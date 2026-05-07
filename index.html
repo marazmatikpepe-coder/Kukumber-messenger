@@ -86,6 +86,7 @@
                     <div id="no-chat-selected" class="no-chat">
                         <div class="cucumber-large">🥒</div>
                         <h2>Выберите чат</h2>
+                        <p>Начните общение прямо сейчас</p>
                     </div>
                     
                     <div id="active-chat" class="active-chat hidden">
@@ -106,19 +107,42 @@
                         
                         <div class="messages-container" id="messages-container"></div>
                         
-                        <div class="message-input-area" id="message-input-area">
-                            <!-- Кнопка прикрепления файла 60x60 для ПК -->
-                            <label for="file-input" class="attach-btn" id="attach-file-btn">
-                                <img src="https://i.ibb.co/TDFN8s1J/Picsart-26-04-10-15-45-03-668.png" alt="Файл">
-                            </label>
-                            <input type="file" id="file-input" accept="image/*,video/*,audio/*" multiple style="display:none;">
+                        <!-- Красивая строка ввода как в Telegram -->
+                        <div class="tg-input-area" id="message-input-area">
+                            <div class="input-wrapper">
+                                <button class="input-action-btn attach-btn-tg" id="attach-btn-tg">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="currentColor"/>
+                                    </svg>
+                                </button>
+                                
+                                <div class="message-input-wrapper">
+                                    <input type="text" id="message-input" class="tg-message-input" placeholder="Сообщение..." onkeypress="handleMessageKeyPress(event)" oninput="onTyping()">
+                                    <div class="input-actions">
+                                        <button class="input-action-btn emoji-btn-tg" onclick="toggleEmojiPicker()">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.58 20 4 16.42 4 12C4 7.58 7.58 4 12 4C16.42 4 20 7.58 20 12C20 16.42 16.42 20 12 20ZM15.5 11C14.67 11 14 10.33 14 9.5C14 8.67 14.67 8 15.5 8C16.33 8 17 8.67 17 9.5C17 10.33 16.33 11 15.5 11ZM8.5 11C7.67 11 7 10.33 7 9.5C7 8.67 7.67 8 8.5 8C9.33 8 10 8.67 10 9.5C10 10.33 9.33 11 8.5 11ZM12 17.5C13.67 17.5 15.17 16.47 15.85 15H8.15C8.83 16.47 10.33 17.5 12 17.5Z" fill="currentColor"/>
+                                            </svg>
+                                        </button>
+                                        <button class="input-action-btn voice-btn-tg" id="voice-record-btn" ontouchstart="startRecording()" ontouchend="stopRecording()" onmousedown="startRecording()" onmouseup="stopRecording()">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14ZM17 11C17 13.76 14.76 16 12 16C9.24 16 7 13.76 7 11H5C5 14.53 7.61 17.43 11 17.92V21H13V17.92C16.39 17.43 19 14.53 19 11H17Z" fill="currentColor"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <button class="send-btn-tg" id="send-btn-tg" onclick="sendMessage()">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"/>
+                                    </svg>
+                                </button>
+                            </div>
                             
-                            <button id="voice-record-btn" class="voice-btn" ontouchstart="startRecording()" ontouchend="stopRecording()" onmousedown="startRecording()" onmouseup="stopRecording()">🎤</button>
-                            
-                            <input type="text" id="message-input" placeholder="Сообщение..." onkeypress="handleMessageKeyPress(event)" oninput="onTyping()">
-                            
-                            <button onclick="toggleEmojiPicker()" class="emoji-btn">😊</button>
-                            <button onclick="sendMessage()" class="send-btn">➤</button>
+                            <!-- Индикатор печатания -->
+                            <div class="typing-indicator" id="typing-indicator">
+                                <span></span><span></span><span></span>
+                            </div>
                         </div>
                         
                         <div class="channel-footer hidden" id="channel-footer">
@@ -239,7 +263,7 @@
         </nav>
     </div>
 
-    <!-- МОДАЛЬНЫЕ ОКНА (все остальные такие же, не меняю) -->
+    <!-- МОДАЛЬНЫЕ ОКНА -->
     <div id="global-search-modal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h3>🔍 Поиск пользователей</h3><button onclick="closeGlobalSearch()" class="btn-close">×</button></div><input type="text" id="global-search-input" placeholder="Имя" oninput="searchGlobalUsers()"><div id="global-users-list" class="users-list"></div></div></div>
     <div id="new-chat-modal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h3>💬 Новый чат (из контактов)</h3><button onclick="closeNewChatDialog()" class="btn-close">×</button></div><input type="text" id="new-chat-search" placeholder="Поиск среди контактов..." oninput="searchContacts()"><div id="users-list" class="users-list"></div></div></div>
     <div id="create-group-modal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h3>👥 Группа</h3><button onclick="closeCreateGroupDialog()" class="btn-close">×</button></div><div id="group-step-1"><div class="avatar-upload"><div class="avatar-preview" id="group-avatar-preview">👥</div><label>Загрузить фото<input type="file" accept="image/*" onchange="previewGroupAvatar(event)" style="display:none;"></label></div><input type="text" id="group-name" placeholder="Название группы"><textarea id="group-description" placeholder="Описание"></textarea><button onclick="goToGroupStep2()" class="btn-primary">Далее</button></div><div id="group-step-2" class="hidden"><p>Добавьте участников (из контактов):</p><input type="text" id="group-members-search" placeholder="Поиск..." oninput="searchGroupMembers()"><div id="selected-members" class="selected-members"></div><div id="group-members-list" class="users-list"></div><div class="modal-buttons"><button onclick="goToGroupStep1()" class="btn-secondary">Назад</button><button onclick="createGroup()" class="btn-primary">Создать</button></div></div></div></div>
@@ -251,9 +275,35 @@
     <div id="view-reel-modal" class="modal hidden"><div class="reel-viewer"><button class="reel-close-btn" onclick="closeViewReelModal()">×</button><div class="reel-media" id="reel-media-container"></div><div class="reel-info"><div class="reel-author"><div class="avatar" id="reel-author-avatar">👤</div><span id="reel-author-name">Автор</span></div><p id="reel-caption-view"></p></div><div class="reel-actions-bar"><button onclick="likeReel()" class="reel-action" id="like-reel-btn">❤️ <span id="reel-likes-count">0</span></button><button onclick="showReelComments()" class="reel-action">💬 <span id="reel-comments-count">0</span></button><button onclick="shareReel()" class="reel-action">↗️</button><button id="delete-reel-btn" onclick="deleteCurrentReel()" class="reel-action" style="display:none;">🗑️</button></div></div></div>
     <div id="call-modal" class="modal hidden"><div class="call-container"><div class="call-header"><h3 id="call-username">Звонок</h3><span id="call-status">Соединение...</span><span id="call-timer">00:00</span></div><div class="video-container"><video id="remote-video" autoplay playsinline></video><video id="local-video" autoplay playsinline muted></video><div id="call-avatar" class="call-avatar"><div class="avatar-large">👤</div></div></div><div class="call-controls"><button onclick="toggleMute()" class="btn-call" id="mute-btn">🎤</button><button onclick="toggleVideo()" class="btn-call" id="video-btn">📹</button><button onclick="endCall()" class="btn-call btn-end-call">📵</button></div></div></div>
     <div id="incoming-call-modal" class="modal hidden"><div class="incoming-call-container"><div class="incoming-call-avatar">👤</div><h3 id="incoming-call-username">Входящий звонок</h3><p id="incoming-call-type">Аудиозвонок</p><div class="incoming-call-actions"><button onclick="rejectCall()" class="btn-call btn-reject">❌</button><button onclick="acceptCall()" class="btn-call btn-accept">✅</button></div></div></div>
-    <div id="image-preview-modal" class="modal hidden"><div class="image-preview-container"><div class="modal-header"><h3>Отправить</h3><button onclick="closeImagePreview()" class="btn-close">×</button></div><img id="preview-image" src=""><input type="text" id="image-caption" placeholder="Подпись..."><button onclick="confirmImageSend()" class="btn-primary">Отправить</button></div></div>
+    
+    <!-- МУЛЬТИ-ФОТО МОДАЛЬНОЕ ОКНО -->
+    <div id="image-preview-modal" class="modal hidden">
+        <div class="image-preview-container">
+            <div class="modal-header">
+                <h3>📷 Отправка фото (<span id="image-counter">0/0</span>)</h3>
+                <button onclick="closeImagePreview()" class="btn-close">×</button>
+            </div>
+            <img id="preview-image" src="" style="width: 100%; max-height: 300px; object-fit: contain; background: #f0f0f0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 15px;">
+                <button id="nav-prev-btn" onclick="navigateImage(-1)" style="background: var(--forest); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 20px; cursor: pointer; display: none;">←</button>
+                <button onclick="addMoreImages()" style="background: var(--forest); color: white; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                    <img src="https://i.ibb.co/BVhBTnmS/11623-AE3-5-A11-48-F3-9-C9-F-95-AF1-CD6-AAE4.png" alt="+" style="width: 40px; height: 40px;">
+                </button>
+                <button id="nav-next-btn" onclick="navigateImage(1)" style="background: var(--forest); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 20px; cursor: pointer; display: none;">→</button>
+            </div>
+            <input type="text" id="image-caption" placeholder="Подпись к фото..." style="margin: 10px 15px; width: calc(100% - 30px); padding: 12px; border: 2px solid var(--border); border-radius: 12px;">
+            <div style="display: flex; gap: 10px; padding: 15px;">
+                <button onclick="cancelAllImages()" class="btn-secondary" style="flex: 1;">❌ Отмена</button>
+                <button onclick="confirmImageSend()" class="btn-primary" style="flex: 2;">📤 Отправить все</button>
+            </div>
+        </div>
+    </div>
+    
     <div id="image-lightbox" class="image-lightbox hidden" onclick="closeLightbox()"><img id="lightbox-image" src=""></div>
     <div id="notifications-container" class="notifications-container"></div>
+
+    <!-- Скрытый input для файлов -->
+    <input type="file" id="file-input" accept="image/*" multiple style="display:none;">
 
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -268,302 +318,38 @@
     <script src="js/upload.js"></script>
     <script src="js/reels.js"></script>
     <script src="js/settings.js"></script>
-    // UPLOAD - фото через base64 (хранятся прямо в Firebase)
-var pendingImageFile = null;
-
-// Конвертация файла в base64
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        var reader = new FileReader();
-        reader.onload = function() {
-            resolve(reader.result);
-        };
-        reader.onerror = function(error) {
-            reject(error);
-        };
-        reader.readAsDataURL(file);
-    });
-}
-
-// Выбор файла
-window.handleFileSelect = function(event) {
-    var file = event.target.files[0];
-    if (!file) return;
     
-    // Проверяем что это изображение
-    if (!file.type.startsWith('image/')) {
-        showNotification('Пожалуйста, выберите изображение', 'error');
-        event.target.value = '';
-        return;
-    }
-    
-    // Ограничение 5MB для base64 (чтобы Firebase не тормозил)
-    if (file.size > 5 * 1024 * 1024) {
-        showNotification('Файл слишком большой (макс. 5MB)', 'error');
-        event.target.value = '';
-        return;
-    }
-    
-    pendingImageFile = file;
-    
-    // Показываем превью
-    var reader = new FileReader();
-    reader.onload = function(e) {
-        var previewImg = document.getElementById('preview-image');
-        if (previewImg) {
-            previewImg.src = e.target.result;
-        }
-        var captionInput = document.getElementById('image-caption');
-        if (captionInput) {
-            captionInput.value = '';
-        }
-        var modal = document.getElementById('image-preview-modal');
-        if (modal) {
-            modal.classList.remove('hidden');
-        }
-    };
-    reader.readAsDataURL(file);
-    
-    event.target.value = '';
-};
-
-// Закрыть окно предпросмотра
-window.closeImagePreview = function() {
-    var modal = document.getElementById('image-preview-modal');
-    if (modal) {
-        modal.classList.add('hidden');
-    }
-    pendingImageFile = null;
-};
-
-// Отправка фото
-window.confirmImageSend = async function() {
-    // Проверки
-    if (!pendingImageFile) {
-        showNotification('Нет выбранного фото', 'error');
-        closeImagePreview();
-        return;
-    }
-    
-    if (!currentChatId) {
-        showNotification('Выберите чат', 'error');
-        closeImagePreview();
-        return;
-    }
-    
-    if (!currentUser) {
-        showNotification('Пользователь не авторизован', 'error');
-        closeImagePreview();
-        return;
-    }
-    
-    var caption = document.getElementById('image-caption').value.trim();
-    var file = pendingImageFile;
-    
-    // Показываем индикатор загрузки
-    showNotification('🔄 Конвертация фото...', 'info');
-    
-    try {
-        // Конвертируем фото в base64
-        var base64 = await fileToBase64(file);
-        
-        // Создаём сообщение
-        var message = {
-            type: 'image',
-            imageUrl: base64,
-            caption: caption,
-            senderId: currentUser.uid,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        };
-        
-        showNotification('📤 Отправка в чат...', 'info');
-        
-        // Отправляем в Firebase
-        var messagesRef = database.ref('messages/' + currentChatId);
-        var newMessageRef = await messagesRef.push(message);
-        
-        console.log('✅ Фото отправлено! ID:', newMessageRef.key);
-        
-        // Обновляем последнее сообщение в чате
-        var lastMsg = caption ? '📷 ' + caption.substring(0, 47) : '📷 Фото';
-        await database.ref('chats/' + currentChatId).update({
-            lastMessage: lastMsg,
-            lastMessageTime: firebase.database.ServerValue.TIMESTAMP
-        });
-        
-        showNotification('✅ Фото отправлено!', 'success');
-        closeImagePreview();
-        
-    } catch (error) {
-        console.error('Ошибка отправки фото:', error);
-        showNotification('❌ Ошибка: ' + error.message, 'error');
-    }
-};
-
-// Отправка любых файлов (для голосовых)
-window.sendAnyFile = async function(file) {
-    if (!currentChatId) {
-        showNotification('Ошибка: чат не выбран', 'error');
-        return;
-    }
-    
-    showNotification('🔄 Обработка...', 'info');
-    
-    try {
-        var base64 = await fileToBase64(file);
-        
-        var message = {
-            type: 'file',
-            fileName: file.name,
-            fileUrl: base64,
-            fileSize: file.size,
-            senderId: currentUser.uid,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        };
-        
-        await database.ref('messages/' + currentChatId).push(message);
-        await database.ref('chats/' + currentChatId).update({
-            lastMessage: '📎 ' + file.name,
-            lastMessageTime: firebase.database.ServerValue.TIMESTAMP
-        });
-        
-        showNotification('✅ Файл отправлен!', 'success');
-    } catch (error) {
-        console.error(error);
-        showNotification('❌ Ошибка загрузки', 'error');
-    }
-};
-
-// Голосовые сообщения
-var mediaRecorder = null;
-var audioChunks = [];
-var isRecording = false;
-
-window.startRecording = function() {
-    navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-            
-            mediaRecorder.ondataavailable = function(e) {
-                if (e.data.size > 0) audioChunks.push(e.data);
-            };
-            
-            mediaRecorder.onstop = function() {
-                var blob = new Blob(audioChunks, { type: 'audio/webm' });
-                var file = new File([blob], 'voice.webm', { type: 'audio/webm' });
-                window.sendAnyFile(file);
-                stream.getTracks().forEach(t => t.stop());
-            };
-            
-            mediaRecorder.start();
-            isRecording = true;
-            
-            var btn = document.getElementById('voice-record-btn');
-            if (btn) {
-                btn.classList.add('recording');
-                btn.innerHTML = '🔴';
-            }
-            
-            // Авто-остановка через 60 секунд
-            setTimeout(function() {
-                if (isRecording) window.stopRecording();
-            }, 60000);
-        })
-        .catch(function() {
-            showNotification('❌ Нет доступа к микрофону', 'error');
-        });
-};
-
-window.stopRecording = function() {
-    if (mediaRecorder && isRecording) {
-        mediaRecorder.stop();
-        isRecording = false;
-        var btn = document.getElementById('voice-record-btn');
-        if (btn) {
-            btn.classList.remove('recording');
-            btn.innerHTML = '🎤';
-        }
-    }
-};
-
-// Аватарки групп
-window.groupAvatarFile = null;
-window.channelAvatarFile = null;
-
-window.previewGroupAvatar = function(e) {
-    var file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-        window.groupAvatarFile = file;
-        var reader = new FileReader();
-        reader.onload = function(ev) {
-            var preview = document.getElementById('group-avatar-preview');
-            if (preview) {
-                preview.style.backgroundImage = 'url(' + ev.target.result + ')';
-                preview.style.backgroundSize = 'cover';
-                preview.textContent = '';
-            }
-        };
-        reader.readAsDataURL(file);
-    }
-};
-
-window.previewChannelAvatar = function(e) {
-    var file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-        window.channelAvatarFile = file;
-        var reader = new FileReader();
-        reader.onload = function(ev) {
-            var preview = document.getElementById('channel-avatar-preview');
-            if (preview) {
-                preview.style.backgroundImage = 'url(' + ev.target.result + ')';
-                preview.style.backgroundSize = 'cover';
-                preview.textContent = '';
-            }
-        };
-        reader.readAsDataURL(file);
-    }
-};
-
-window.pendingAvatarFile = null;
-
-window.previewEditAvatar = function(e) {
-    var file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-        window.pendingAvatarFile = file;
-        var reader = new FileReader();
-        reader.onload = function(ev) {
-            var preview = document.getElementById('edit-avatar-preview');
-            if (preview) {
-                preview.style.backgroundImage = 'url(' + ev.target.result + ')';
-                preview.style.backgroundSize = 'cover';
-                preview.textContent = '';
-            }
-        };
-        reader.readAsDataURL(file);
-    }
-};
+    <!-- Инициализация красивой строки ввода -->
     <script>
-    // Привязываем обработчики для кнопки файла
-    document.addEventListener('DOMContentLoaded', function() {
-        var attachBtn = document.getElementById('attach-file-btn');
-        var fileInput = document.getElementById('file-input');
-        
-        if (attachBtn && fileInput) {
-            attachBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                fileInput.click();
-            });
+        document.addEventListener('DOMContentLoaded', function() {
+            // Привязываем обработчики для кнопки файла
+            var attachBtn = document.getElementById('attach-btn-tg');
+            var fileInput = document.getElementById('file-input');
             
-            fileInput.addEventListener('change', function(e) {
-                if (typeof window.handleFileSelect === 'function') {
-                    window.handleFileSelect(e);
-                } else {
-                    console.error('handleFileSelect не найдена');
-                }
-            });
-        }
-    });
-</script>
+            if (attachBtn && fileInput) {
+                attachBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    fileInput.click();
+                });
+                
+                fileInput.addEventListener('change', function(e) {
+                    if (typeof window.handleFileSelect === 'function') {
+                        window.handleFileSelect(e);
+                    }
+                });
+            }
+            
+            // Анимация для строки ввода
+            var messageInput = document.getElementById('message-input');
+            if (messageInput) {
+                messageInput.addEventListener('focus', function() {
+                    document.querySelector('.tg-input-area').classList.add('focused');
+                });
+                messageInput.addEventListener('blur', function() {
+                    document.querySelector('.tg-input-area').classList.remove('focused');
+                });
+            }
+        });
+    </script>
 </body>
 </html>
