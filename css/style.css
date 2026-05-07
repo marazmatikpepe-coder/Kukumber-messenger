@@ -559,3 +559,335 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .replies-list {
     margin-left: 42px;
 }
+/* ===== ПРОФИЛЬ ===== */
+.profile-modal-content {
+    background: white;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.profile-banner {
+    height: 120px;
+    position: relative;
+    border-radius: 20px 20px 0 0;
+    background-size: cover;
+    background-position: center;
+}
+
+.profile-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: rgba(0,0,0,0.5);
+    color: white;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.profile-avatar-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: -40px;
+}
+
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--sage);
+    border: 3px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 40px;
+    background-size: cover;
+    background-position: center;
+}
+
+.profile-info {
+    text-align: center;
+    padding: 15px;
+}
+
+.profile-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.profile-name {
+    font-size: 22px;
+    color: var(--text-dark);
+}
+
+.profile-subscribe-btn {
+    background: #1a1a1a;
+    color: white;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 30px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.profile-subscribe-btn:hover {
+    transform: scale(1.02);
+}
+
+.profile-notify-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.profile-bio {
+    color: var(--text-light);
+    margin-top: 8px;
+    font-size: 14px;
+}
+
+.profile-tabs {
+    display: flex;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.profile-tab-btn {
+    flex: 1;
+    padding: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-light);
+    transition: 0.2s;
+}
+
+.profile-tab-btn.active {
+    color: var(--forest);
+    border-bottom: 2px solid var(--forest);
+}
+
+.profile-content {
+    padding: 15px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.profile-loading, .profile-empty {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted);
+}
+
+.profile-slice-card {
+    margin-bottom: 15px;
+}
+
+.repost-badge {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 5px 15px;
+    background: var(--background);
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+/* ===== КОММЕНТАРИИ ===== */
+.comments-block {
+    border-top: 1px solid var(--border);
+    padding: 15px;
+    background: var(--background);
+}
+
+.comments-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.comments-loading, .no-comments {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+}
+
+.comment-item {
+    background: white;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 2px var(--shadow);
+}
+
+.comment-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.comment-author-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--sage);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    background-size: cover;
+}
+
+.comment-author-info {
+    flex: 1;
+}
+
+.comment-author-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-dark);
+}
+
+.comment-date {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.comment-text {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--text-dark);
+    margin: 8px 0 8px 42px;
+    word-break: break-word;
+}
+
+.comment-actions {
+    margin-left: 42px;
+}
+
+.comment-reply-btn {
+    background: none;
+    border: none;
+    color: var(--forest);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 12px;
+}
+
+.comment-reply-btn:hover {
+    background: var(--background);
+}
+
+.comment-like-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-light);
+}
+
+.reply-form {
+    margin: 10px 0 10px 42px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.reply-form textarea {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 13px;
+    resize: none;
+    min-width: 150px;
+}
+
+.reply-form button,
+.add-comment button {
+    background: linear-gradient(135deg, var(--forest), var(--lime));
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 16px;
+    cursor: pointer;
+}
+
+.cancel-reply-btn {
+    background: var(--error) !important;
+}
+
+.add-comment {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.add-comment textarea {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 14px;
+    resize: none;
+    font-family: inherit;
+}
+
+.replies-container {
+    margin-top: 10px;
+}
+
+.reply-item {
+    background: var(--background);
+    margin-bottom: 8px;
+}
+
+.replies-list {
+    margin-left: 42px;
+}
+
+/* ===== ВЕРИФИКАЦИЯ ===== */
+.verified-badge {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.verified-badge:hover {
+    transform: scale(1.1);
+}
+
+/* ===== ПОИСК ===== */
+.search-logo-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-logo-btn img {
+    width: 24px;
+    height: 24px;
+}
