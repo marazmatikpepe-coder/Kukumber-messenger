@@ -146,8 +146,15 @@
                 </div>
                 
                 <div class="slices-search-bar">
-                    <input type="text" id="slices-search-input" placeholder="🔍 Поиск по постам, хештегам (#) или авторам (@)..." oninput="searchSlices()">
-                    <div class="slices-profile-avatar" onclick="openSlicesProfile()">
+                   <div class="slices-search-bar">
+    <div style="position: relative; flex: 1;">
+        <img src="https://i.ibb.co/6JT5CgSf/AF4-C8037-1-C4-D-4889-AF9-A-FF259-E880-B29.png" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; opacity: 0.6;">
+        <input type="text" id="slices-search-input" placeholder="Поиск по постам, хештегам (#) или авторам (@)..." oninput="searchSlices()" style="padding-left: 40px;">
+    </div>
+    <div class="slices-profile-avatar" onclick="openSlicesProfile()">
+        <div class="avatar" id="slices-user-avatar">🥒</div>
+    </div>
+</div>
                         <div class="avatar" id="slices-user-avatar">🥒</div>
                     </div>
                 </div>
