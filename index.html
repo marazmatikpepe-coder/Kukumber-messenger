@@ -133,22 +133,28 @@
             </div>
         </div>
 
-        <!-- ВКЛАДКА РЕЕЛСЫ -->
-        <div id="reels-tab" class="tab-content hidden">
-            <div class="reels-container">
-                <div class="reels-header">
-                    <h2>🎬 Реелсы</h2>
-                    <button onclick="showCreateReelModal()" class="btn-create-reel">+ Создать</button>
-                </div>
-                <div class="reels-tabs">
-                    <button class="reel-tab-btn active" onclick="switchReelsTab('feed')">Лента</button>
-                    <button class="reel-tab-btn" onclick="switchReelsTab('my')">Мои</button>
-                    <button class="reel-tab-btn" onclick="switchReelsTab('liked')">Понравилось</button>
-                </div>
-                <div id="reels-feed" class="reels-feed"></div>
+      <!-- ВКЛАДКА SLICES (вместо реелсов) -->
+<div id="reels-tab" class="tab-content hidden">
+    <div class="slices-container">
+        <div class="slices-header">
+            <div class="slices-header-left">
+                <img src="https://i.ibb.co/jkGTZrYN/image.png" alt="Slices" class="slices-logo-light">
+                <img src="https://i.ibb.co/XfbnsqhH/Artguru-20260507170418-artguru-1.png" alt="Slices" class="slices-logo-dark hidden">
+                <h2>Slices</h2>
+            </div>
+            <button onclick="showCreateSliceModal()" class="btn-create-slice">+ Создать пост</button>
+        </div>
+        
+        <div class="slices-search-bar">
+            <input type="text" id="slices-search-input" placeholder="🔍 Поиск по постам, хештегам (#) или авторам (@)..." oninput="searchSlices()">
+            <div class="slices-profile-avatar" onclick="openSlicesProfile()">
+                <div class="avatar" id="slices-user-avatar">🥒</div>
             </div>
         </div>
-
+        
+        <div id="slices-feed" class="slices-feed"></div>
+    </div>
+</div>
         <!-- ВКЛАДКА НАСТРОЙКИ -->
         <div id="settings-tab" class="tab-content hidden">
             <div class="settings-container">
