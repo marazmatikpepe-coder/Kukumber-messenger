@@ -1935,3 +1935,54 @@ button:hover img[alt="+"] {
         height: 48px;
     }
 }
+/* GIF сообщения */
+.gif-message {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    border-radius: 16px;
+    overflow: hidden;
+    max-width: 280px;
+}
+
+.gif-image {
+    width: 100%;
+    max-height: 250px;
+    object-fit: cover;
+    display: block;
+    border-radius: 16px;
+    transition: transform 0.2s;
+}
+
+.gif-message:hover .gif-image {
+    transform: scale(1.02);
+}
+
+.gif-badge {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.message.sent .gif-badge {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 768px) {
+    .gif-message {
+        max-width: 220px;
+    }
+    
+    .gif-image {
+        max-height: 200px;
+    }
+}
