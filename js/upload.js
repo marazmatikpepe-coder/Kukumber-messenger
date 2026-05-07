@@ -1,41 +1,38 @@
-// UPLOAD - работающая отправка фото через ImgBB
+// UPLOAD - работающая отправка фото через Catbox
 var pendingImageFile = null;
 
-// ТВОЙ API ключ ImgBB
-var IMGBB_API_KEY = '03a5a914cba6f919ff317ebb6d9ed4f9';
-
-// Загрузка фото на ImgBB
-async function uploadImageToImgBB(file) {
+// Загрузка на Catbox (работает без API ключа)
+async function uploadToCatbox(file) {
     var formData = new FormData();
-    formData.append('image', file);
+    formData.append('reqtype', 'fileupload');
+    formData.append('fileToUpload', file);
     
-    var response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+    var response = await fetch('https://catbox.moe/user/api.php', {
         method: 'POST',
-        body: formData
+        body: formData,
+        mode: 'cors'
     });
     
-    var data = await response.json();
+    var url = await response.text();
     
-    if (!data.success) {
-        throw new Error(data.error?.message || 'Ошибка загрузки');
+    if (!url || !url.startsWith('https://')) {
+        throw new Error('Catbox вернул неверный URL: ' + url);
     }
     
-    return { url: data.data.url };
+    return url;
 }
 
-// Выбор файла (только фото)
+// Выбор файла
 function handleFileSelect(event) {
     var file = event.target.files[0];
     if (!file) return;
     
-    // Проверяем что это изображение
     if (!file.type.startsWith('image/')) {
         showNotification('Пожалуйста, выберите изображение', 'error');
         event.target.value = '';
         return;
     }
     
-    // Ограничение размера 10MB
     if (file.size > 10 * 1024 * 1024) {
         showNotification('Файл слишком большой (макс. 10MB)', 'error');
         event.target.value = '';
@@ -55,7 +52,6 @@ function handleFileSelect(event) {
     event.target.value = '';
 }
 
-// Закрыть окно предпросмотра
 function closeImagePreview() {
     document.getElementById('image-preview-modal').classList.add('hidden');
     pendingImageFile = null;
@@ -78,22 +74,27 @@ async function confirmImageSend() {
     var caption = document.getElementById('image-caption').value.trim();
     var file = pendingImageFile;
     
-    // Показываем индикатор загрузки
-    showNotification('📤 Загрузка фото...', 'info');
+    showNotification('📤 Загрузка фото на сервер...', 'info');
     
     try {
-        var result = await uploadImageToImgBB(file);
-        var imageUrl = result.url;
+        // Сначала загружаем фото
+        var imageUrl = await uploadToCatbox(file);
+        console.log('Фото загружено:', imageUrl);
         
+        // Потом отправляем ссылку в Firebase
         var message = {
             type: 'image',
             imageUrl: imageUrl,
             caption: caption,
             senderId: currentUser.uid,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            sentAt: Date.now()
         };
         
-        await database.ref('messages/' + currentChatId).push(message);
+        console.log('Отправка сообщения в чат:', currentChatId);
+        
+        var newMsgRef = await database.ref('messages/' + currentChatId).push(message);
+        console.log('Сообщение отправлено, ID:', newMsgRef.key);
         
         var lastMsg = caption ? '📷 ' + caption.substring(0, 47) : '📷 Фото';
         await database.ref('chats/' + currentChatId).update({
@@ -105,12 +106,16 @@ async function confirmImageSend() {
         closeImagePreview();
         
     } catch (error) {
-        console.error('Upload error:', error);
-        showNotification('❌ Ошибка загрузки фото. Попробуйте ещё раз.', 'error');
+        console.error('Ошибка:', error);
+        showNotification('❌ Ошибка: ' + error.message, 'error');
     }
 }
 
-// Отправка любых файлов (для голосовых сообщений)
+// Голосовые и остальные функции
+var mediaRecorder = null;
+var audioChunks = [];
+var isRecording = false;
+
 async function sendAnyFile(file) {
     if (!currentChatId) {
         showNotification('Ошибка: чат не выбран', 'error');
@@ -120,20 +125,7 @@ async function sendAnyFile(file) {
     showNotification('📤 Загрузка...', 'info');
     
     try {
-        // Для голосовых используем тот же принцип
-        var formData = new FormData();
-        formData.append('image', file);
-        
-        var response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        var data = await response.json();
-        
-        if (!data.success) throw new Error('Upload failed');
-        
-        var url = data.data.url;
+        var url = await uploadToCatbox(file);
         
         var message = {
             type: 'file',
@@ -156,11 +148,6 @@ async function sendAnyFile(file) {
         showNotification('❌ Ошибка загрузки', 'error');
     }
 }
-
-// Голосовые сообщения
-var mediaRecorder = null;
-var audioChunks = [];
-var isRecording = false;
 
 function startRecording() {
     navigator.mediaDevices.getUserMedia({ audio: true })
@@ -188,7 +175,6 @@ function startRecording() {
                 btn.textContent = '🔴';
             }
             
-            // Авто-остановка через 60 секунд
             setTimeout(() => {
                 if (isRecording) stopRecording();
             }, 60000);
@@ -208,7 +194,6 @@ function stopRecording() {
     }
 }
 
-// Аватарки групп и каналов
 var groupAvatarFile = null;
 var channelAvatarFile = null;
 
@@ -242,7 +227,6 @@ function previewChannelAvatar(e) {
     }
 }
 
-// Для редактирования аватарки профиля
 var pendingAvatarFile = null;
 
 function previewEditAvatar(e) {
