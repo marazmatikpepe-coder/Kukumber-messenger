@@ -5,11 +5,16 @@ var pendingSliceFiles = [];
 var currentSliceIndex = 0;
 var searchTimeout = null;
 var slicesListener = null;
+var slicesLoaded = false;
 
-// Загрузка ленты
+// Загрузка ленты (вызывается при открытии вкладки)
 function loadSlices() {
     var feed = document.getElementById('slices-feed');
     if (!feed) return;
+    
+    // Очищаем поиск при загрузке вкладки
+    var searchInput = document.getElementById('slices-search-input');
+    if (searchInput) searchInput.value = '';
     
     feed.innerHTML = '<div class="empty-slices"><span>🍕</span><p>Загрузка...</p></div>';
     
@@ -41,6 +46,8 @@ function loadSlices() {
             var card = createSliceCard(slice.id, slice.data);
             feed.appendChild(card);
         });
+        
+        slicesLoaded = true;
     });
 }
 
@@ -232,11 +239,8 @@ function goToSlide(sliceId, index) {
 // Форматирование текста
 function formatSliceText(text) {
     if (!text) return '';
-    // Экранируем HTML
     text = escapeHtml(text);
-    // Ссылки
     text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
-    // Упоминания
     text = text.replace(/@(\w+)/g, '<span class="slice-mention" onclick="searchByUser(\'$1\')">@$1</span>');
     return text;
 }
@@ -293,15 +297,12 @@ function searchSlices() {
                 var slice = slices[id];
                 var match = false;
                 
-                // Поиск по тексту
                 if (slice.text && slice.text.toLowerCase().includes(query)) match = true;
                 
-                // Поиск по хештегам
                 if (slice.hashtags && slice.hashtags.some(function(tag) { 
                     return '#' + tag.toLowerCase().includes(query) || tag.toLowerCase().includes(query.replace('#', ''));
                 })) match = true;
                 
-                // Поиск по автору
                 if (slice.authorName && slice.authorName.toLowerCase().includes(query.replace('@', ''))) match = true;
                 
                 if (match) {
@@ -337,7 +338,6 @@ function likeSlice(sliceId) {
             sliceRef.child('likesCount').transaction(function(c) { return (c || 0) + 1; });
         }
         
-        // Обновляем UI
         var card = document.querySelector('.slice-card[data-slice-id="' + sliceId + '"]');
         if (card) {
             var likeBtn = card.querySelector('.like-btn');
@@ -350,12 +350,10 @@ function likeSlice(sliceId) {
     });
 }
 
-// Показать комментарии
 function showSliceComments(sliceId) {
     showNotification('Комментарии в разработке 📝', 'info');
 }
 
-// Репост
 function repostSlice(sliceId) {
     database.ref('slices/' + sliceId).once('value').then(function(snapshot) {
         var originalSlice = snapshot.val();
@@ -385,7 +383,6 @@ function repostSlice(sliceId) {
     });
 }
 
-// Поделиться
 function shareSlice(sliceId) {
     var url = window.location.href + '?slice=' + sliceId;
     if (navigator.share) {
@@ -396,7 +393,6 @@ function shareSlice(sliceId) {
     }
 }
 
-// Открыть фото в лайтбоксе
 function openSliceLightbox(url) {
     var lightbox = document.getElementById('image-lightbox');
     var lightboxImg = document.getElementById('lightbox-image');
@@ -406,7 +402,6 @@ function openSliceLightbox(url) {
     }
 }
 
-// Открыть профиль пользователя в слайсах
 function openSlicesProfile() {
     showNotification('Профиль в разработке 👤', 'info');
 }
@@ -479,7 +474,6 @@ function showSliceContextMenu(event, sliceId, sliceData) {
     }, 10);
 }
 
-// Редактирование поста
 function editSlice(sliceId) {
     database.ref('slices/' + sliceId).once('value').then(function(snapshot) {
         var slice = snapshot.val();
@@ -509,7 +503,6 @@ function editSlice(sliceId) {
     closeSliceContextMenu();
 }
 
-// Удаление поста
 function deleteSlice(sliceId) {
     if (!confirm('Удалить этот пост? Действие необратимо.')) return;
     
@@ -525,7 +518,6 @@ function deleteSlice(sliceId) {
     closeSliceContextMenu();
 }
 
-// Закрепить пост
 function pinSlice(sliceId) {
     database.ref('slices/' + sliceId).update({
         pinned: true,
@@ -539,7 +531,6 @@ function pinSlice(sliceId) {
     closeSliceContextMenu();
 }
 
-// Открепить пост
 function unpinSlice(sliceId) {
     database.ref('slices/' + sliceId).update({
         pinned: false,
@@ -553,7 +544,6 @@ function unpinSlice(sliceId) {
     closeSliceContextMenu();
 }
 
-// Пожаловаться на пост
 function reportSlice(sliceId) {
     var reason = prompt('Укажите причину жалобы:');
     if (!reason) return;
