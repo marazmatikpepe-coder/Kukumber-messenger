@@ -146,15 +146,11 @@
                 </div>
                 
                 <div class="slices-search-bar">
-                   <div class="slices-search-bar">
-    <div style="position: relative; flex: 1;">
-        <img src="https://i.ibb.co/6JT5CgSf/AF4-C8037-1-C4-D-4889-AF9-A-FF259-E880-B29.png" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; opacity: 0.6;">
-        <input type="text" id="slices-search-input" placeholder="Поиск по постам, хештегам (#) или авторам (@)..." oninput="searchSlices()" style="padding-left: 40px;">
-    </div>
-    <div class="slices-profile-avatar" onclick="openSlicesProfile()">
-        <div class="avatar" id="slices-user-avatar">🥒</div>
-    </div>
-</div>
+                    <div style="position: relative; flex: 1;">
+                        <img src="https://i.ibb.co/6JT5CgSf/AF4-C8037-1-C4-D-4889-AF9-A-FF259-E880-B29.png" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; opacity: 0.6;">
+                        <input type="text" id="slices-search-input" placeholder="Поиск по постам, хештегам (#) или авторам (@)..." oninput="searchSlices()" style="padding-left: 40px;">
+                    </div>
+                    <div class="slices-profile-avatar" onclick="openSlicesProfile()">
                         <div class="avatar" id="slices-user-avatar">🥒</div>
                     </div>
                 </div>
@@ -243,11 +239,11 @@
                 <span class="nav-label">Чаты</span>
             </button>
             <button onclick="switchToTab('reels')" class="nav-item" id="nav-reels">
-    <span class="nav-icon">
-        <img src="https://i.ibb.co/jkGTZrYN/image.png" alt="Slices" style="width: 60px; height: 60px; object-fit: contain; margin-top: -15px;">
-    </span>
-    <span class="nav-label" style="margin-top: -5px;">Slices</span>
-</button>
+                <span class="nav-icon">
+                    <img src="https://i.ibb.co/jkGTZrYN/image.png" alt="Slices" style="width: 28px; height: 28px; object-fit: contain;">
+                </span>
+                <span class="nav-label">Slices</span>
+            </button>
             <button onclick="switchToTab('settings')" class="nav-item" id="nav-settings">
                 <span class="nav-icon">⚙️</span>
                 <span class="nav-label">Настройки</span>
@@ -365,7 +361,6 @@
                 });
             }
             
-            // Обновляем аватарку в Slices при загрузке пользователя
             if (currentUserData) {
                 var slicesAvatar = document.getElementById('slices-user-avatar');
                 if (slicesAvatar && currentUserData.avatar) {
@@ -376,7 +371,6 @@
             }
         });
         
-        // Функция для переключения темы (для логотипов)
         function setTheme(theme) {
             var lightLogo = document.getElementById('slices-logo-light');
             var darkLogo = document.getElementById('slices-logo-dark');
@@ -389,7 +383,6 @@
             }
         }
         
-        // Следим за темой системы
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             setTheme('dark');
         }
