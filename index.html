@@ -256,6 +256,38 @@
     <div id="edit-profile-modal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h3>Редактировать профиль</h3><button onclick="closeEditProfileModal()" class="btn-close">×</button></div><div class="avatar-upload"><div class="avatar-preview" id="edit-avatar-preview">🥒</div><label>Изменить фото<input type="file" id="edit-avatar-input" accept="image/*" onchange="previewEditAvatar(event)" style="display:none;"></label></div><input type="text" id="edit-username" placeholder="Имя пользователя"><input type="text" id="edit-bio" placeholder="О себе"><button onclick="saveProfile()" class="btn-primary">Сохранить</button></div></div>
     <div id="view-reel-modal" class="modal hidden"><div class="reel-viewer"><button class="reel-close-btn" onclick="closeViewReelModal()">×</button><div class="reel-media" id="reel-media-container"></div><div class="reel-info"><div class="reel-author"><div class="avatar" id="reel-author-avatar">👤</div><span id="reel-author-name">Автор</span></div><p id="reel-caption-view"></p></div><div class="reel-actions-bar"><button onclick="likeReel()" class="reel-action" id="like-reel-btn">❤️ <span id="reel-likes-count">0</span></button><button onclick="showReelComments()" class="reel-action">💬 <span id="reel-comments-count">0</span></button><button onclick="shareReel()" class="reel-action">↗️</button><button id="delete-reel-btn" onclick="deleteCurrentReel()" class="reel-action" style="display:none;">🗑️</button></div></div></div>
     <div id="call-modal" class="modal hidden"><div class="call-container"><div class="call-header"><h3 id="call-username">Звонок</h3><span id="call-status">Соединение...</span><span id="call-timer">00:00</span></div><div class="video-container"><video id="remote-video" autoplay playsinline></video><video id="local-video" autoplay playsinline muted></video><div id="call-avatar" class="call-avatar"><div class="avatar-large">👤</div></div></div><div class="call-controls"><button onclick="toggleMute()" class="btn-call" id="mute-btn">🎤</button><button onclick="toggleVideo()" class="btn-call" id="video-btn">📹</button><button onclick="endCall()" class="btn-call btn-end-call">📵</button></div></div></div>
+    <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ПОСТА SLICES -->
+<div id="create-slice-modal" class="modal hidden">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3>🍕 Новый слайс</h3>
+            <button onclick="closeCreateSliceModal()" class="btn-close">×</button>
+        </div>
+        
+        <div id="slice-upload-area" class="slice-upload-area" onclick="addSliceMedia()">
+            <span>📷</span>
+            <p>Нажмите чтобы добавить фото или GIF</p>
+            <small>Можно несколько файлов</small>
+        </div>
+        
+        <div id="slice-preview-container" class="slice-preview-container hidden">
+            <div class="slice-preview-header">
+                <span>📸 Медиафайлы (<span id="slice-preview-counter">0</span>)</span>
+                <button onclick="addSliceMedia()" class="slice-add-more">+ Добавить ещё</button>
+            </div>
+            <div id="slice-preview-area" class="slice-preview-area"></div>
+        </div>
+        
+        <textarea id="slice-text" class="slice-text-input" placeholder="Что у вас нового? #хештеги @упоминания" maxlength="5000"></textarea>
+        
+        <input type="text" id="slice-hashtags-input" class="slice-hashtags-input" placeholder="#хештеги через пробел">
+        
+        <div class="modal-buttons" style="padding: 15px;">
+            <button onclick="closeCreateSliceModal()" class="btn-secondary">Отмена</button>
+            <button onclick="publishSlice()" class="btn-primary">🍕 Опубликовать</button>
+        </div>
+    </div>
+</div>
     <div id="incoming-call-modal" class="modal hidden"><div class="incoming-call-container"><div class="incoming-call-avatar">👤</div><h3 id="incoming-call-username">Входящий звонок</h3><p id="incoming-call-type">Аудиозвонок</p><div class="incoming-call-actions"><button onclick="rejectCall()" class="btn-call btn-reject">❌</button><button onclick="acceptCall()" class="btn-call btn-accept">✅</button></div></div></div>
     
     <!-- МУЛЬТИ-ФОТО МОДАЛЬНОЕ ОКНО (КРАСИВОЕ) -->
