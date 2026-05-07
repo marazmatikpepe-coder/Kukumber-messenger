@@ -1,39 +1,26 @@
-// UPLOAD - reeImage.host
-var REEIMAGE_API_KEY = '6d207e02198a847aa98d0a2a901485a5';
+// UPLOAD - Catbox (работает из РФ)
 var pendingImageFile = null;
 
-// Загрузка любого файла на reeImage.host
-async function uploadToReeImage(file) {
+// Загрузка на Catbox
+async function uploadToCatbox(file) {
     var formData = new FormData();
-    formData.append('source', file);
-    formData.append('type', 'file');
-    formData.append('action', 'upload');
-    formData.append('key', REEIMAGE_API_KEY);
-    formData.append('format', 'json');
+    formData.append('reqtype', 'fileupload');
+    formData.append('fileToUpload', file);
     
-    var response = await fetch('https://reeimage.host/api/1/upload', {
+    var response = await fetch('https://catbox.moe/user/api.php', {
         method: 'POST',
         body: formData
     });
     
-    var data = await response.json();
-    console.log('reeImage ответ:', data);
-    
-    if (data && data.image && data.image.url) {
-        return data.image.url;
-    } else if (data && data.image_url) {
-        return data.image_url;
-    } else {
-        throw new Error(data.error?.message || 'Ошибка загрузки');
-    }
+    var url = await response.text();
+    if (!url.startsWith('https://')) throw new Error('Ошибка загрузки');
+    return url;
 }
 
 // Выбор файла
 function handleFileSelect(event) {
     var file = event.target.files[0];
     if (!file) return;
-    
-    console.log('Выбран файл:', file.name, file.type, file.size);
     
     if (!file.type.startsWith('image/')) {
         sendAnyFile(file);
@@ -60,7 +47,7 @@ function closeImagePreview() {
 // Отправка фото
 async function confirmImageSend() {
     if (!pendingImageFile || !currentChatId) {
-        showNotification('Ошибка: нет фото или чата', 'error');
+        showNotification('Ошибка отправки', 'error');
         closeImagePreview();
         return;
     }
@@ -72,8 +59,7 @@ async function confirmImageSend() {
     showNotification('Загрузка фото...', 'info');
     
     try {
-        var url = await uploadToReeImage(file);
-        console.log('URL загруженного фото:', url);
+        var url = await uploadToCatbox(file);
         
         var message = {
             type: 'image',
@@ -93,12 +79,12 @@ async function confirmImageSend() {
         
         showNotification('Фото отправлено!', 'success');
     } catch (error) {
-        console.error('Ошибка:', error);
-        showNotification('Ошибка загрузки: ' + (error.message || 'Неизвестная ошибка'), 'error');
+        console.error(error);
+        showNotification('Ошибка загрузки фото', 'error');
     }
 }
 
-// Отправка других файлов
+// Отправка любых файлов
 async function sendAnyFile(file) {
     if (!currentChatId) {
         showNotification('Ошибка: чат не выбран', 'error');
@@ -108,7 +94,7 @@ async function sendAnyFile(file) {
     showNotification('Загрузка файла...', 'info');
     
     try {
-        var url = await uploadToReeImage(file);
+        var url = await uploadToCatbox(file);
         
         var message = {
             type: 'file',
