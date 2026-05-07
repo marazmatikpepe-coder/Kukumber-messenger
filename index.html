@@ -543,5 +543,27 @@ window.previewEditAvatar = function(e) {
         reader.readAsDataURL(file);
     }
 };
+    <script>
+    // Привязываем обработчики для кнопки файла
+    document.addEventListener('DOMContentLoaded', function() {
+        var attachBtn = document.getElementById('attach-file-btn');
+        var fileInput = document.getElementById('file-input');
+        
+        if (attachBtn && fileInput) {
+            attachBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', function(e) {
+                if (typeof window.handleFileSelect === 'function') {
+                    window.handleFileSelect(e);
+                } else {
+                    console.error('handleFileSelect не найдена');
+                }
+            });
+        }
+    });
+</script>
 </body>
 </html>
