@@ -4,15 +4,19 @@ var viewingSliceId = null;
 var pendingSliceFiles = [];
 var currentSliceIndex = 0;
 var searchTimeout = null;
+var slicesListener = null;
 
 // Загрузка ленты
 function loadSlices() {
     var feed = document.getElementById('slices-feed');
+    if (!feed) return;
+    
     feed.innerHTML = '<div class="empty-slices"><span>🍕</span><p>Загрузка...</p></div>';
     
-    var query = database.ref('slices').orderByChild('createdAt').limitToLast(50);
+    if (slicesListener) slicesListener.off();
     
-    query.once('value').then(function(snapshot) {
+    slicesListener = database.ref('slices').orderByChild('createdAt').limitToLast(100);
+    slicesListener.on('value', function(snapshot) {
         var slices = snapshot.val();
         feed.innerHTML = '';
         
@@ -26,7 +30,10 @@ function loadSlices() {
             slicesArray.push({ id: id, data: slices[id] });
         }
         
+        // Сначала закреплённые, потом по дате
         slicesArray.sort(function(a, b) {
+            if (a.data.pinned && !b.data.pinned) return -1;
+            if (!a.data.pinned && b.data.pinned) return 1;
             return (b.data.createdAt || 0) - (a.data.createdAt || 0);
         });
         
@@ -43,41 +50,66 @@ function createSliceCard(sliceId, sliceData) {
     div.className = 'slice-card';
     div.setAttribute('data-slice-id', sliceId);
     
+    // Контекстное меню (правой кнопкой мыши / долгое нажатие)
+    div.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        showSliceContextMenu(e, sliceId, sliceData);
+    });
+    
+    // Долгое нажатие для мобильных
+    var touchTimer = null;
+    div.addEventListener('touchstart', function(e) {
+        touchTimer = setTimeout(function() {
+            showSliceContextMenu(e, sliceId, sliceData);
+        }, 500);
+    });
+    div.addEventListener('touchend', function() {
+        if (touchTimer) clearTimeout(touchTimer);
+    });
+    div.addEventListener('touchmove', function() {
+        if (touchTimer) clearTimeout(touchTimer);
+    });
+    
     // Шапка: аватар + имя + дата
     var avatarStyle = sliceData.authorAvatar ? 'background-image:url('+sliceData.authorAvatar+');background-size:cover;' : '';
     var avatarContent = sliceData.authorAvatar ? '' : '👤';
     
     var mediaHtml = '';
-    if (sliceData.mediaType === 'multiple') {
-        // Несколько фото/гиф
+    if (sliceData.mediaType === 'multiple' && sliceData.mediaUrls && sliceData.mediaUrls.length > 0) {
         mediaHtml = '<div class="slice-media-multiple" id="slice-media-'+sliceId+'">';
         mediaHtml += '<div class="slice-media-slider">';
         sliceData.mediaUrls.forEach(function(url, idx) {
             var isGif = url.toLowerCase().endsWith('.gif');
             if (isGif) {
-                mediaHtml += '<div class="slice-slide"><img src="'+url+'" class="slice-gif" loading="lazy" onclick="openSliceLightbox(\''+url+'\')"></div>';
+                mediaHtml += '<div class="slice-slide"><img src="'+url+'" class="slice-gif" loading="lazy" onclick="event.stopPropagation(); openSliceLightbox(\''+url+'\')"></div>';
             } else {
-                mediaHtml += '<div class="slice-slide"><img src="'+url+'" class="slice-image" loading="lazy" onclick="openSliceLightbox(\''+url+'\')"></div>';
+                mediaHtml += '<div class="slice-slide"><img src="'+url+'" class="slice-image" loading="lazy" onclick="event.stopPropagation(); openSliceLightbox(\''+url+'\')"></div>';
             }
         });
         mediaHtml += '</div>';
         if (sliceData.mediaUrls.length > 1) {
-            mediaHtml += '<button class="slice-slider-prev" onclick="slideSlice(\''+sliceId+'\', -1)">←</button>';
-            mediaHtml += '<button class="slice-slider-next" onclick="slideSlice(\''+sliceId+'\', 1)">→</button>';
+            mediaHtml += '<button class="slice-slider-prev" onclick="event.stopPropagation(); slideSlice(\''+sliceId+'\', -1)">←</button>';
+            mediaHtml += '<button class="slice-slider-next" onclick="event.stopPropagation(); slideSlice(\''+sliceId+'\', 1)">→</button>';
             mediaHtml += '<div class="slice-slider-dots" id="slice-dots-'+sliceId+'"></div>';
         }
         mediaHtml += '</div>';
-    } else {
-        var isGif = sliceData.mediaUrl && sliceData.mediaUrl.toLowerCase().endsWith('.gif');
+    } else if (sliceData.mediaUrl) {
+        var isGif = sliceData.mediaUrl.toLowerCase().endsWith('.gif');
         if (isGif) {
-            mediaHtml = '<div class="slice-media"><img src="'+sliceData.mediaUrl+'" class="slice-gif" loading="lazy" onclick="openSliceLightbox(\''+sliceData.mediaUrl+'\')"></div>';
+            mediaHtml = '<div class="slice-media"><img src="'+sliceData.mediaUrl+'" class="slice-gif" loading="lazy" onclick="event.stopPropagation(); openSliceLightbox(\''+sliceData.mediaUrl+'\')"></div>';
         } else {
-            mediaHtml = '<div class="slice-media"><img src="'+sliceData.mediaUrl+'" class="slice-image" loading="lazy" onclick="openSliceLightbox(\''+sliceData.mediaUrl+'\')"></div>';
+            mediaHtml = '<div class="slice-media"><img src="'+sliceData.mediaUrl+'" class="slice-image" loading="lazy" onclick="event.stopPropagation(); openSliceLightbox(\''+sliceData.mediaUrl+'\')"></div>';
         }
     }
     
     // Текст поста
-    var textHtml = sliceData.text ? '<div class="slice-text">'+formatSliceText(sliceData.text)+'</div>' : '';
+    var textHtml = '';
+    if (sliceData.text) {
+        var displayText = sliceData.text;
+        if (sliceData.edited) displayText += ' <span style="font-size:10px; opacity:0.6;">(ред.)</span>';
+        textHtml = '<div class="slice-text">'+formatSliceText(displayText)+'</div>';
+    }
     
     // Хештеги
     var hashtagsHtml = '';
@@ -88,6 +120,9 @@ function createSliceCard(sliceId, sliceData) {
         });
         hashtagsHtml += '</div>';
     }
+    
+    // Закреплённый значок
+    var pinnedBadge = sliceData.pinned ? '<span class="slice-pinned-badge">📌 Закреплено</span>' : '';
     
     div.innerHTML = `
         <div class="slice-header">
@@ -102,6 +137,7 @@ function createSliceCard(sliceId, sliceData) {
                 <span class="slice-views-count">👁️ ${sliceData.viewsCount || 0}</span>
             </div>
         </div>
+        ${pinnedBadge}
         ${mediaHtml}
         ${textHtml}
         ${hashtagsHtml}
@@ -124,10 +160,17 @@ function createSliceCard(sliceId, sliceData) {
     `;
     
     // Инициализация слайдера если несколько фото
-    if (sliceData.mediaType === 'multiple' && sliceData.mediaUrls.length > 1) {
+    if (sliceData.mediaType === 'multiple' && sliceData.mediaUrls && sliceData.mediaUrls.length > 1) {
         setTimeout(function() {
             initSliceSlider(sliceId, sliceData.mediaUrls.length);
         }, 100);
+    }
+    
+    // Увеличиваем просмотры (один раз за сессию)
+    var viewedKey = 'viewed_slice_' + sliceId;
+    if (!sessionStorage.getItem(viewedKey)) {
+        sessionStorage.setItem(viewedKey, 'true');
+        database.ref('slices/' + sliceId + '/viewsCount').transaction(function(v) { return (v || 0) + 1; });
     }
     
     return div;
@@ -189,6 +232,8 @@ function goToSlide(sliceId, index) {
 // Форматирование текста
 function formatSliceText(text) {
     if (!text) return '';
+    // Экранируем HTML
+    text = escapeHtml(text);
     // Ссылки
     text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
     // Упоминания
@@ -212,13 +257,15 @@ function formatSliceDate(timestamp) {
 
 // Поиск по хештегу
 function searchByHashtag(tag) {
-    document.getElementById('slices-search-input').value = '#' + tag;
+    var input = document.getElementById('slices-search-input');
+    if (input) input.value = '#' + tag;
     searchSlices();
 }
 
 // Поиск по пользователю
 function searchByUser(username) {
-    document.getElementById('slices-search-input').value = '@' + username;
+    var input = document.getElementById('slices-search-input');
+    if (input) input.value = '@' + username;
     searchSlices();
 }
 
@@ -228,12 +275,14 @@ function searchSlices() {
     
     if (searchTimeout) clearTimeout(searchTimeout);
     searchTimeout = setTimeout(function() {
+        var feed = document.getElementById('slices-feed');
+        if (!feed) return;
+        
         if (!query) {
             loadSlices();
             return;
         }
         
-        var feed = document.getElementById('slices-feed');
         feed.innerHTML = '<div class="empty-slices"><span>🔍</span><p>Поиск...</p></div>';
         
         database.ref('slices').orderByChild('createdAt').limitToLast(100).once('value').then(function(snapshot) {
@@ -248,10 +297,12 @@ function searchSlices() {
                 if (slice.text && slice.text.toLowerCase().includes(query)) match = true;
                 
                 // Поиск по хештегам
-                if (slice.hashtags && slice.hashtags.some(function(tag) { return '#' + tag.toLowerCase().includes(query) || tag.toLowerCase().includes(query); })) match = true;
+                if (slice.hashtags && slice.hashtags.some(function(tag) { 
+                    return '#' + tag.toLowerCase().includes(query) || tag.toLowerCase().includes(query.replace('#', ''));
+                })) match = true;
                 
                 // Поиск по автору
-                if (slice.authorName && slice.authorName.toLowerCase().includes(query)) match = true;
+                if (slice.authorName && slice.authorName.toLowerCase().includes(query.replace('@', ''))) match = true;
                 
                 if (match) {
                     results.push({ id: id, data: slice });
@@ -285,6 +336,7 @@ function likeSlice(sliceId) {
             likeRef.set(true);
             sliceRef.child('likesCount').transaction(function(c) { return (c || 0) + 1; });
         }
+        
         // Обновляем UI
         var card = document.querySelector('.slice-card[data-slice-id="' + sliceId + '"]');
         if (card) {
@@ -326,7 +378,6 @@ function repostSlice(sliceId) {
         };
         
         database.ref('slices/').push(repostData).then(function() {
-            // Увеличиваем счетчик репостов у оригинала
             database.ref('slices/' + sliceId + '/repostsCount').transaction(function(c) { return (c || 0) + 1; });
             showNotification('Репостнуто!', 'success');
             loadSlices();
@@ -347,8 +398,12 @@ function shareSlice(sliceId) {
 
 // Открыть фото в лайтбоксе
 function openSliceLightbox(url) {
-    document.getElementById('lightbox-image').src = url;
-    document.getElementById('image-lightbox').classList.remove('hidden');
+    var lightbox = document.getElementById('image-lightbox');
+    var lightboxImg = document.getElementById('lightbox-image');
+    if (lightbox && lightboxImg) {
+        lightboxImg.src = url;
+        lightbox.classList.remove('hidden');
+    }
 }
 
 // Открыть профиль пользователя в слайсах
@@ -356,147 +411,6 @@ function openSlicesProfile() {
     showNotification('Профиль в разработке 👤', 'info');
 }
 
-// ========== СОЗДАНИЕ ПОСТА ==========
-function showCreateSliceModal() {
-    document.getElementById('create-slice-modal').classList.remove('hidden');
-    pendingSliceFiles = [];
-    currentSliceIndex = 0;
-    document.getElementById('slice-preview-area').innerHTML = '';
-    document.getElementById('slice-text').value = '';
-    document.getElementById('slice-hashtags-input').value = '';
-    document.getElementById('slice-upload-area').style.display = '';
-    document.getElementById('slice-preview-container').classList.add('hidden');
-    updateSlicePreviewCounter();
-}
-
-function closeCreateSliceModal() {
-    document.getElementById('create-slice-modal').classList.add('hidden');
-}
-
-function addSliceMedia() {
-    var input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*,image/gif';
-    input.multiple = true;
-    input.onchange = function(e) {
-        var files = Array.from(e.target.files);
-        files.forEach(function(file) {
-            if (file.size > 15 * 1024 * 1024) {
-                showNotification('Файл слишком большой (макс. 15MB)', 'error');
-                return;
-            }
-            pendingSliceFiles.push(file);
-        });
-        updateSlicePreview();
-    };
-    input.click();
-}
-
-function updateSlicePreview() {
-    if (pendingSliceFiles.length === 0) {
-        document.getElementById('slice-upload-area').style.display = '';
-        document.getElementById('slice-preview-container').classList.add('hidden');
-        return;
-    }
-    
-    document.getElementById('slice-upload-area').style.display = 'none';
-    document.getElementById('slice-preview-container').classList.remove('hidden');
-    
-    var previewArea = document.getElementById('slice-preview-area');
-    previewArea.innerHTML = '';
-    
-    pendingSliceFiles.forEach(function(file, idx) {
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            var isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
-            var div = document.createElement('div');
-            div.className = 'slice-preview-item';
-            div.innerHTML = `
-                <img src="${e.target.result}" class="slice-preview-img">
-                <button class="slice-preview-remove" onclick="removeSliceMedia(${idx})">×</button>
-                ${isGif ? '<span class="slice-preview-gif-badge">GIF</span>' : ''}
-            `;
-            previewArea.appendChild(div);
-        };
-        reader.readAsDataURL(file);
-    });
-    
-    updateSlicePreviewCounter();
-}
-
-function updateSlicePreviewCounter() {
-    var counter = document.getElementById('slice-preview-counter');
-    if (counter) {
-        counter.textContent = pendingSliceFiles.length + ' файла(ов)';
-    }
-}
-
-function removeSliceMedia(index) {
-    pendingSliceFiles.splice(index, 1);
-    updateSlicePreview();
-}
-
-function extractHashtags(text) {
-    var hashtags = text.match(/#[а-яА-Яa-zA-Z0-9_]+/g);
-    if (!hashtags) return [];
-    return hashtags.map(function(tag) { return tag.substring(1); });
-}
-
-async function publishSlice() {
-    var text = document.getElementById('slice-text').value.trim();
-    var hashtagsInput = document.getElementById('slice-hashtags-input').value.trim();
-    
-    if (pendingSliceFiles.length === 0 && !text) {
-        showNotification('Добавьте текст или фото', 'error');
-        return;
-    }
-    
-    // Добавляем хештеги из отдельного поля
-    if (hashtagsInput) {
-        var extraTags = hashtagsInput.split(/[ ,]+/).filter(function(t) { return t; });
-        if (text) text += ' ' + extraTags.map(function(t) { return '#' + t; }).join(' ');
-        else text = extraTags.map(function(t) { return '#' + t; }).join(' ');
-    }
-    
-    var hashtags = extractHashtags(text);
-    
-    showNotification('Публикация...', 'info');
-    
-    try {
-        var mediaUrls = [];
-        
-        for (var i = 0; i < pendingSliceFiles.length; i++) {
-            var url = await uploadToImgBB(pendingSliceFiles[i]);
-            mediaUrls.push(url);
-        }
-        
-        var sliceData = {
-            authorId: currentUser.uid,
-            authorName: currentUserData.username || 'Пользователь',
-            authorAvatar: currentUserData.avatar || '',
-            text: text,
-            hashtags: hashtags,
-            mediaType: mediaUrls.length > 1 ? 'multiple' : (mediaUrls.length === 1 ? 'single' : 'none'),
-            mediaUrls: mediaUrls.length > 0 ? mediaUrls : null,
-            mediaUrl: mediaUrls.length === 1 ? mediaUrls[0] : null,
-            likesCount: 0,
-            commentsCount: 0,
-            repostsCount: 0,
-            viewsCount: 0,
-            createdAt: firebase.database.ServerValue.TIMESTAMP
-        };
-        
-        await database.ref('slices/').push(sliceData);
-        
-        showNotification('Пост опубликован! 🍕', 'success');
-        closeCreateSliceModal();
-        loadSlices();
-        
-    } catch (error) {
-        console.error(error);
-        showNotification('Ошибка публикации', 'error');
-    }
-}
 // ========== КОНТЕКСТНОЕ МЕНЮ ДЛЯ СЛАЙСОВ ==========
 function showSliceContextMenu(event, sliceId, sliceData) {
     event.preventDefault();
@@ -506,7 +420,7 @@ function showSliceContextMenu(event, sliceId, sliceData) {
     if (oldMenu) oldMenu.remove();
     
     var isOwner = sliceData.authorId === currentUser.uid;
-    var isAdmin = isSuperAdmin === true;
+    var isAdmin = window.isSuperAdmin === true;
     
     if (!isOwner && !isAdmin) return;
     
@@ -522,16 +436,26 @@ function showSliceContextMenu(event, sliceId, sliceData) {
     }
     
     if (isAdmin && !isOwner) {
-        menuHtml += '<div style="border-top:1px solid #eee; margin-top:5px; padding-top:5px;"></div>';
-        menuHtml += '<div class="context-menu-item" onclick="pinSlice(\''+sliceId+'\')">📌 Закрепить в ленте</div>';
+        menuHtml += '<div style="border-top:1px solid #eee; margin:5px 0;"></div>';
+        if (!sliceData.pinned) {
+            menuHtml += '<div class="context-menu-item" onclick="pinSlice(\''+sliceId+'\')">📌 Закрепить в ленте</div>';
+        } else {
+            menuHtml += '<div class="context-menu-item" onclick="unpinSlice(\''+sliceId+'\')">📌 Открепить</div>';
+        }
         menuHtml += '<div class="context-menu-item" onclick="reportSlice(\''+sliceId+'\')">⚠️ Пожаловаться</div>';
     }
     
     menu.innerHTML = menuHtml;
     document.body.appendChild(menu);
     
-    var x = event.clientX;
-    var y = event.clientY;
+    var x, y;
+    if (event.touches) {
+        x = event.touches[0].clientX;
+        y = event.touches[0].clientY;
+    } else {
+        x = event.clientX;
+        y = event.clientY;
+    }
     
     var menuRect = menu.getBoundingClientRect();
     var windowWidth = window.innerWidth;
@@ -590,9 +514,7 @@ function deleteSlice(sliceId) {
     if (!confirm('Удалить этот пост? Действие необратимо.')) return;
     
     database.ref('slices/' + sliceId).remove().then(function() {
-        // Удаляем лайки
         database.ref('sliceLikes/' + sliceId).remove();
-        // Удаляем комментарии (если есть)
         database.ref('sliceComments/' + sliceId).remove();
         showNotification('Пост удалён', 'success');
         loadSlices();
@@ -603,7 +525,7 @@ function deleteSlice(sliceId) {
     closeSliceContextMenu();
 }
 
-// Закрепить пост (только для админов)
+// Закрепить пост
 function pinSlice(sliceId) {
     database.ref('slices/' + sliceId).update({
         pinned: true,
@@ -614,7 +536,20 @@ function pinSlice(sliceId) {
     }).catch(function(err) {
         showNotification('Ошибка', 'error');
     });
-    
+    closeSliceContextMenu();
+}
+
+// Открепить пост
+function unpinSlice(sliceId) {
+    database.ref('slices/' + sliceId).update({
+        pinned: false,
+        pinnedAt: null
+    }).then(function() {
+        showNotification('Пост откреплён', 'info');
+        loadSlices();
+    }).catch(function(err) {
+        showNotification('Ошибка', 'error');
+    });
     closeSliceContextMenu();
 }
 
@@ -625,6 +560,7 @@ function reportSlice(sliceId) {
     
     database.ref('reports/slices/' + sliceId).push({
         userId: currentUser.uid,
+        userName: currentUserData?.username || 'Пользователь',
         reason: reason,
         timestamp: firebase.database.ServerValue.TIMESTAMP
     }).then(function() {
@@ -632,11 +568,173 @@ function reportSlice(sliceId) {
     }).catch(function(err) {
         showNotification('Ошибка', 'error');
     });
-    
     closeSliceContextMenu();
 }
 
 function closeSliceContextMenu() {
     var menu = document.getElementById('slice-context-menu');
     if (menu) menu.remove();
+}
+
+// ========== СОЗДАНИЕ ПОСТА ==========
+function showCreateSliceModal() {
+    var modal = document.getElementById('create-slice-modal');
+    if (modal) modal.classList.remove('hidden');
+    pendingSliceFiles = [];
+    currentSliceIndex = 0;
+    
+    var previewArea = document.getElementById('slice-preview-area');
+    if (previewArea) previewArea.innerHTML = '';
+    
+    var textInput = document.getElementById('slice-text');
+    if (textInput) textInput.value = '';
+    
+    var hashtagsInput = document.getElementById('slice-hashtags-input');
+    if (hashtagsInput) hashtagsInput.value = '';
+    
+    var uploadArea = document.getElementById('slice-upload-area');
+    if (uploadArea) uploadArea.style.display = '';
+    
+    var previewContainer = document.getElementById('slice-preview-container');
+    if (previewContainer) previewContainer.classList.add('hidden');
+    
+    updateSlicePreviewCounter();
+}
+
+function closeCreateSliceModal() {
+    var modal = document.getElementById('create-slice-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function addSliceMedia() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,image/gif';
+    input.multiple = true;
+    input.onchange = function(e) {
+        var files = Array.from(e.target.files);
+        files.forEach(function(file) {
+            if (file.size > 15 * 1024 * 1024) {
+                showNotification('Файл слишком большой (макс. 15MB)', 'error');
+                return;
+            }
+            pendingSliceFiles.push(file);
+        });
+        updateSlicePreview();
+    };
+    input.click();
+}
+
+function updateSlicePreview() {
+    if (pendingSliceFiles.length === 0) {
+        var uploadArea = document.getElementById('slice-upload-area');
+        if (uploadArea) uploadArea.style.display = '';
+        
+        var previewContainer = document.getElementById('slice-preview-container');
+        if (previewContainer) previewContainer.classList.add('hidden');
+        return;
+    }
+    
+    var uploadArea = document.getElementById('slice-upload-area');
+    if (uploadArea) uploadArea.style.display = 'none';
+    
+    var previewContainer = document.getElementById('slice-preview-container');
+    if (previewContainer) previewContainer.classList.remove('hidden');
+    
+    var previewArea = document.getElementById('slice-preview-area');
+    if (previewArea) {
+        previewArea.innerHTML = '';
+        
+        pendingSliceFiles.forEach(function(file, idx) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+                var div = document.createElement('div');
+                div.className = 'slice-preview-item';
+                div.innerHTML = `
+                    <img src="${e.target.result}" class="slice-preview-img">
+                    <button class="slice-preview-remove" onclick="removeSliceMedia(${idx})">×</button>
+                    ${isGif ? '<span class="slice-preview-gif-badge">GIF</span>' : ''}
+                `;
+                previewArea.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    updateSlicePreviewCounter();
+}
+
+function updateSlicePreviewCounter() {
+    var counter = document.getElementById('slice-preview-counter');
+    if (counter) {
+        counter.textContent = pendingSliceFiles.length + ' файла(ов)';
+    }
+}
+
+function removeSliceMedia(index) {
+    pendingSliceFiles.splice(index, 1);
+    updateSlicePreview();
+}
+
+function extractHashtags(text) {
+    var hashtags = text.match(/#[а-яА-Яa-zA-Z0-9_]+/g);
+    if (!hashtags) return [];
+    return hashtags.map(function(tag) { return tag.substring(1); });
+}
+
+async function publishSlice() {
+    var text = document.getElementById('slice-text').value.trim();
+    var hashtagsInput = document.getElementById('slice-hashtags-input').value.trim();
+    
+    if (pendingSliceFiles.length === 0 && !text) {
+        showNotification('Добавьте текст или фото', 'error');
+        return;
+    }
+    
+    if (hashtagsInput) {
+        var extraTags = hashtagsInput.split(/[ ,]+/).filter(function(t) { return t; });
+        if (text) text += ' ' + extraTags.map(function(t) { return '#' + t; }).join(' ');
+        else text = extraTags.map(function(t) { return '#' + t; }).join(' ');
+    }
+    
+    var hashtags = extractHashtags(text);
+    
+    showNotification('Публикация...', 'info');
+    
+    try {
+        var mediaUrls = [];
+        
+        for (var i = 0; i < pendingSliceFiles.length; i++) {
+            var url = await uploadToImgBB(pendingSliceFiles[i]);
+            mediaUrls.push(url);
+        }
+        
+        var sliceData = {
+            authorId: currentUser.uid,
+            authorName: currentUserData.username || 'Пользователь',
+            authorAvatar: currentUserData.avatar || '',
+            text: text,
+            hashtags: hashtags,
+            mediaType: mediaUrls.length > 1 ? 'multiple' : (mediaUrls.length === 1 ? 'single' : 'none'),
+            mediaUrls: mediaUrls.length > 0 ? mediaUrls : null,
+            mediaUrl: mediaUrls.length === 1 ? mediaUrls[0] : null,
+            likesCount: 0,
+            commentsCount: 0,
+            repostsCount: 0,
+            viewsCount: 0,
+            pinned: false,
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        await database.ref('slices/').push(sliceData);
+        
+        showNotification('Пост опубликован! 🍕', 'success');
+        closeCreateSliceModal();
+        loadSlices();
+        
+    } catch (error) {
+        console.error(error);
+        showNotification('Ошибка публикации', 'error');
+    }
 }
