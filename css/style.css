@@ -1885,3 +1885,53 @@ button:hover img[alt="+"] {
 #image-preview-modal img[alt="Добавить фото"]:hover {
     transform: scale(1.05);
 }
+/* Увеличенная кнопка прикрепления файла */
+.attach-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: all 0.2s;
+    width: 60px;
+    height: 60px;
+}
+
+.attach-btn img {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+}
+
+.attach-btn:hover {
+    background: var(--background);
+    transform: scale(1.05);
+}
+
+/* Для мобильных устройств */
+@media (max-width: 768px) {
+    .attach-btn {
+        width: 56px;
+        height: 56px;
+    }
+    
+    .attach-btn img {
+        width: 52px;
+        height: 52px;
+    }
+}
+
+/* Для очень маленьких экранов */
+@media (max-width: 480px) {
+    .attach-btn {
+        width: 52px;
+        height: 52px;
+    }
+    
+    .attach-btn img {
+        width: 48px;
+        height: 48px;
+    }
+}
