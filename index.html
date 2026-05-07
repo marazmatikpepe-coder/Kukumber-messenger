@@ -276,29 +276,51 @@
     <div id="call-modal" class="modal hidden"><div class="call-container"><div class="call-header"><h3 id="call-username">Звонок</h3><span id="call-status">Соединение...</span><span id="call-timer">00:00</span></div><div class="video-container"><video id="remote-video" autoplay playsinline></video><video id="local-video" autoplay playsinline muted></video><div id="call-avatar" class="call-avatar"><div class="avatar-large">👤</div></div></div><div class="call-controls"><button onclick="toggleMute()" class="btn-call" id="mute-btn">🎤</button><button onclick="toggleVideo()" class="btn-call" id="video-btn">📹</button><button onclick="endCall()" class="btn-call btn-end-call">📵</button></div></div></div>
     <div id="incoming-call-modal" class="modal hidden"><div class="incoming-call-container"><div class="incoming-call-avatar">👤</div><h3 id="incoming-call-username">Входящий звонок</h3><p id="incoming-call-type">Аудиозвонок</p><div class="incoming-call-actions"><button onclick="rejectCall()" class="btn-call btn-reject">❌</button><button onclick="acceptCall()" class="btn-call btn-accept">✅</button></div></div></div>
     
-    <!-- МУЛЬТИ-ФОТО МОДАЛЬНОЕ ОКНО -->
-    <div id="image-preview-modal" class="modal hidden">
-        <div class="image-preview-container">
-            <div class="modal-header">
-                <h3>📷 Отправка фото (<span id="image-counter">0/0</span>)</h3>
-                <button onclick="closeImagePreview()" class="btn-close">×</button>
-            </div>
-            <img id="preview-image" src="" style="width: 100%; max-height: 300px; object-fit: contain; background: #f0f0f0;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 15px;">
-                <button id="nav-prev-btn" onclick="navigateImage(-1)" style="background: var(--forest); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 20px; cursor: pointer; display: none;">←</button>
-                <button onclick="addMoreImages()" style="background: var(--forest); color: white; border: none; border-radius: 50%; width: 60px; height: 60px; font-size: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                    <img src="https://i.ibb.co/BVhBTnmS/11623-AE3-5-A11-48-F3-9-C9-F-95-AF1-CD6-AAE4.png" alt="+" style="width: 40px; height: 40px;">
+<!-- МУЛЬТИ-ФОТО МОДАЛЬНОЕ ОКНО -->
+<div id="image-preview-modal" class="modal hidden">
+    <div class="image-preview-container">
+        <div class="modal-header">
+            <h3>📷 Отправка фото (<span id="image-counter">0/0</span>)</h3>
+            <button onclick="closeImagePreview()" class="btn-close">×</button>
+        </div>
+        
+        <!-- Изображение -->
+        <img id="preview-image" src="" style="width: 100%; max-height: 350px; object-fit: contain; background: #f0f0f0;">
+        
+        <!-- Навигация -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
+            <button id="nav-prev-btn" onclick="navigateImage(-1)" style="background: none; border: none; font-size: 32px; cursor: pointer; color: var(--forest); display: none;">←</button>
+            
+            <!-- ТВОЯ КАРТИНКА 62x62 КАК КНОПКА ДОБАВИТЬ (БЕЗ ЗЕЛЁНОГО КРУГА) -->
+            <img src="https://i.ibb.co/BVhBTnmS/11623-AE3-5-A11-48-F3-9-C9-F-95-AF1-CD6-AAE4.png" 
+                 alt="Добавить фото" 
+                 onclick="addMoreImages()"
+                 style="width: 62px; height: 62px; cursor: pointer; transition: transform 0.2s;">
+            
+            <button id="nav-next-btn" onclick="navigateImage(1)" style="background: none; border: none; font-size: 32px; cursor: pointer; color: var(--forest); display: none;">→</button>
+        </div>
+        
+        <!-- Красивая строка ввода как в Telegram для подписи -->
+        <div style="padding: 10px 20px 20px;">
+            <div style="display: flex; align-items: center; background: var(--background); border-radius: 24px; padding: 5px 15px;">
+                <input type="text" id="image-caption" 
+                       placeholder="Добавить подпись..." 
+                       style="flex: 1; background: transparent; border: none; padding: 12px 0; font-size: 16px; outline: none;">
+                <button onclick="confirmImageSend()" 
+                        style="background: var(--forest); border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"/>
+                    </svg>
                 </button>
-                <button id="nav-next-btn" onclick="navigateImage(1)" style="background: var(--forest); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 20px; cursor: pointer; display: none;">→</button>
-            </div>
-            <input type="text" id="image-caption" placeholder="Подпись к фото..." style="margin: 10px 15px; width: calc(100% - 30px); padding: 12px; border: 2px solid var(--border); border-radius: 12px;">
-            <div style="display: flex; gap: 10px; padding: 15px;">
-                <button onclick="cancelAllImages()" class="btn-secondary" style="flex: 1;">❌ Отмена</button>
-                <button onclick="confirmImageSend()" class="btn-primary" style="flex: 2;">📤 Отправить все</button>
             </div>
         </div>
+        
+        <!-- Кнопки внизу -->
+        <div style="display: flex; gap: 10px; padding: 0 20px 20px;">
+            <button onclick="cancelAllImages()" class="btn-secondary" style="flex: 1; padding: 12px;">❌ Отмена</button>
+        </div>
     </div>
-    
+</div>
     <div id="image-lightbox" class="image-lightbox hidden" onclick="closeLightbox()"><img id="lightbox-image" src=""></div>
     <div id="notifications-container" class="notifications-container"></div>
 
