@@ -1881,3 +1881,7 @@ button:hover img[alt="+"] {
         padding: 8px 0;
     }
 }
+/* Кнопка добавления фото при наведении */
+#image-preview-modal img[alt="Добавить фото"]:hover {
+    transform: scale(1.05);
+}
