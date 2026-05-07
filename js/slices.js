@@ -1,11 +1,15 @@
-// SLICES (Слайсы) - полная версия с работающими комментариями
+// SLICES (Слайсы) - ПОЛНАЯ ВЕРСИЯ
+// Лайки, репосты, комментарии, профиль, подписки, верификация
+
 var currentSlicesTab = 'feed';
 var pendingSliceFiles = [];
 var searchTimeout = null;
 var slicesListener = null;
 var openCommentsSliceId = null;
+var pendingLikeRequests = {};
+var pendingRepostRequests = {};
 
-// Загрузка ленты
+// ========== ЗАГРУЗКА ЛЕНТЫ ==========
 function loadSlices() {
     var feed = document.getElementById('slices-feed');
     if (!feed) return;
@@ -39,7 +43,6 @@ function loadSlices() {
         });
         
         slicesArray.forEach(function(slice) {
-            // Проверяем, лайкнул ли текущий пользователь этот пост
             var likeRef = database.ref('sliceLikes/' + slice.id + '/' + currentUser.uid);
             likeRef.once('value').then(function(snap) {
                 slice.data.userLiked = snap.exists();
@@ -50,7 +53,7 @@ function loadSlices() {
     });
 }
 
-// Создание карточки поста
+// ========== СОЗДАНИЕ КАРТОЧКИ ПОСТА ==========
 function createSliceCard(sliceId, sliceData) {
     var div = document.createElement('div');
     div.className = 'slice-card';
@@ -70,12 +73,8 @@ function createSliceCard(sliceId, sliceData) {
             showSliceContextMenu(e, sliceId, sliceData);
         }, 500);
     });
-    div.addEventListener('touchend', function() {
-        if (touchTimer) clearTimeout(touchTimer);
-    });
-    div.addEventListener('touchmove', function() {
-        if (touchTimer) clearTimeout(touchTimer);
-    });
+    div.addEventListener('touchend', function() { if (touchTimer) clearTimeout(touchTimer); });
+    div.addEventListener('touchmove', function() { if (touchTimer) clearTimeout(touchTimer); });
     
     // Шапка
     var avatarStyle = sliceData.authorAvatar ? 'background-image:url('+sliceData.authorAvatar+');background-size:cover;' : '';
@@ -137,13 +136,17 @@ function createSliceCard(sliceId, sliceData) {
         '<img src="https://i.ibb.co/4wPS6NB6/7-B6-E9-A78-01-E0-4481-9135-005-C4-F238-FD8.png" style="width:24px; height:24px;">';
     
     var commentIcon = '<img src="https://i.ibb.co/PzVWZ3dd/980-E0-C70-E93-B-4-AA0-80-AD-883-AD22-EB40-C.png" style="width:24px; height:24px;">';
+    var repostIcon = '<img src="https://i.ibb.co/BHzJVy1L/3545-DF6-B-CA20-410-D-8837-DB9-EC1-B2-A080.png" style="width:24px; height:24px;">';
     
     div.innerHTML = `
         <div class="slice-header">
-            <div class="slice-author">
+            <div class="slice-author" onclick="openUserProfile('${sliceData.authorId}', '${escapeHtml(sliceData.authorName)}', '${sliceData.authorAvatar || ''}')" style="cursor:pointer;">
                 <div class="avatar" style="${avatarStyle}">${avatarContent}</div>
                 <div class="slice-author-info">
-                    <span class="slice-author-name">${escapeHtml(sliceData.authorName)}</span>
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <span class="slice-author-name">${escapeHtml(sliceData.authorName)}</span>
+                        ${sliceData.verified ? '<img src="https://i.ibb.co/YTRCNHkq/4e9cba55-b083-46d3-8a30-bff7b1be94c7-1.png" style="width:16px; height:16px; cursor:pointer;" onclick="event.stopPropagation(); showVerifiedInfo()">' : ''}
+                    </div>
                     <span class="slice-date">${formatSliceDate(sliceData.createdAt)}</span>
                 </div>
             </div>
@@ -164,7 +167,7 @@ function createSliceCard(sliceId, sliceData) {
                     ${commentIcon} <span class="comment-count">${sliceData.commentsCount || 0}</span>
                 </button>
                 <button class="slice-action-btn" onclick="repostSlice('${sliceId}')">
-                    🔁 <span class="repost-count">${sliceData.repostsCount || 0}</span>
+                    ${repostIcon} <span class="repost-count">${sliceData.repostsCount || 0}</span>
                 </button>
             </div>
             <div class="slice-actions-right">
@@ -178,12 +181,10 @@ function createSliceCard(sliceId, sliceData) {
     
     // Инициализация слайдера
     if (sliceData.mediaType === 'multiple' && sliceData.mediaUrls && sliceData.mediaUrls.length > 1) {
-        setTimeout(function() {
-            initSliceSlider(sliceId, sliceData.mediaUrls.length);
-        }, 100);
+        setTimeout(function() { initSliceSlider(sliceId, sliceData.mediaUrls.length); }, 100);
     }
     
-    // Увеличиваем просмотры
+    // Просмотры
     var viewedKey = 'viewed_slice_' + sliceId;
     if (!sessionStorage.getItem(viewedKey)) {
         sessionStorage.setItem(viewedKey, 'true');
@@ -193,38 +194,109 @@ function createSliceCard(sliceId, sliceData) {
     return div;
 }
 
-// Лайк поста
+// ========== ЛАЙКИ (без дублей) ==========
 function likeSlice(sliceId) {
+    if (pendingLikeRequests[sliceId]) return;
+    pendingLikeRequests[sliceId] = true;
+    
     var likeRef = database.ref('sliceLikes/' + sliceId + '/' + currentUser.uid);
     var sliceRef = database.ref('slices/' + sliceId);
     var card = document.querySelector('.slice-card[data-slice-id="' + sliceId + '"]');
     
     likeRef.once('value').then(function(snap) {
-        if (snap.exists()) {
+        var isLiked = snap.exists();
+        
+        if (isLiked) {
             likeRef.remove();
-            sliceRef.child('likesCount').transaction(function(c) { return Math.max((c || 1) - 1, 0); });
+            sliceRef.transaction(function(currentData) {
+                if (currentData) currentData.likesCount = Math.max((currentData.likesCount || 1) - 1, 0);
+                return currentData;
+            });
             if (card) {
                 var likeBtn = card.querySelector('.like-btn');
-                var likeCount = card.querySelector('.like-count');
-                if (likeBtn) {
-                    likeBtn.innerHTML = '<img src="https://i.ibb.co/4wPS6NB6/7-B6-E9-A78-01-E0-4481-9135-005-C4-F238-FD8.png" style="width:24px; height:24px;"> <span class="like-count">' + (parseInt(likeCount.textContent) - 1) + '</span>';
-                }
+                var likeCountSpan = card.querySelector('.like-count');
+                var currentCount = parseInt(likeCountSpan.textContent) || 0;
+                likeCountSpan.textContent = Math.max(currentCount - 1, 0);
+                likeBtn.innerHTML = '<img src="https://i.ibb.co/4wPS6NB6/7-B6-E9-A78-01-E0-4481-9135-005-C4-F238-FD8.png" style="width:24px; height:24px;"> <span class="like-count">' + Math.max(currentCount - 1, 0) + '</span>';
             }
         } else {
             likeRef.set(true);
-            sliceRef.child('likesCount').transaction(function(c) { return (c || 0) + 1; });
+            sliceRef.transaction(function(currentData) {
+                if (currentData) currentData.likesCount = (currentData.likesCount || 0) + 1;
+                return currentData;
+            });
             if (card) {
                 var likeBtn = card.querySelector('.like-btn');
-                var likeCount = card.querySelector('.like-count');
-                if (likeBtn) {
-                    likeBtn.innerHTML = '<img src="https://i.ibb.co/0HFsXGK/1-CD2632-B-7-DD7-46-D4-8920-FBBE5-B29-D34-D.png" style="width:24px; height:24px;"> <span class="like-count">' + (parseInt(likeCount.textContent) + 1) + '</span>';
-                }
+                var likeCountSpan = card.querySelector('.like-count');
+                var currentCount = parseInt(likeCountSpan.textContent) || 0;
+                likeCountSpan.textContent = currentCount + 1;
+                likeBtn.innerHTML = '<img src="https://i.ibb.co/0HFsXGK/1-CD2632-B-7-DD7-46-D4-8920-FBBE5-B29-D34-D.png" style="width:24px; height:24px;"> <span class="like-count">' + (currentCount + 1) + '</span>';
             }
         }
-    });
+        
+        setTimeout(function() { delete pendingLikeRequests[sliceId]; }, 500);
+    }).catch(function() { delete pendingLikeRequests[sliceId]; });
 }
 
-// ========== КОММЕНТАРИИ (рабочая версия) ==========
+// ========== РЕПОСТЫ ==========
+function repostSlice(sliceId) {
+    if (pendingRepostRequests[sliceId]) return;
+    pendingRepostRequests[sliceId] = true;
+    
+    var repostRef = database.ref('userReposts/' + currentUser.uid + '/' + sliceId);
+    
+    repostRef.once('value').then(function(snap) {
+        if (snap.exists()) {
+            // Удаляем репост
+            repostRef.remove();
+            database.ref('slices/' + sliceId + '/repostsCount').transaction(function(c) { return Math.max((c || 1) - 1, 0); });
+            
+            var userRepostQuery = database.ref('slices').orderByChild('originalId').equalTo(sliceId);
+            userRepostQuery.once('value').then(function(repostSnap) {
+                repostSnap.forEach(function(child) {
+                    if (child.val().authorId === currentUser.uid && child.val().type === 'repost') {
+                        child.ref.remove();
+                    }
+                });
+            });
+            showNotification('Репост удалён', 'info');
+            loadSlices();
+        } else {
+            // Создаём репост
+            database.ref('slices/' + sliceId).once('value').then(function(snapshot) {
+                var originalSlice = snapshot.val();
+                if (!originalSlice) return;
+                
+                var repostData = {
+                    type: 'repost',
+                    originalId: sliceId,
+                    originalAuthorId: originalSlice.authorId,
+                    originalAuthorName: originalSlice.authorName,
+                    originalText: originalSlice.text,
+                    originalMediaUrl: originalSlice.mediaUrl || (originalSlice.mediaUrls ? originalSlice.mediaUrls[0] : null),
+                    authorId: currentUser.uid,
+                    authorName: currentUserData.username,
+                    authorAvatar: currentUserData.avatar || '',
+                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                    repostsCount: 0,
+                    likesCount: 0,
+                    viewsCount: 0
+                };
+                
+                database.ref('slices/').push(repostData).then(function() {
+                    repostRef.set(true);
+                    database.ref('slices/' + sliceId + '/repostsCount').transaction(function(c) { return (c || 0) + 1; });
+                    showNotification('Репостнуто!', 'success');
+                    loadSlices();
+                });
+            });
+        }
+        
+        setTimeout(function() { delete pendingRepostRequests[sliceId]; }, 1000);
+    }).catch(function() { delete pendingRepostRequests[sliceId]; });
+}
+
+// ========== КОММЕНТАРИИ ==========
 function toggleComments(sliceId) {
     var commentsBlock = document.getElementById('comments-block-' + sliceId);
     if (!commentsBlock) return;
@@ -253,7 +325,9 @@ function loadComments(sliceId) {
         } else {
             var commentsArray = [];
             for (var id in comments) {
-                commentsArray.push({ id: id, data: comments[id] });
+                if (!comments[id].parentId) {
+                    commentsArray.push({ id: id, data: comments[id] });
+                }
             }
             commentsArray.sort(function(a, b) { return (a.data.createdAt || 0) - (b.data.createdAt || 0); });
             
@@ -278,11 +352,6 @@ function renderComment(commentId, comment, sliceId, level) {
     var avatarStyle = comment.authorAvatar ? 'background-image:url('+comment.authorAvatar+');background-size:cover;' : '';
     var avatarContent = comment.authorAvatar ? '' : '👤';
     
-    // Проверяем, лайкнут ли комментарий
-    var isLiked = comment.userLiked === true;
-    var likeIcon = isLiked ? '❤️' : '🤍';
-    var likeClass = isLiked ? 'liked' : '';
-    
     var marginLeft = level * 40;
     
     var html = `
@@ -293,8 +362,8 @@ function renderComment(commentId, comment, sliceId, level) {
                     <span class="comment-author-name">${escapeHtml(comment.authorName)}</span>
                     <span class="comment-date">${formatSliceDate(comment.createdAt)}</span>
                 </div>
-                <button class="comment-like-btn ${likeClass}" onclick="likeComment('${sliceId}', '${commentId}')">
-                    ${likeIcon} <span class="comment-like-count">${comment.likesCount || 0}</span>
+                <button class="comment-like-btn" onclick="likeComment('${sliceId}', '${commentId}')">
+                    🤍 <span class="comment-like-count">${comment.likesCount || 0}</span>
                 </button>
             </div>
             <div class="comment-text">${escapeHtml(comment.text)}</div>
@@ -332,19 +401,15 @@ function addComment(sliceId, parentId) {
         text: text,
         parentId: parentId || null,
         createdAt: firebase.database.ServerValue.TIMESTAMP,
-        likesCount: 0,
-        repliesCount: 0
+        likesCount: 0
     };
     
     var newCommentRef = database.ref('sliceComments/' + sliceId).push();
     newCommentRef.set(commentData).then(function() {
         if (textInput) textInput.value = '';
-        // Обновляем счетчик комментариев у поста
         database.ref('slices/' + sliceId + '/commentsCount').transaction(function(c) { return (c || 0) + 1; });
         loadComments(sliceId);
         showNotification('Комментарий добавлен', 'success');
-    }).catch(function(err) {
-        showNotification('Ошибка: ' + err.message, 'error');
     });
 }
 
@@ -352,7 +417,6 @@ function showReplyForm(sliceId, parentId) {
     var container = document.getElementById('replies-container-' + parentId);
     if (!container) return;
     
-    // Проверяем, не открыта ли уже форма
     if (container.querySelector('.reply-form')) {
         container.innerHTML = '';
         return;
@@ -366,7 +430,6 @@ function showReplyForm(sliceId, parentId) {
         </div>
     `;
     
-    // Загружаем существующие ответы
     loadReplies(sliceId, parentId);
 }
 
@@ -395,7 +458,7 @@ function loadReplies(sliceId, parentId) {
             var avatarContent = reply.data.authorAvatar ? '' : '👤';
             
             repliesHtml += `
-                <div class="comment-item reply-item" data-comment-id="${reply.id}">
+                <div class="comment-item reply-item">
                     <div class="comment-header">
                         <div class="comment-author-avatar" style="${avatarStyle}">${avatarContent}</div>
                         <div class="comment-author-info">
@@ -413,7 +476,6 @@ function loadReplies(sliceId, parentId) {
         
         repliesHtml += '</div>';
         
-        // Вставляем ответы перед формой
         var existingForm = container.querySelector('.reply-form');
         if (existingForm) {
             container.innerHTML = repliesHtml;
@@ -436,21 +498,222 @@ function likeComment(sliceId, commentId) {
             commentRef.child('likesCount').transaction(function(c) { return Math.max((c || 1) - 1, 0); });
             if (likeBtn) {
                 likeBtn.innerHTML = '🤍 <span>' + (parseInt(likeBtn.querySelector('span').textContent) - 1) + '</span>';
-                likeBtn.classList.remove('liked');
             }
         } else {
             likeRef.set(true);
             commentRef.child('likesCount').transaction(function(c) { return (c || 0) + 1; });
             if (likeBtn) {
                 likeBtn.innerHTML = '❤️ <span>' + (parseInt(likeBtn.querySelector('span').textContent) + 1) + '</span>';
-                likeBtn.classList.add('liked');
             }
         }
     });
 }
 
-// ========== ОСТАЛЬНЫЕ ФУНКЦИИ (слайдер, поиск, контекстное меню, создание поста) ==========
+// ========== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ==========
+function openUserProfile(userId, userName, userAvatar) {
+    window.viewingProfileUserId = userId;
+    window.viewingProfileUserName = userName;
+    window.viewingProfileUserAvatar = userAvatar;
+    
+    var oldModal = document.getElementById('user-profile-modal');
+    if (oldModal) oldModal.remove();
+    
+    var isOwnProfile = (userId === currentUser.uid);
+    
+    var modal = document.createElement('div');
+    modal.id = 'user-profile-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="profile-modal-content">
+            <div class="profile-banner" id="profile-banner" style="background: linear-gradient(135deg, var(--forest), var(--olive));">
+                <button class="profile-close-btn" onclick="closeProfileModal()">×</button>
+            </div>
+            <div class="profile-avatar-wrapper">
+                <div class="profile-avatar" id="profile-avatar" style="background-image: url(${userAvatar || ''}); background-size: cover;">
+                    ${!userAvatar ? '👤' : ''}
+                </div>
+            </div>
+            <div class="profile-info">
+                <div class="profile-name-row">
+                    <h2 class="profile-name">${escapeHtml(userName)}</h2>
+                    ${isOwnProfile ? '' : `
+                        <button class="profile-subscribe-btn" id="profile-subscribe-btn" onclick="toggleSubscription()">Подписаться</button>
+                        <button class="profile-notify-btn" id="profile-notify-btn" onclick="toggleNotifications()">🔔</button>
+                    `}
+                </div>
+                <p class="profile-bio" id="profile-bio">${isOwnProfile ? (currentUserData?.bio || '') : 'Загрузка...'}</p>
+            </div>
+            <div class="profile-tabs">
+                <button class="profile-tab-btn active" onclick="switchProfileTab('posts', '${userId}')">📷 Посты</button>
+                <button class="profile-tab-btn" onclick="switchProfileTab('reposts', '${userId}')">🔄 Репосты</button>
+            </div>
+            <div id="profile-content" class="profile-content">
+                <div class="profile-loading">Загрузка...</div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.classList.remove('hidden');
+    
+    database.ref('users/' + userId).once('value').then(function(snap) {
+        var userData = snap.val();
+        if (userData && userData.bio) {
+            var bioEl = document.getElementById('profile-bio');
+            if (bioEl) bioEl.textContent = userData.bio;
+        }
+        if (!isOwnProfile) {
+            checkSubscriptionStatus(userId);
+        }
+    });
+    
+    switchProfileTab('posts', userId);
+}
 
+function checkSubscriptionStatus(userId) {
+    database.ref('subscriptions/' + currentUser.uid + '/' + userId).once('value').then(function(snap) {
+        var isSubscribed = snap.exists();
+        var btn = document.getElementById('profile-subscribe-btn');
+        if (btn) {
+            btn.textContent = isSubscribed ? 'Отписаться' : 'Подписаться';
+            btn.style.background = isSubscribed ? '#555' : '#1a1a1a';
+        }
+    });
+    
+    database.ref('subscriptionNotifications/' + currentUser.uid + '/' + userId).once('value').then(function(snap) {
+        var notifBtn = document.getElementById('profile-notify-btn');
+        if (notifBtn) notifBtn.style.opacity = snap.val() === true ? '1' : '0.5';
+    });
+}
+
+function toggleSubscription() {
+    var userId = window.viewingProfileUserId;
+    if (!userId || userId === currentUser.uid) return;
+    
+    var subRef = database.ref('subscriptions/' + currentUser.uid + '/' + userId);
+    subRef.once('value').then(function(snap) {
+        if (snap.exists()) {
+            subRef.remove();
+            showNotification('Вы отписались', 'info');
+        } else {
+            subRef.set(true);
+            showNotification('Вы подписались', 'success');
+        }
+        checkSubscriptionStatus(userId);
+    });
+}
+
+function toggleNotifications() {
+    var userId = window.viewingProfileUserId;
+    if (!userId || userId === currentUser.uid) return;
+    
+    var notifRef = database.ref('subscriptionNotifications/' + currentUser.uid + '/' + userId);
+    notifRef.once('value').then(function(snap) {
+        if (snap.val() === true) {
+            notifRef.remove();
+            showNotification('Уведомления выключены', 'info');
+        } else {
+            notifRef.set(true);
+            showNotification('Уведомления включены', 'success');
+        }
+        var notifBtn = document.getElementById('profile-notify-btn');
+        if (notifBtn) notifBtn.style.opacity = snap.val() === true ? '0.5' : '1';
+    });
+}
+
+function switchProfileTab(tab, userId) {
+    var content = document.getElementById('profile-content');
+    if (!content) return;
+    
+    var btns = document.querySelectorAll('.profile-tab-btn');
+    btns.forEach(function(btn) { btn.classList.remove('active'); });
+    if (tab === 'posts') {
+        btns[0].classList.add('active');
+    } else {
+        btns[1].classList.add('active');
+    }
+    
+    content.innerHTML = '<div class="profile-loading">Загрузка...</div>';
+    
+    var query = database.ref('slices').orderByChild('authorId').equalTo(userId);
+    query.once('value').then(function(snapshot) {
+        var slices = snapshot.val();
+        content.innerHTML = '';
+        
+        if (!slices) {
+            content.innerHTML = '<div class="profile-empty">Нет постов</div>';
+            return;
+        }
+        
+        var slicesArray = [];
+        for (var id in slices) {
+            var slice = slices[id];
+            if (tab === 'reposts' && slice.type !== 'repost') continue;
+            if (tab === 'posts' && slice.type === 'repost') continue;
+            slicesArray.push({ id: id, data: slice });
+        }
+        
+        slicesArray.sort(function(a, b) { return (b.data.createdAt || 0) - (a.data.createdAt || 0); });
+        
+        slicesArray.forEach(function(slice) {
+            var card = createProfileSliceCard(slice.id, slice.data);
+            content.appendChild(card);
+        });
+    });
+}
+
+function createProfileSliceCard(sliceId, sliceData) {
+    var div = document.createElement('div');
+    div.className = 'slice-card profile-slice-card';
+    div.setAttribute('data-slice-id', sliceId);
+    
+    var avatarStyle = sliceData.authorAvatar ? 'background-image:url('+sliceData.authorAvatar+');background-size:cover;' : '';
+    var avatarContent = sliceData.authorAvatar ? '' : '👤';
+    
+    var mediaHtml = '';
+    if (sliceData.mediaUrl) {
+        mediaHtml = '<div class="slice-media"><img src="'+sliceData.mediaUrl+'" class="slice-image" onclick="openSliceLightbox(\''+sliceData.mediaUrl+'\')"></div>';
+    } else if (sliceData.mediaUrls && sliceData.mediaUrls.length) {
+        mediaHtml = '<div class="slice-media"><img src="'+sliceData.mediaUrls[0]+'" class="slice-image" onclick="openSliceLightbox(\''+sliceData.mediaUrls[0]+'\')"></div>';
+    }
+    
+    var textHtml = sliceData.text ? '<div class="slice-text">'+formatSliceText(sliceData.text)+'</div>' : '';
+    
+    var repostBadge = sliceData.type === 'repost' ? '<div class="repost-badge">🔄 Репостнуто с @' + escapeHtml(sliceData.originalAuthorName) + '</div>' : '';
+    
+    div.innerHTML = `
+        <div class="slice-header">
+            <div class="slice-author">
+                <div class="avatar" style="${avatarStyle}">${avatarContent}</div>
+                <div class="slice-author-info">
+                    <span class="slice-author-name">${escapeHtml(sliceData.authorName)}</span>
+                    <span class="slice-date">${formatSliceDate(sliceData.createdAt)}</span>
+                </div>
+            </div>
+        </div>
+        ${repostBadge}
+        ${mediaHtml}
+        ${textHtml}
+        <div class="slice-actions">
+            <button class="slice-action-btn" onclick="likeSlice('${sliceId}')">❤️ <span>${sliceData.likesCount || 0}</span></button>
+            <button class="slice-action-btn" onclick="toggleComments('${sliceId}')">💬 <span>${sliceData.commentsCount || 0}</span></button>
+            <button class="slice-action-btn" onclick="repostSlice('${sliceId}')">🔄 <span>${sliceData.repostsCount || 0}</span></button>
+        </div>
+    `;
+    
+    return div;
+}
+
+function closeProfileModal() {
+    var modal = document.getElementById('user-profile-modal');
+    if (modal) modal.remove();
+}
+
+function showVerifiedInfo() {
+    alert('Этот пользователь имеет подтверждённый, верифицированный аккаунт, подтверждённый администрацией Kukumber 🌟');
+}
+
+// ========== СЛАЙДЕР ==========
 function initSliceSlider(sliceId, totalSlides) {
     var container = document.getElementById('slice-media-' + sliceId);
     if (!container) return;
@@ -476,10 +739,8 @@ function slideSlice(sliceId, direction) {
     var current = window['sliceCurrentIndex_' + sliceId] || 0;
     var total = window['sliceTotal_' + sliceId] || 1;
     var newIndex = current + direction;
-    
     if (newIndex < 0) newIndex = total - 1;
     if (newIndex >= total) newIndex = 0;
-    
     goToSlide(sliceId, newIndex);
 }
 
@@ -490,19 +751,15 @@ function goToSlide(sliceId, index) {
     var slider = container.querySelector('.slice-media-slider');
     var slides = slider.querySelectorAll('.slice-slide');
     var dots = document.querySelectorAll('#slice-dots-' + sliceId + ' .slice-dot');
-    
     if (!slides.length) return;
     
     var slideWidth = slides[0].offsetWidth;
     slider.style.transform = 'translateX(-' + (index * slideWidth) + 'px)';
-    
-    dots.forEach(function(dot, i) {
-        dot.classList.toggle('active', i === index);
-    });
-    
+    dots.forEach(function(dot, i) { dot.classList.toggle('active', i === index); });
     window['sliceCurrentIndex_' + sliceId] = index;
 }
 
+// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 function formatSliceText(text) {
     if (!text) return '';
     text = escapeHtml(text);
@@ -516,7 +773,6 @@ function formatSliceDate(timestamp) {
     var date = new Date(timestamp);
     var now = new Date();
     var diff = Math.floor((now - date) / 1000);
-    
     if (diff < 60) return 'только что';
     if (diff < 3600) return Math.floor(diff/60) + ' мин назад';
     if (diff < 86400) return 'сегодня в ' + date.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
@@ -538,42 +794,28 @@ function searchByUser(username) {
 
 function searchSlices() {
     var query = document.getElementById('slices-search-input').value.trim().toLowerCase();
-    
     if (searchTimeout) clearTimeout(searchTimeout);
     searchTimeout = setTimeout(function() {
         var feed = document.getElementById('slices-feed');
         if (!feed) return;
-        
-        if (!query) {
-            loadSlices();
-            return;
-        }
+        if (!query) { loadSlices(); return; }
         
         feed.innerHTML = '<div class="empty-slices"><span>🔍</span><p>Поиск...</p></div>';
         
         database.ref('slices').orderByChild('createdAt').limitToLast(100).once('value').then(function(snapshot) {
             var slices = snapshot.val();
             var results = [];
-            
             for (var id in slices) {
                 var slice = slices[id];
                 var match = false;
-                
                 if (slice.text && slice.text.toLowerCase().includes(query)) match = true;
-                if (slice.hashtags && slice.hashtags.some(function(tag) { 
-                    return '#' + tag.toLowerCase().includes(query) || tag.toLowerCase().includes(query.replace('#', ''));
-                })) match = true;
+                if (slice.hashtags && slice.hashtags.some(function(tag) { return '#' + tag.toLowerCase().includes(query) || tag.toLowerCase().includes(query.replace('#', '')); })) match = true;
                 if (slice.authorName && slice.authorName.toLowerCase().includes(query.replace('@', ''))) match = true;
-                
                 if (match) results.push({ id: id, data: slice });
             }
             
             feed.innerHTML = '';
-            if (results.length === 0) {
-                feed.innerHTML = '<div class="empty-slices"><span>🔍</span><p>Ничего не найдено</p></div>';
-                return;
-            }
-            
+            if (results.length === 0) { feed.innerHTML = '<div class="empty-slices"><span>🔍</span><p>Ничего не найдено</p></div>'; return; }
             results.sort(function(a, b) { return (b.data.createdAt || 0) - (a.data.createdAt || 0); });
             results.forEach(function(result) {
                 var likeRef = database.ref('sliceLikes/' + result.id + '/' + currentUser.uid);
@@ -584,35 +826,6 @@ function searchSlices() {
             });
         });
     }, 500);
-}
-
-function repostSlice(sliceId) {
-    database.ref('slices/' + sliceId).once('value').then(function(snapshot) {
-        var originalSlice = snapshot.val();
-        if (!originalSlice) return;
-        
-        var repostData = {
-            type: 'repost',
-            originalId: sliceId,
-            originalAuthorId: originalSlice.authorId,
-            originalAuthorName: originalSlice.authorName,
-            originalText: originalSlice.text,
-            originalMediaUrl: originalSlice.mediaUrl || (originalSlice.mediaUrls ? originalSlice.mediaUrls[0] : null),
-            authorId: currentUser.uid,
-            authorName: currentUserData.username,
-            authorAvatar: currentUserData.avatar || '',
-            createdAt: firebase.database.ServerValue.TIMESTAMP,
-            repostsCount: 0,
-            likesCount: 0,
-            viewsCount: 0
-        };
-        
-        database.ref('slices/').push(repostData).then(function() {
-            database.ref('slices/' + sliceId + '/repostsCount').transaction(function(c) { return (c || 0) + 1; });
-            showNotification('Репостнуто!', 'success');
-            loadSlices();
-        });
-    });
 }
 
 function shareSlice(sliceId) {
@@ -635,10 +848,12 @@ function openSliceLightbox(url) {
 }
 
 function openSlicesProfile() {
-    switchToTab('settings');
+    if (currentUser) {
+        openUserProfile(currentUser.uid, currentUserData.username, currentUserData.avatar);
+    }
 }
 
-// ========== КОНТЕКСТНОЕ МЕНЮ ==========
+// ========== КОНТЕКСТНОЕ МЕНЮ (админ/владелец) ==========
 function showSliceContextMenu(event, sliceId, sliceData) {
     event.preventDefault();
     event.stopPropagation();
@@ -656,52 +871,34 @@ function showSliceContextMenu(event, sliceId, sliceData) {
     menu.style.cssText = 'position:fixed; z-index:10001; background:white; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.2); min-width:180px; overflow:hidden;';
     
     var menuHtml = '';
-    
     if (isOwner || isAdmin) {
         menuHtml += '<div class="context-menu-item" onclick="editSlice(\''+sliceId+'\')">✏️ Редактировать пост</div>';
         menuHtml += '<div class="context-menu-item" onclick="deleteSlice(\''+sliceId+'\')">🗑️ Удалить пост</div>';
     }
-    
     if (isAdmin && !isOwner) {
         menuHtml += '<div style="border-top:1px solid #eee; margin:5px 0;"></div>';
-        if (!sliceData.pinned) {
-            menuHtml += '<div class="context-menu-item" onclick="pinSlice(\''+sliceId+'\')">📌 Закрепить в ленте</div>';
-        } else {
-            menuHtml += '<div class="context-menu-item" onclick="unpinSlice(\''+sliceId+'\')">📌 Открепить</div>';
-        }
+        if (!sliceData.pinned) menuHtml += '<div class="context-menu-item" onclick="pinSlice(\''+sliceId+'\')">📌 Закрепить в ленте</div>';
+        else menuHtml += '<div class="context-menu-item" onclick="unpinSlice(\''+sliceId+'\')">📌 Открепить</div>';
         menuHtml += '<div class="context-menu-item" onclick="reportSlice(\''+sliceId+'\')">⚠️ Пожаловаться</div>';
     }
     
     menu.innerHTML = menuHtml;
     document.body.appendChild(menu);
     
-    var x, y;
-    if (event.touches) {
-        x = event.touches[0].clientX;
-        y = event.touches[0].clientY;
-    } else {
-        x = event.clientX;
-        y = event.clientY;
-    }
+    var x = event.clientX, y = event.clientY;
+    if (event.touches) { x = event.touches[0].clientX; y = event.touches[0].clientY; }
     
     var menuRect = menu.getBoundingClientRect();
     var windowWidth = window.innerWidth;
     var windowHeight = window.innerHeight;
-    
     if (x + menuRect.width > windowWidth) x = windowWidth - menuRect.width - 10;
     if (y + menuRect.height > windowHeight) y = windowHeight - menuRect.height - 10;
-    if (x < 10) x = 10;
-    if (y < 10) y = 10;
-    
-    menu.style.left = x + 'px';
-    menu.style.top = y + 'px';
+    if (x < 10) x = 10; if (y < 10) y = 10;
+    menu.style.left = x + 'px'; menu.style.top = y + 'px';
     
     setTimeout(function() {
         document.addEventListener('click', function closeSliceMenu(e) {
-            if (!menu.contains(e.target)) {
-                menu.remove();
-                document.removeEventListener('click', closeSliceMenu);
-            }
+            if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', closeSliceMenu); }
         });
     }, 10);
 }
@@ -709,123 +906,71 @@ function showSliceContextMenu(event, sliceId, sliceData) {
 function editSlice(sliceId) {
     database.ref('slices/' + sliceId).once('value').then(function(snapshot) {
         var slice = snapshot.val();
-        if (!slice) {
-            showNotification('Пост не найден', 'error');
-            return;
-        }
-        
+        if (!slice) { showNotification('Пост не найден', 'error'); return; }
         var newText = prompt('Редактировать текст поста:', slice.text || '');
         if (newText === null) return;
-        
         var newHashtags = extractHashtags(newText);
-        
-        database.ref('slices/' + sliceId).update({
-            text: newText,
-            hashtags: newHashtags,
-            editedAt: firebase.database.ServerValue.TIMESTAMP,
-            edited: true
-        }).then(function() {
-            showNotification('Пост отредактирован!', 'success');
-            loadSlices();
-        }).catch(function(err) {
-            showNotification('Ошибка редактирования', 'error');
-        });
+        database.ref('slices/' + sliceId).update({ text: newText, hashtags: newHashtags, editedAt: firebase.database.ServerValue.TIMESTAMP, edited: true })
+            .then(function() { showNotification('Пост отредактирован!', 'success'); loadSlices(); })
+            .catch(function() { showNotification('Ошибка редактирования', 'error'); });
     });
-    
     closeSliceContextMenu();
 }
 
 function deleteSlice(sliceId) {
     if (!confirm('Удалить этот пост? Действие необратимо.')) return;
-    
     database.ref('slices/' + sliceId).remove().then(function() {
         database.ref('sliceLikes/' + sliceId).remove();
         database.ref('sliceComments/' + sliceId).remove();
         showNotification('Пост удалён', 'success');
         loadSlices();
-    }).catch(function(err) {
-        showNotification('Ошибка удаления', 'error');
-    });
-    
+    }).catch(function() { showNotification('Ошибка удаления', 'error'); });
     closeSliceContextMenu();
 }
 
 function pinSlice(sliceId) {
-    database.ref('slices/' + sliceId).update({
-        pinned: true,
-        pinnedAt: firebase.database.ServerValue.TIMESTAMP
-    }).then(function() {
-        showNotification('Пост закреплён!', 'success');
-        loadSlices();
-    }).catch(function(err) {
-        showNotification('Ошибка', 'error');
-    });
+    database.ref('slices/' + sliceId).update({ pinned: true, pinnedAt: firebase.database.ServerValue.TIMESTAMP })
+        .then(function() { showNotification('Пост закреплён!', 'success'); loadSlices(); });
     closeSliceContextMenu();
 }
 
 function unpinSlice(sliceId) {
-    database.ref('slices/' + sliceId).update({
-        pinned: false,
-        pinnedAt: null
-    }).then(function() {
-        showNotification('Пост откреплён', 'info');
-        loadSlices();
-    }).catch(function(err) {
-        showNotification('Ошибка', 'error');
-    });
+    database.ref('slices/' + sliceId).update({ pinned: false, pinnedAt: null })
+        .then(function() { showNotification('Пост откреплён', 'info'); loadSlices(); });
     closeSliceContextMenu();
 }
 
 function reportSlice(sliceId) {
     var reason = prompt('Укажите причину жалобы:');
     if (!reason) return;
-    
     database.ref('reports/slices/' + sliceId).push({
-        userId: currentUser.uid,
-        userName: currentUserData?.username || 'Пользователь',
-        reason: reason,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-    }).then(function() {
-        showNotification('Жалоба отправлена администрации', 'success');
-    }).catch(function(err) {
-        showNotification('Ошибка', 'error');
-    });
+        userId: currentUser.uid, userName: currentUserData?.username || 'Пользователь',
+        reason: reason, timestamp: firebase.database.ServerValue.TIMESTAMP
+    }).then(function() { showNotification('Жалоба отправлена администрации', 'success'); });
     closeSliceContextMenu();
 }
 
-function closeSliceContextMenu() {
-    var menu = document.getElementById('slice-context-menu');
-    if (menu) menu.remove();
-}
+function closeSliceContextMenu() { var menu = document.getElementById('slice-context-menu'); if (menu) menu.remove(); }
 
 // ========== СОЗДАНИЕ ПОСТА ==========
 function showCreateSliceModal() {
     var modal = document.getElementById('create-slice-modal');
     if (modal) modal.classList.remove('hidden');
     pendingSliceFiles = [];
-    
     var previewArea = document.getElementById('slice-preview-area');
     if (previewArea) previewArea.innerHTML = '';
-    
     var textInput = document.getElementById('slice-text');
     if (textInput) textInput.value = '';
-    
     var hashtagsInput = document.getElementById('slice-hashtags-input');
     if (hashtagsInput) hashtagsInput.value = '';
-    
     var uploadArea = document.getElementById('slice-upload-area');
     if (uploadArea) uploadArea.style.display = '';
-    
     var previewContainer = document.getElementById('slice-preview-container');
     if (previewContainer) previewContainer.classList.add('hidden');
-    
     updateSlicePreviewCounter();
 }
 
-function closeCreateSliceModal() {
-    var modal = document.getElementById('create-slice-modal');
-    if (modal) modal.classList.add('hidden');
-}
+function closeCreateSliceModal() { var modal = document.getElementById('create-slice-modal'); if (modal) modal.classList.add('hidden'); }
 
 function addSliceMedia() {
     var input = document.createElement('input');
@@ -835,10 +980,7 @@ function addSliceMedia() {
     input.onchange = function(e) {
         var files = Array.from(e.target.files);
         files.forEach(function(file) {
-            if (file.size > 15 * 1024 * 1024) {
-                showNotification('Файл слишком большой (макс. 15MB)', 'error');
-                return;
-            }
+            if (file.size > 15 * 1024 * 1024) { showNotification('Файл слишком большой (макс. 15MB)', 'error'); return; }
             pendingSliceFiles.push(file);
         });
         updateSlicePreview();
@@ -854,107 +996,62 @@ function updateSlicePreview() {
         if (previewContainer) previewContainer.classList.add('hidden');
         return;
     }
-    
     var uploadArea = document.getElementById('slice-upload-area');
     if (uploadArea) uploadArea.style.display = 'none';
-    
     var previewContainer = document.getElementById('slice-preview-container');
     if (previewContainer) previewContainer.classList.remove('hidden');
-    
     var previewArea = document.getElementById('slice-preview-area');
     if (previewArea) {
         previewArea.innerHTML = '';
-        
         pendingSliceFiles.forEach(function(file, idx) {
             var reader = new FileReader();
             reader.onload = function(e) {
                 var isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
                 var div = document.createElement('div');
                 div.className = 'slice-preview-item';
-                div.innerHTML = `
-                    <img src="${e.target.result}" class="slice-preview-img">
-                    <button class="slice-preview-remove" onclick="removeSliceMedia(${idx})">×</button>
-                    ${isGif ? '<span class="slice-preview-gif-badge">GIF</span>' : ''}
-                `;
+                div.innerHTML = `<img src="${e.target.result}" class="slice-preview-img"><button class="slice-preview-remove" onclick="removeSliceMedia(${idx})">×</button>${isGif ? '<span class="slice-preview-gif-badge">GIF</span>' : ''}`;
                 previewArea.appendChild(div);
             };
             reader.readAsDataURL(file);
         });
     }
-    
     updateSlicePreviewCounter();
 }
 
-function updateSlicePreviewCounter() {
-    var counter = document.getElementById('slice-preview-counter');
-    if (counter) {
-        counter.textContent = pendingSliceFiles.length;
-    }
-}
+function updateSlicePreviewCounter() { var counter = document.getElementById('slice-preview-counter'); if (counter) counter.textContent = pendingSliceFiles.length; }
 
-function removeSliceMedia(index) {
-    pendingSliceFiles.splice(index, 1);
-    updateSlicePreview();
-}
+function removeSliceMedia(index) { pendingSliceFiles.splice(index, 1); updateSlicePreview(); }
 
-function extractHashtags(text) {
-    var hashtags = text.match(/#[а-яА-Яa-zA-Z0-9_]+/g);
-    if (!hashtags) return [];
-    return hashtags.map(function(tag) { return tag.substring(1); });
-}
+function extractHashtags(text) { var hashtags = text.match(/#[а-яА-Яa-zA-Z0-9_]+/g); if (!hashtags) return []; return hashtags.map(function(tag) { return tag.substring(1); }); }
 
 async function publishSlice() {
     var text = document.getElementById('slice-text').value.trim();
     var hashtagsInput = document.getElementById('slice-hashtags-input').value.trim();
-    
-    if (pendingSliceFiles.length === 0 && !text) {
-        showNotification('Добавьте текст или фото', 'error');
-        return;
-    }
-    
+    if (pendingSliceFiles.length === 0 && !text) { showNotification('Добавьте текст или фото', 'error'); return; }
     if (hashtagsInput) {
         var extraTags = hashtagsInput.split(/[ ,]+/).filter(function(t) { return t; });
         if (text) text += ' ' + extraTags.map(function(t) { return '#' + t; }).join(' ');
         else text = extraTags.map(function(t) { return '#' + t; }).join(' ');
     }
-    
     var hashtags = extractHashtags(text);
-    
     showNotification('Публикация...', 'info');
-    
     try {
         var mediaUrls = [];
-        
         for (var i = 0; i < pendingSliceFiles.length; i++) {
             var url = await uploadToImgBB(pendingSliceFiles[i]);
             mediaUrls.push(url);
         }
-        
         var sliceData = {
-            authorId: currentUser.uid,
-            authorName: currentUserData.username || 'Пользователь',
-            authorAvatar: currentUserData.avatar || '',
-            text: text,
-            hashtags: hashtags,
+            authorId: currentUser.uid, authorName: currentUserData.username || 'Пользователь',
+            authorAvatar: currentUserData.avatar || '', text: text, hashtags: hashtags,
             mediaType: mediaUrls.length > 1 ? 'multiple' : (mediaUrls.length === 1 ? 'single' : 'none'),
-            mediaUrls: mediaUrls.length > 0 ? mediaUrls : null,
-            mediaUrl: mediaUrls.length === 1 ? mediaUrls[0] : null,
-            likesCount: 0,
-            commentsCount: 0,
-            repostsCount: 0,
-            viewsCount: 0,
-            pinned: false,
+            mediaUrls: mediaUrls.length > 0 ? mediaUrls : null, mediaUrl: mediaUrls.length === 1 ? mediaUrls[0] : null,
+            likesCount: 0, commentsCount: 0, repostsCount: 0, viewsCount: 0, pinned: false,
             createdAt: firebase.database.ServerValue.TIMESTAMP
         };
-        
         await database.ref('slices/').push(sliceData);
-        
         showNotification('Пост опубликован! 🍕', 'success');
         closeCreateSliceModal();
         loadSlices();
-        
-    } catch (error) {
-        console.error(error);
-        showNotification('Ошибка публикации', 'error');
-    }
+    } catch (error) { console.error(error); showNotification('Ошибка публикации', 'error'); }
 }
