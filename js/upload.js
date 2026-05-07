@@ -1,64 +1,74 @@
-// UPLOAD - работающая отправка фото через Catbox
+// UPLOAD - фото через base64 (хранятся прямо в Firebase)
 var pendingImageFile = null;
 
-// Загрузка на Catbox (работает без API ключа)
-async function uploadToCatbox(file) {
-    var formData = new FormData();
-    formData.append('reqtype', 'fileupload');
-    formData.append('fileToUpload', file);
-    
-    var response = await fetch('https://catbox.moe/user/api.php', {
-        method: 'POST',
-        body: formData,
-        mode: 'cors'
+// Конвертация файла в base64
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        var reader = new FileReader();
+        reader.onload = function() {
+            resolve(reader.result);
+        };
+        reader.onerror = function(error) {
+            reject(error);
+        };
+        reader.readAsDataURL(file);
     });
-    
-    var url = await response.text();
-    
-    if (!url || !url.startsWith('https://')) {
-        throw new Error('Catbox вернул неверный URL: ' + url);
-    }
-    
-    return url;
 }
 
 // Выбор файла
-function handleFileSelect(event) {
+window.handleFileSelect = function(event) {
     var file = event.target.files[0];
     if (!file) return;
     
+    // Проверяем что это изображение
     if (!file.type.startsWith('image/')) {
         showNotification('Пожалуйста, выберите изображение', 'error');
         event.target.value = '';
         return;
     }
     
-    if (file.size > 10 * 1024 * 1024) {
-        showNotification('Файл слишком большой (макс. 10MB)', 'error');
+    // Ограничение 5MB для base64 (чтобы Firebase не тормозил)
+    if (file.size > 5 * 1024 * 1024) {
+        showNotification('Файл слишком большой (макс. 5MB)', 'error');
         event.target.value = '';
         return;
     }
     
     pendingImageFile = file;
     
+    // Показываем превью
     var reader = new FileReader();
     reader.onload = function(e) {
-        document.getElementById('preview-image').src = e.target.result;
-        document.getElementById('image-caption').value = '';
-        document.getElementById('image-preview-modal').classList.remove('hidden');
+        var previewImg = document.getElementById('preview-image');
+        if (previewImg) {
+            previewImg.src = e.target.result;
+        }
+        var captionInput = document.getElementById('image-caption');
+        if (captionInput) {
+            captionInput.value = '';
+        }
+        var modal = document.getElementById('image-preview-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        }
     };
     reader.readAsDataURL(file);
     
     event.target.value = '';
-}
+};
 
-function closeImagePreview() {
-    document.getElementById('image-preview-modal').classList.add('hidden');
+// Закрыть окно предпросмотра
+window.closeImagePreview = function() {
+    var modal = document.getElementById('image-preview-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
     pendingImageFile = null;
-}
+};
 
 // Отправка фото
-async function confirmImageSend() {
+window.confirmImageSend = async function() {
+    // Проверки
     if (!pendingImageFile) {
         showNotification('Нет выбранного фото', 'error');
         closeImagePreview();
@@ -71,31 +81,40 @@ async function confirmImageSend() {
         return;
     }
     
+    if (!currentUser) {
+        showNotification('Пользователь не авторизован', 'error');
+        closeImagePreview();
+        return;
+    }
+    
     var caption = document.getElementById('image-caption').value.trim();
     var file = pendingImageFile;
     
-    showNotification('📤 Загрузка фото на сервер...', 'info');
+    // Показываем индикатор загрузки
+    showNotification('🔄 Конвертация фото...', 'info');
     
     try {
-        // Сначала загружаем фото
-        var imageUrl = await uploadToCatbox(file);
-        console.log('Фото загружено:', imageUrl);
+        // Конвертируем фото в base64
+        var base64 = await fileToBase64(file);
         
-        // Потом отправляем ссылку в Firebase
+        // Создаём сообщение
         var message = {
             type: 'image',
-            imageUrl: imageUrl,
+            imageUrl: base64,
             caption: caption,
             senderId: currentUser.uid,
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
-            sentAt: Date.now()
+            timestamp: firebase.database.ServerValue.TIMESTAMP
         };
         
-        console.log('Отправка сообщения в чат:', currentChatId);
+        showNotification('📤 Отправка в чат...', 'info');
         
-        var newMsgRef = await database.ref('messages/' + currentChatId).push(message);
-        console.log('Сообщение отправлено, ID:', newMsgRef.key);
+        // Отправляем в Firebase
+        var messagesRef = database.ref('messages/' + currentChatId);
+        var newMessageRef = await messagesRef.push(message);
         
+        console.log('✅ Фото отправлено! ID:', newMessageRef.key);
+        
+        // Обновляем последнее сообщение в чате
         var lastMsg = caption ? '📷 ' + caption.substring(0, 47) : '📷 Фото';
         await database.ref('chats/' + currentChatId).update({
             lastMessage: lastMsg,
@@ -106,31 +125,27 @@ async function confirmImageSend() {
         closeImagePreview();
         
     } catch (error) {
-        console.error('Ошибка:', error);
+        console.error('Ошибка отправки фото:', error);
         showNotification('❌ Ошибка: ' + error.message, 'error');
     }
-}
+};
 
-// Голосовые и остальные функции
-var mediaRecorder = null;
-var audioChunks = [];
-var isRecording = false;
-
-async function sendAnyFile(file) {
+// Отправка любых файлов (для голосовых)
+window.sendAnyFile = async function(file) {
     if (!currentChatId) {
         showNotification('Ошибка: чат не выбран', 'error');
         return;
     }
     
-    showNotification('📤 Загрузка...', 'info');
+    showNotification('🔄 Обработка...', 'info');
     
     try {
-        var url = await uploadToCatbox(file);
+        var base64 = await fileToBase64(file);
         
         var message = {
             type: 'file',
             fileName: file.name,
-            fileUrl: url,
+            fileUrl: base64,
             fileSize: file.size,
             senderId: currentUser.uid,
             timestamp: firebase.database.ServerValue.TIMESTAMP
@@ -147,22 +162,27 @@ async function sendAnyFile(file) {
         console.error(error);
         showNotification('❌ Ошибка загрузки', 'error');
     }
-}
+};
 
-function startRecording() {
+// Голосовые сообщения
+var mediaRecorder = null;
+var audioChunks = [];
+var isRecording = false;
+
+window.startRecording = function() {
     navigator.mediaDevices.getUserMedia({ audio: true })
         .then(stream => {
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
             
-            mediaRecorder.ondataavailable = e => {
+            mediaRecorder.ondataavailable = function(e) {
                 if (e.data.size > 0) audioChunks.push(e.data);
             };
             
-            mediaRecorder.onstop = () => {
+            mediaRecorder.onstop = function() {
                 var blob = new Blob(audioChunks, { type: 'audio/webm' });
                 var file = new File([blob], 'voice.webm', { type: 'audio/webm' });
-                sendAnyFile(file);
+                window.sendAnyFile(file);
                 stream.getTracks().forEach(t => t.stop());
             };
             
@@ -172,74 +192,84 @@ function startRecording() {
             var btn = document.getElementById('voice-record-btn');
             if (btn) {
                 btn.classList.add('recording');
-                btn.textContent = '🔴';
+                btn.innerHTML = '🔴';
             }
             
-            setTimeout(() => {
-                if (isRecording) stopRecording();
+            // Авто-остановка через 60 секунд
+            setTimeout(function() {
+                if (isRecording) window.stopRecording();
             }, 60000);
         })
-        .catch(() => showNotification('❌ Нет доступа к микрофону', 'error'));
-}
+        .catch(function() {
+            showNotification('❌ Нет доступа к микрофону', 'error');
+        });
+};
 
-function stopRecording() {
+window.stopRecording = function() {
     if (mediaRecorder && isRecording) {
         mediaRecorder.stop();
         isRecording = false;
         var btn = document.getElementById('voice-record-btn');
         if (btn) {
             btn.classList.remove('recording');
-            btn.textContent = '🎤';
+            btn.innerHTML = '🎤';
         }
     }
-}
+};
 
-var groupAvatarFile = null;
-var channelAvatarFile = null;
+// Аватарки групп
+window.groupAvatarFile = null;
+window.channelAvatarFile = null;
 
-function previewGroupAvatar(e) {
+window.previewGroupAvatar = function(e) {
     var file = e.target.files[0];
     if (file && file.type.startsWith('image/')) {
-        groupAvatarFile = file;
+        window.groupAvatarFile = file;
         var reader = new FileReader();
-        reader.onload = ev => {
+        reader.onload = function(ev) {
             var preview = document.getElementById('group-avatar-preview');
-            preview.style.backgroundImage = 'url(' + ev.target.result + ')';
-            preview.style.backgroundSize = 'cover';
-            preview.textContent = '';
+            if (preview) {
+                preview.style.backgroundImage = 'url(' + ev.target.result + ')';
+                preview.style.backgroundSize = 'cover';
+                preview.textContent = '';
+            }
         };
         reader.readAsDataURL(file);
     }
-}
+};
 
-function previewChannelAvatar(e) {
+window.previewChannelAvatar = function(e) {
     var file = e.target.files[0];
     if (file && file.type.startsWith('image/')) {
-        channelAvatarFile = file;
+        window.channelAvatarFile = file;
         var reader = new FileReader();
-        reader.onload = ev => {
+        reader.onload = function(ev) {
             var preview = document.getElementById('channel-avatar-preview');
-            preview.style.backgroundImage = 'url(' + ev.target.result + ')';
-            preview.style.backgroundSize = 'cover';
-            preview.textContent = '';
+            if (preview) {
+                preview.style.backgroundImage = 'url(' + ev.target.result + ')';
+                preview.style.backgroundSize = 'cover';
+                preview.textContent = '';
+            }
         };
         reader.readAsDataURL(file);
     }
-}
+};
 
-var pendingAvatarFile = null;
+window.pendingAvatarFile = null;
 
-function previewEditAvatar(e) {
+window.previewEditAvatar = function(e) {
     var file = e.target.files[0];
     if (file && file.type.startsWith('image/')) {
-        pendingAvatarFile = file;
+        window.pendingAvatarFile = file;
         var reader = new FileReader();
-        reader.onload = ev => {
+        reader.onload = function(ev) {
             var preview = document.getElementById('edit-avatar-preview');
-            preview.style.backgroundImage = 'url(' + ev.target.result + ')';
-            preview.style.backgroundSize = 'cover';
-            preview.textContent = '';
+            if (preview) {
+                preview.style.backgroundImage = 'url(' + ev.target.result + ')';
+                preview.style.backgroundSize = 'cover';
+                preview.textContent = '';
+            }
         };
         reader.readAsDataURL(file);
     }
-}
+};
