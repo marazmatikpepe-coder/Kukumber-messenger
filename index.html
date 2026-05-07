@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#228B22">
-    <title>Kukumber</title>
+    <title>Kukumber | Slices</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥒</text></svg>">
 </head>
@@ -106,7 +106,7 @@
                         
                         <div class="messages-container" id="messages-container"></div>
                         
-                        <!-- Строка ввода чата (рабочая, не трогаем) -->
+                        <!-- Строка ввода чата -->
                         <div class="message-input-area" id="message-input-area">
                             <label for="file-input" class="attach-btn" id="attach-file-btn">
                                 <img src="https://i.ibb.co/TDFN8s1J/Picsart-26-04-10-15-45-03-668.png" alt="Файл" style="width: 50px; height: 50px;">
@@ -133,28 +133,29 @@
             </div>
         </div>
 
-      <!-- ВКЛАДКА SLICES (вместо реелсов) -->
-<div id="reels-tab" class="tab-content hidden">
-    <div class="slices-container">
-        <div class="slices-header">
-            <div class="slices-header-left">
-                <img src="https://i.ibb.co/jkGTZrYN/image.png" alt="Slices" class="slices-logo-light">
-                <img src="https://i.ibb.co/XfbnsqhH/Artguru-20260507170418-artguru-1.png" alt="Slices" class="slices-logo-dark hidden">
-                <h2>Slices</h2>
+        <!-- ВКЛАДКА SLICES (вместо реелсов) -->
+        <div id="reels-tab" class="tab-content hidden">
+            <div class="slices-container">
+                <div class="slices-header">
+                    <div class="slices-header-left">
+                        <img src="https://i.ibb.co/jkGTZrYN/image.png" alt="Slices" class="slices-logo-light" id="slices-logo-light">
+                        <img src="https://i.ibb.co/XfbnsqhH/Artguru-20260507170418-artguru-1.png" alt="Slices" class="slices-logo-dark hidden" id="slices-logo-dark">
+                        <h2>Slices</h2>
+                    </div>
+                    <button onclick="showCreateSliceModal()" class="btn-create-slice">+ Создать пост</button>
+                </div>
+                
+                <div class="slices-search-bar">
+                    <input type="text" id="slices-search-input" placeholder="🔍 Поиск по постам, хештегам (#) или авторам (@)..." oninput="searchSlices()">
+                    <div class="slices-profile-avatar" onclick="openSlicesProfile()">
+                        <div class="avatar" id="slices-user-avatar">🥒</div>
+                    </div>
+                </div>
+                
+                <div id="slices-feed" class="slices-feed"></div>
             </div>
-            <button onclick="showCreateSliceModal()" class="btn-create-slice">+ Создать пост</button>
         </div>
-        
-        <div class="slices-search-bar">
-            <input type="text" id="slices-search-input" placeholder="🔍 Поиск по постам, хештегам (#) или авторам (@)..." oninput="searchSlices()">
-            <div class="slices-profile-avatar" onclick="openSlicesProfile()">
-                <div class="avatar" id="slices-user-avatar">🥒</div>
-            </div>
-        </div>
-        
-        <div id="slices-feed" class="slices-feed"></div>
-    </div>
-</div>
+
         <!-- ВКЛАДКА НАСТРОЙКИ -->
         <div id="settings-tab" class="tab-content hidden">
             <div class="settings-container">
@@ -235,8 +236,8 @@
                 <span class="nav-label">Чаты</span>
             </button>
             <button onclick="switchToTab('reels')" class="nav-item" id="nav-reels">
-                <span class="nav-icon">🎬</span>
-                <span class="nav-label">Реелсы</span>
+                <span class="nav-icon">🍕</span>
+                <span class="nav-label">Slices</span>
             </button>
             <button onclick="switchToTab('settings')" class="nav-item" id="nav-settings">
                 <span class="nav-icon">⚙️</span>
@@ -252,86 +253,73 @@
     <div id="create-channel-modal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h3>📢 Канал</h3><button onclick="closeCreateChannelDialog()" class="btn-close">×</button></div><div class="avatar-upload"><div class="avatar-preview" id="channel-avatar-preview">📢</div><label>Загрузить фото<input type="file" accept="image/*" onchange="previewChannelAvatar(event)" style="display:none;"></label></div><input type="text" id="channel-name" placeholder="Название канала"><textarea id="channel-description" placeholder="Описание"></textarea><div class="channel-type-options"><label><input type="radio" name="channel-type" value="public" checked> 🌍 Публичный</label><label><input type="radio" name="channel-type" value="private"> 🔒 Приватный</label></div><input type="text" id="channel-link" placeholder="Ссылка (например: mychannel)" oninput="validateChannelLink()"><p id="channel-link-hint" class="hint"></p><button onclick="createChannel()" class="btn-primary">Создать</button></div></div>
     <div id="chat-info-modal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h3 id="info-title">Информация</h3><button onclick="closeChatInfo()" class="btn-close">×</button></div><div class="chat-info-body"><div class="info-avatar" id="info-avatar">👤</div><h2 id="info-name">Имя</h2><p id="info-status"></p><p id="info-description"></p><div id="channel-stats" class="hidden"><span id="subscribers-count">0</span> подписчиков</div><div id="group-members-section" class="hidden"><h4>Участники (<span id="members-count">0</span>)</h4><button onclick="showAddMembersDialog()" id="add-member-btn" class="btn-small">+ Добавить</button><div id="info-members-list"></div></div><div class="info-actions"><button id="leave-btn" onclick="leaveChat()" class="btn-danger hidden">Покинуть</button><button id="subscribe-btn" onclick="subscribeToChannel()" class="btn-primary hidden">Подписаться</button><button id="unsubscribe-btn" onclick="unsubscribeFromChannel()" class="btn-secondary hidden">Отписаться</button><button id="delete-btn" onclick="deleteChat()" class="btn-danger hidden">Удалить</button></div></div></div></div>
     <div id="add-members-modal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h3>Добавить участников</h3><button onclick="closeAddMembersDialog()" class="btn-close">×</button></div><input type="text" id="add-members-search" placeholder="Поиск..." oninput="searchAddMembers()"><div id="add-members-list" class="users-list"></div></div></div>
-    <div id="create-reel-modal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h3>🎬 Новый реелс</h3><button onclick="closeCreateReelModal()" class="btn-close">×</button></div><div class="reel-upload-area" id="reel-upload-area" onclick="document.getElementById('reel-file-input').click()"><span>📹</span><p>Нажмите чтобы выбрать фото</p><input type="file" id="reel-file-input" accept="image/*" onchange="previewReelMedia(event)" style="display:none;"></div><div id="reel-preview" class="reel-preview hidden"></div><textarea id="reel-caption" placeholder="Описание..." maxlength="500"></textarea><div class="reel-options"><label><input type="checkbox" id="reel-comments-enabled" checked> Разрешить комментарии</label></div><button onclick="publishReel()" class="btn-primary">Опубликовать</button></div></div>
-    <div id="edit-profile-modal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h3>Редактировать профиль</h3><button onclick="closeEditProfileModal()" class="btn-close">×</button></div><div class="avatar-upload"><div class="avatar-preview" id="edit-avatar-preview">🥒</div><label>Изменить фото<input type="file" id="edit-avatar-input" accept="image/*" onchange="previewEditAvatar(event)" style="display:none;"></label></div><input type="text" id="edit-username" placeholder="Имя пользователя"><input type="text" id="edit-bio" placeholder="О себе"><button onclick="saveProfile()" class="btn-primary">Сохранить</button></div></div>
-    <div id="view-reel-modal" class="modal hidden"><div class="reel-viewer"><button class="reel-close-btn" onclick="closeViewReelModal()">×</button><div class="reel-media" id="reel-media-container"></div><div class="reel-info"><div class="reel-author"><div class="avatar" id="reel-author-avatar">👤</div><span id="reel-author-name">Автор</span></div><p id="reel-caption-view"></p></div><div class="reel-actions-bar"><button onclick="likeReel()" class="reel-action" id="like-reel-btn">❤️ <span id="reel-likes-count">0</span></button><button onclick="showReelComments()" class="reel-action">💬 <span id="reel-comments-count">0</span></button><button onclick="shareReel()" class="reel-action">↗️</button><button id="delete-reel-btn" onclick="deleteCurrentReel()" class="reel-action" style="display:none;">🗑️</button></div></div></div>
-    <div id="call-modal" class="modal hidden"><div class="call-container"><div class="call-header"><h3 id="call-username">Звонок</h3><span id="call-status">Соединение...</span><span id="call-timer">00:00</span></div><div class="video-container"><video id="remote-video" autoplay playsinline></video><video id="local-video" autoplay playsinline muted></video><div id="call-avatar" class="call-avatar"><div class="avatar-large">👤</div></div></div><div class="call-controls"><button onclick="toggleMute()" class="btn-call" id="mute-btn">🎤</button><button onclick="toggleVideo()" class="btn-call" id="video-btn">📹</button><button onclick="endCall()" class="btn-call btn-end-call">📵</button></div></div></div>
+    
     <!-- МОДАЛЬНОЕ ОКНО СОЗДАНИЯ ПОСТА SLICES -->
-<div id="create-slice-modal" class="modal hidden">
-    <div class="modal-content" style="max-width: 600px;">
-        <div class="modal-header">
-            <h3>🍕 Новый слайс</h3>
-            <button onclick="closeCreateSliceModal()" class="btn-close">×</button>
-        </div>
-        
-        <div id="slice-upload-area" class="slice-upload-area" onclick="addSliceMedia()">
-            <span>📷</span>
-            <p>Нажмите чтобы добавить фото или GIF</p>
-            <small>Можно несколько файлов</small>
-        </div>
-        
-        <div id="slice-preview-container" class="slice-preview-container hidden">
-            <div class="slice-preview-header">
-                <span>📸 Медиафайлы (<span id="slice-preview-counter">0</span>)</span>
-                <button onclick="addSliceMedia()" class="slice-add-more">+ Добавить ещё</button>
+    <div id="create-slice-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>🍕 Новый слайс</h3>
+                <button onclick="closeCreateSliceModal()" class="btn-close">×</button>
             </div>
-            <div id="slice-preview-area" class="slice-preview-area"></div>
-        </div>
-        
-        <textarea id="slice-text" class="slice-text-input" placeholder="Что у вас нового? #хештеги @упоминания" maxlength="5000"></textarea>
-        
-        <input type="text" id="slice-hashtags-input" class="slice-hashtags-input" placeholder="#хештеги через пробел">
-        
-        <div class="modal-buttons" style="padding: 15px;">
-            <button onclick="closeCreateSliceModal()" class="btn-secondary">Отмена</button>
-            <button onclick="publishSlice()" class="btn-primary">🍕 Опубликовать</button>
+            
+            <div id="slice-upload-area" class="slice-upload-area" onclick="addSliceMedia()">
+                <span>📷</span>
+                <p>Нажмите чтобы добавить фото или GIF</p>
+                <small>Можно несколько файлов</small>
+            </div>
+            
+            <div id="slice-preview-container" class="slice-preview-container hidden">
+                <div class="slice-preview-header">
+                    <span>📸 Медиафайлы (<span id="slice-preview-counter">0</span>)</span>
+                    <button onclick="addSliceMedia()" class="slice-add-more">+ Добавить ещё</button>
+                </div>
+                <div id="slice-preview-area" class="slice-preview-area"></div>
+            </div>
+            
+            <textarea id="slice-text" class="slice-text-input" placeholder="Что у вас нового? #хештеги @упоминания" maxlength="5000"></textarea>
+            
+            <input type="text" id="slice-hashtags-input" class="slice-hashtags-input" placeholder="#хештеги через пробел">
+            
+            <div class="modal-buttons" style="padding: 15px;">
+                <button onclick="closeCreateSliceModal()" class="btn-secondary">Отмена</button>
+                <button onclick="publishSlice()" class="btn-primary">🍕 Опубликовать</button>
+            </div>
         </div>
     </div>
-</div>
-    <div id="incoming-call-modal" class="modal hidden"><div class="incoming-call-container"><div class="incoming-call-avatar">👤</div><h3 id="incoming-call-username">Входящий звонок</h3><p id="incoming-call-type">Аудиозвонок</p><div class="incoming-call-actions"><button onclick="rejectCall()" class="btn-call btn-reject">❌</button><button onclick="acceptCall()" class="btn-call btn-accept">✅</button></div></div></div>
     
-    <!-- МУЛЬТИ-ФОТО МОДАЛЬНОЕ ОКНО (КРАСИВОЕ) -->
+    <!-- МУЛЬТИ-ФОТО МОДАЛЬНОЕ ОКНО -->
     <div id="image-preview-modal" class="modal hidden">
         <div class="image-preview-container">
             <div class="modal-header">
                 <h3>📷 Отправка фото (<span id="image-counter">0/0</span>)</h3>
                 <button onclick="closeImagePreview()" class="btn-close">×</button>
             </div>
-            
             <img id="preview-image" src="" style="width: 100%; max-height: 350px; object-fit: contain; background: #f0f0f0;">
-            
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
                 <button id="nav-prev-btn" onclick="navigateImage(-1)" style="background: none; border: none; font-size: 32px; cursor: pointer; color: var(--forest); display: none;">←</button>
-                
-                <!-- Твоя картинка 62x62 как кнопка добавить (без зелёного круга) -->
-                <img src="https://i.ibb.co/BVhBTnmS/11623-AE3-5-A11-48-F3-9-C9-F-95-AF1-CD6-AAE4.png" 
-                     alt="Добавить фото" 
-                     onclick="addMoreImages()"
-                     style="width: 62px; height: 62px; cursor: pointer; transition: transform 0.2s;">
-                
+                <img src="https://i.ibb.co/BVhBTnmS/11623-AE3-5-A11-48-F3-9-C9-F-95-AF1-CD6-AAE4.png" alt="Добавить фото" onclick="addMoreImages()" style="width: 62px; height: 62px; cursor: pointer; transition: transform 0.2s;">
                 <button id="nav-next-btn" onclick="navigateImage(1)" style="background: none; border: none; font-size: 32px; cursor: pointer; color: var(--forest); display: none;">→</button>
             </div>
-            
-            <!-- Красивая строка для подписи -->
             <div style="padding: 10px 20px 20px;">
                 <div style="display: flex; align-items: center; background: var(--background); border-radius: 24px; padding: 5px 15px;">
-                    <input type="text" id="image-caption" 
-                           placeholder="Добавить подпись..." 
-                           style="flex: 1; background: transparent; border: none; padding: 12px 0; font-size: 16px; outline: none;">
-                    <button onclick="confirmImageSend()" 
-                            style="background: var(--forest); border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: all 0.2s;">
+                    <input type="text" id="image-caption" placeholder="Добавить подпись..." style="flex: 1; background: transparent; border: none; padding: 12px 0; font-size: 16px; outline: none;">
+                    <button onclick="confirmImageSend()" style="background: var(--forest); border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white;">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"/>
                         </svg>
                     </button>
                 </div>
             </div>
-            
             <div style="display: flex; gap: 10px; padding: 0 20px 20px;">
                 <button onclick="cancelAllImages()" class="btn-secondary" style="flex: 1; padding: 12px;">❌ Отмена</button>
             </div>
         </div>
     </div>
+    
+    <div id="edit-profile-modal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h3>Редактировать профиль</h3><button onclick="closeEditProfileModal()" class="btn-close">×</button></div><div class="avatar-upload"><div class="avatar-preview" id="edit-avatar-preview">🥒</div><label>Изменить фото<input type="file" id="edit-avatar-input" accept="image/*" onchange="previewEditAvatar(event)" style="display:none;"></label></div><input type="text" id="edit-username" placeholder="Имя пользователя"><input type="text" id="edit-bio" placeholder="О себе"><button onclick="saveProfile()" class="btn-primary">Сохранить</button></div></div>
+    <div id="view-reel-modal" class="modal hidden"><div class="reel-viewer"><button class="reel-close-btn" onclick="closeViewReelModal()">×</button><div class="reel-media" id="reel-media-container"></div><div class="reel-info"><div class="reel-author"><div class="avatar" id="reel-author-avatar">👤</div><span id="reel-author-name">Автор</span></div><p id="reel-caption-view"></p></div><div class="reel-actions-bar"><button onclick="likeReel()" class="reel-action" id="like-reel-btn">❤️ <span id="reel-likes-count">0</span></button><button onclick="showReelComments()" class="reel-action">💬 <span id="reel-comments-count">0</span></button><button onclick="shareReel()" class="reel-action">↗️</button><button id="delete-reel-btn" onclick="deleteCurrentReel()" class="reel-action" style="display:none;">🗑️</button></div></div></div>
+    <div id="call-modal" class="modal hidden"><div class="call-container"><div class="call-header"><h3 id="call-username">Звонок</h3><span id="call-status">Соединение...</span><span id="call-timer">00:00</span></div><div class="video-container"><video id="remote-video" autoplay playsinline></video><video id="local-video" autoplay playsinline muted></video><div id="call-avatar" class="call-avatar"><div class="avatar-large">👤</div></div></div><div class="call-controls"><button onclick="toggleMute()" class="btn-call" id="mute-btn">🎤</button><button onclick="toggleVideo()" class="btn-call" id="video-btn">📹</button><button onclick="endCall()" class="btn-call btn-end-call">📵</button></div></div></div>
+    <div id="incoming-call-modal" class="modal hidden"><div class="incoming-call-container"><div class="incoming-call-avatar">👤</div><h3 id="incoming-call-username">Входящий звонок</h3><p id="incoming-call-type">Аудиозвонок</p><div class="incoming-call-actions"><button onclick="rejectCall()" class="btn-call btn-reject">❌</button><button onclick="acceptCall()" class="btn-call btn-accept">✅</button></div></div></div>
     
     <div id="image-lightbox" class="image-lightbox hidden" onclick="closeLightbox()"><img id="lightbox-image" src=""></div>
     <div id="notifications-container" class="notifications-container"></div>
@@ -347,7 +335,7 @@
     <script src="js/chat.js"></script>
     <script src="js/calls.js"></script>
     <script src="js/upload.js"></script>
-    <script src="js/reels.js"></script>
+    <script src="js/slices.js"></script>
     <script src="js/settings.js"></script>
     
     <script>
@@ -367,6 +355,37 @@
                     }
                 });
             }
+            
+            // Обновляем аватарку в Slices при загрузке пользователя
+            if (currentUserData) {
+                var slicesAvatar = document.getElementById('slices-user-avatar');
+                if (slicesAvatar && currentUserData.avatar) {
+                    slicesAvatar.style.backgroundImage = 'url(' + currentUserData.avatar + ')';
+                    slicesAvatar.style.backgroundSize = 'cover';
+                    slicesAvatar.textContent = '';
+                }
+            }
+        });
+        
+        // Функция для переключения темы (для логотипов)
+        function setTheme(theme) {
+            var lightLogo = document.getElementById('slices-logo-light');
+            var darkLogo = document.getElementById('slices-logo-dark');
+            if (theme === 'dark') {
+                if (lightLogo) lightLogo.classList.add('hidden');
+                if (darkLogo) darkLogo.classList.remove('hidden');
+            } else {
+                if (lightLogo) lightLogo.classList.remove('hidden');
+                if (darkLogo) darkLogo.classList.add('hidden');
+            }
+        }
+        
+        // Следим за темой системы
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            setTheme('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
+            setTheme(e.matches ? 'dark' : 'light');
         });
     </script>
 </body>
