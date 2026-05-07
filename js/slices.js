@@ -497,3 +497,146 @@ async function publishSlice() {
         showNotification('Ошибка публикации', 'error');
     }
 }
+// ========== КОНТЕКСТНОЕ МЕНЮ ДЛЯ СЛАЙСОВ ==========
+function showSliceContextMenu(event, sliceId, sliceData) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    var oldMenu = document.getElementById('slice-context-menu');
+    if (oldMenu) oldMenu.remove();
+    
+    var isOwner = sliceData.authorId === currentUser.uid;
+    var isAdmin = isSuperAdmin === true;
+    
+    if (!isOwner && !isAdmin) return;
+    
+    var menu = document.createElement('div');
+    menu.id = 'slice-context-menu';
+    menu.style.cssText = 'position:fixed; z-index:10001; background:white; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.2); min-width:180px; overflow:hidden;';
+    
+    var menuHtml = '';
+    
+    if (isOwner || isAdmin) {
+        menuHtml += '<div class="context-menu-item" onclick="editSlice(\''+sliceId+'\')">✏️ Редактировать пост</div>';
+        menuHtml += '<div class="context-menu-item" onclick="deleteSlice(\''+sliceId+'\')">🗑️ Удалить пост</div>';
+    }
+    
+    if (isAdmin && !isOwner) {
+        menuHtml += '<div style="border-top:1px solid #eee; margin-top:5px; padding-top:5px;"></div>';
+        menuHtml += '<div class="context-menu-item" onclick="pinSlice(\''+sliceId+'\')">📌 Закрепить в ленте</div>';
+        menuHtml += '<div class="context-menu-item" onclick="reportSlice(\''+sliceId+'\')">⚠️ Пожаловаться</div>';
+    }
+    
+    menu.innerHTML = menuHtml;
+    document.body.appendChild(menu);
+    
+    var x = event.clientX;
+    var y = event.clientY;
+    
+    var menuRect = menu.getBoundingClientRect();
+    var windowWidth = window.innerWidth;
+    var windowHeight = window.innerHeight;
+    
+    if (x + menuRect.width > windowWidth) x = windowWidth - menuRect.width - 10;
+    if (y + menuRect.height > windowHeight) y = windowHeight - menuRect.height - 10;
+    if (x < 10) x = 10;
+    if (y < 10) y = 10;
+    
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    
+    setTimeout(function() {
+        document.addEventListener('click', function closeSliceMenu(e) {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeSliceMenu);
+            }
+        });
+    }, 10);
+}
+
+// Редактирование поста
+function editSlice(sliceId) {
+    database.ref('slices/' + sliceId).once('value').then(function(snapshot) {
+        var slice = snapshot.val();
+        if (!slice) {
+            showNotification('Пост не найден', 'error');
+            return;
+        }
+        
+        var newText = prompt('Редактировать текст поста:', slice.text || '');
+        if (newText === null) return;
+        
+        var newHashtags = extractHashtags(newText);
+        
+        database.ref('slices/' + sliceId).update({
+            text: newText,
+            hashtags: newHashtags,
+            editedAt: firebase.database.ServerValue.TIMESTAMP,
+            edited: true
+        }).then(function() {
+            showNotification('Пост отредактирован!', 'success');
+            loadSlices();
+        }).catch(function(err) {
+            showNotification('Ошибка редактирования', 'error');
+        });
+    });
+    
+    closeSliceContextMenu();
+}
+
+// Удаление поста
+function deleteSlice(sliceId) {
+    if (!confirm('Удалить этот пост? Действие необратимо.')) return;
+    
+    database.ref('slices/' + sliceId).remove().then(function() {
+        // Удаляем лайки
+        database.ref('sliceLikes/' + sliceId).remove();
+        // Удаляем комментарии (если есть)
+        database.ref('sliceComments/' + sliceId).remove();
+        showNotification('Пост удалён', 'success');
+        loadSlices();
+    }).catch(function(err) {
+        showNotification('Ошибка удаления', 'error');
+    });
+    
+    closeSliceContextMenu();
+}
+
+// Закрепить пост (только для админов)
+function pinSlice(sliceId) {
+    database.ref('slices/' + sliceId).update({
+        pinned: true,
+        pinnedAt: firebase.database.ServerValue.TIMESTAMP
+    }).then(function() {
+        showNotification('Пост закреплён!', 'success');
+        loadSlices();
+    }).catch(function(err) {
+        showNotification('Ошибка', 'error');
+    });
+    
+    closeSliceContextMenu();
+}
+
+// Пожаловаться на пост
+function reportSlice(sliceId) {
+    var reason = prompt('Укажите причину жалобы:');
+    if (!reason) return;
+    
+    database.ref('reports/slices/' + sliceId).push({
+        userId: currentUser.uid,
+        reason: reason,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    }).then(function() {
+        showNotification('Жалоба отправлена администрации', 'success');
+    }).catch(function(err) {
+        showNotification('Ошибка', 'error');
+    });
+    
+    closeSliceContextMenu();
+}
+
+function closeSliceContextMenu() {
+    var menu = document.getElementById('slice-context-menu');
+    if (menu) menu.remove();
+}
