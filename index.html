@@ -86,7 +86,6 @@
                     <div id="no-chat-selected" class="no-chat">
                         <div class="cucumber-large">🥒</div>
                         <h2>Выберите чат</h2>
-                        <p>Начните общение прямо сейчас</p>
                     </div>
                     
                     <div id="active-chat" class="active-chat hidden">
@@ -107,42 +106,19 @@
                         
                         <div class="messages-container" id="messages-container"></div>
                         
-                        <!-- Красивая строка ввода как в Telegram -->
-                        <div class="tg-input-area" id="message-input-area">
-                            <div class="input-wrapper">
-                                <button class="input-action-btn attach-btn-tg" id="attach-btn-tg">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="currentColor"/>
-                                    </svg>
-                                </button>
-                                
-                                <div class="message-input-wrapper">
-                                    <input type="text" id="message-input" class="tg-message-input" placeholder="Сообщение..." onkeypress="handleMessageKeyPress(event)" oninput="onTyping()">
-                                    <div class="input-actions">
-                                        <button class="input-action-btn emoji-btn-tg" onclick="toggleEmojiPicker()">
-                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.58 20 4 16.42 4 12C4 7.58 7.58 4 12 4C16.42 4 20 7.58 20 12C20 16.42 16.42 20 12 20ZM15.5 11C14.67 11 14 10.33 14 9.5C14 8.67 14.67 8 15.5 8C16.33 8 17 8.67 17 9.5C17 10.33 16.33 11 15.5 11ZM8.5 11C7.67 11 7 10.33 7 9.5C7 8.67 7.67 8 8.5 8C9.33 8 10 8.67 10 9.5C10 10.33 9.33 11 8.5 11ZM12 17.5C13.67 17.5 15.17 16.47 15.85 15H8.15C8.83 16.47 10.33 17.5 12 17.5Z" fill="currentColor"/>
-                                            </svg>
-                                        </button>
-                                        <button class="input-action-btn voice-btn-tg" id="voice-record-btn" ontouchstart="startRecording()" ontouchend="stopRecording()" onmousedown="startRecording()" onmouseup="stopRecording()">
-                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M12 14C13.66 14 15 12.66 15 11V5C15 3.34 13.66 2 12 2C10.34 2 9 3.34 9 5V11C9 12.66 10.34 14 12 14ZM17 11C17 13.76 14.76 16 12 16C9.24 16 7 13.76 7 11H5C5 14.53 7.61 17.43 11 17.92V21H13V17.92C16.39 17.43 19 14.53 19 11H17Z" fill="currentColor"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <button class="send-btn-tg" id="send-btn-tg" onclick="sendMessage()">
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"/>
-                                    </svg>
-                                </button>
-                            </div>
+                        <!-- Строка ввода чата (рабочая, не трогаем) -->
+                        <div class="message-input-area" id="message-input-area">
+                            <label for="file-input" class="attach-btn" id="attach-file-btn">
+                                <img src="https://i.ibb.co/TDFN8s1J/Picsart-26-04-10-15-45-03-668.png" alt="Файл" style="width: 50px; height: 50px;">
+                            </label>
+                            <input type="file" id="file-input" accept="image/*" multiple style="display:none;">
                             
-                            <!-- Индикатор печатания -->
-                            <div class="typing-indicator" id="typing-indicator">
-                                <span></span><span></span><span></span>
-                            </div>
+                            <button id="voice-record-btn" class="voice-btn" ontouchstart="startRecording()" ontouchend="stopRecording()" onmousedown="startRecording()" onmouseup="stopRecording()">🎤</button>
+                            
+                            <input type="text" id="message-input" placeholder="Сообщение..." onkeypress="handleMessageKeyPress(event)" oninput="onTyping()">
+                            
+                            <button onclick="toggleEmojiPicker()" class="emoji-btn">😊</button>
+                            <button onclick="sendMessage()" class="send-btn">➤</button>
                         </div>
                         
                         <div class="channel-footer hidden" id="channel-footer">
@@ -276,56 +252,51 @@
     <div id="call-modal" class="modal hidden"><div class="call-container"><div class="call-header"><h3 id="call-username">Звонок</h3><span id="call-status">Соединение...</span><span id="call-timer">00:00</span></div><div class="video-container"><video id="remote-video" autoplay playsinline></video><video id="local-video" autoplay playsinline muted></video><div id="call-avatar" class="call-avatar"><div class="avatar-large">👤</div></div></div><div class="call-controls"><button onclick="toggleMute()" class="btn-call" id="mute-btn">🎤</button><button onclick="toggleVideo()" class="btn-call" id="video-btn">📹</button><button onclick="endCall()" class="btn-call btn-end-call">📵</button></div></div></div>
     <div id="incoming-call-modal" class="modal hidden"><div class="incoming-call-container"><div class="incoming-call-avatar">👤</div><h3 id="incoming-call-username">Входящий звонок</h3><p id="incoming-call-type">Аудиозвонок</p><div class="incoming-call-actions"><button onclick="rejectCall()" class="btn-call btn-reject">❌</button><button onclick="acceptCall()" class="btn-call btn-accept">✅</button></div></div></div>
     
-<!-- МУЛЬТИ-ФОТО МОДАЛЬНОЕ ОКНО -->
-<div id="image-preview-modal" class="modal hidden">
-    <div class="image-preview-container">
-        <div class="modal-header">
-            <h3>📷 Отправка фото (<span id="image-counter">0/0</span>)</h3>
-            <button onclick="closeImagePreview()" class="btn-close">×</button>
-        </div>
-        
-        <!-- Изображение -->
-        <img id="preview-image" src="" style="width: 100%; max-height: 350px; object-fit: contain; background: #f0f0f0;">
-        
-        <!-- Навигация -->
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
-            <button id="nav-prev-btn" onclick="navigateImage(-1)" style="background: none; border: none; font-size: 32px; cursor: pointer; color: var(--forest); display: none;">←</button>
+    <!-- МУЛЬТИ-ФОТО МОДАЛЬНОЕ ОКНО (КРАСИВОЕ) -->
+    <div id="image-preview-modal" class="modal hidden">
+        <div class="image-preview-container">
+            <div class="modal-header">
+                <h3>📷 Отправка фото (<span id="image-counter">0/0</span>)</h3>
+                <button onclick="closeImagePreview()" class="btn-close">×</button>
+            </div>
             
-            <!-- ТВОЯ КАРТИНКА 62x62 КАК КНОПКА ДОБАВИТЬ (БЕЗ ЗЕЛЁНОГО КРУГА) -->
-            <img src="https://i.ibb.co/BVhBTnmS/11623-AE3-5-A11-48-F3-9-C9-F-95-AF1-CD6-AAE4.png" 
-                 alt="Добавить фото" 
-                 onclick="addMoreImages()"
-                 style="width: 62px; height: 62px; cursor: pointer; transition: transform 0.2s;">
+            <img id="preview-image" src="" style="width: 100%; max-height: 350px; object-fit: contain; background: #f0f0f0;">
             
-            <button id="nav-next-btn" onclick="navigateImage(1)" style="background: none; border: none; font-size: 32px; cursor: pointer; color: var(--forest); display: none;">→</button>
-        </div>
-        
-        <!-- Красивая строка ввода как в Telegram для подписи -->
-        <div style="padding: 10px 20px 20px;">
-            <div style="display: flex; align-items: center; background: var(--background); border-radius: 24px; padding: 5px 15px;">
-                <input type="text" id="image-caption" 
-                       placeholder="Добавить подпись..." 
-                       style="flex: 1; background: transparent; border: none; padding: 12px 0; font-size: 16px; outline: none;">
-                <button onclick="confirmImageSend()" 
-                        style="background: var(--forest); border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white;">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"/>
-                    </svg>
-                </button>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
+                <button id="nav-prev-btn" onclick="navigateImage(-1)" style="background: none; border: none; font-size: 32px; cursor: pointer; color: var(--forest); display: none;">←</button>
+                
+                <!-- Твоя картинка 62x62 как кнопка добавить (без зелёного круга) -->
+                <img src="https://i.ibb.co/BVhBTnmS/11623-AE3-5-A11-48-F3-9-C9-F-95-AF1-CD6-AAE4.png" 
+                     alt="Добавить фото" 
+                     onclick="addMoreImages()"
+                     style="width: 62px; height: 62px; cursor: pointer; transition: transform 0.2s;">
+                
+                <button id="nav-next-btn" onclick="navigateImage(1)" style="background: none; border: none; font-size: 32px; cursor: pointer; color: var(--forest); display: none;">→</button>
+            </div>
+            
+            <!-- Красивая строка для подписи -->
+            <div style="padding: 10px 20px 20px;">
+                <div style="display: flex; align-items: center; background: var(--background); border-radius: 24px; padding: 5px 15px;">
+                    <input type="text" id="image-caption" 
+                           placeholder="Добавить подпись..." 
+                           style="flex: 1; background: transparent; border: none; padding: 12px 0; font-size: 16px; outline: none;">
+                    <button onclick="confirmImageSend()" 
+                            style="background: var(--forest); border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white; transition: all 0.2s;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; padding: 0 20px 20px;">
+                <button onclick="cancelAllImages()" class="btn-secondary" style="flex: 1; padding: 12px;">❌ Отмена</button>
             </div>
         </div>
-        
-        <!-- Кнопки внизу -->
-        <div style="display: flex; gap: 10px; padding: 0 20px 20px;">
-            <button onclick="cancelAllImages()" class="btn-secondary" style="flex: 1; padding: 12px;">❌ Отмена</button>
-        </div>
     </div>
-</div>
+    
     <div id="image-lightbox" class="image-lightbox hidden" onclick="closeLightbox()"><img id="lightbox-image" src=""></div>
     <div id="notifications-container" class="notifications-container"></div>
-
-    <!-- Скрытый input для файлов -->
-    <input type="file" id="file-input" accept="image/*" multiple style="display:none;">
 
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -341,11 +312,9 @@
     <script src="js/reels.js"></script>
     <script src="js/settings.js"></script>
     
-    <!-- Инициализация красивой строки ввода -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Привязываем обработчики для кнопки файла
-            var attachBtn = document.getElementById('attach-btn-tg');
+            var attachBtn = document.getElementById('attach-file-btn');
             var fileInput = document.getElementById('file-input');
             
             if (attachBtn && fileInput) {
@@ -358,17 +327,6 @@
                     if (typeof window.handleFileSelect === 'function') {
                         window.handleFileSelect(e);
                     }
-                });
-            }
-            
-            // Анимация для строки ввода
-            var messageInput = document.getElementById('message-input');
-            if (messageInput) {
-                messageInput.addEventListener('focus', function() {
-                    document.querySelector('.tg-input-area').classList.add('focused');
-                });
-                messageInput.addEventListener('blur', function() {
-                    document.querySelector('.tg-input-area').classList.remove('focused');
                 });
             }
         });
