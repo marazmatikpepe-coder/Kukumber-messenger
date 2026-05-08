@@ -1,6 +1,7 @@
-// SLICES (Слайсы) - ПОЛНАЯ ВЕРСИЯ 4.0
+// SLICES (Слайсы) - ПОЛНАЯ ВЕРСИЯ 5.0
 // Лайки, репосты, комментарии, профиль (только посты и репосты)
 // Баннер (цвета, картинка, GIF), подписчики, колокольчик, верификация
+// Звук при создании слайса
 
 var currentSlicesTab = 'feed';
 var pendingSliceFiles = [];
@@ -9,6 +10,21 @@ var slicesListener = null;
 var openCommentsSliceId = null;
 var pendingLikeRequests = {};
 var pendingRepostRequests = {};
+
+// Звук при создании слайса
+var sliceCreateSound = null;
+function initSliceSound() {
+    sliceCreateSound = new Audio('https://s33.aconvert.com/convert/p3r68-cdx67/rvt3w-3afhb.mp3');
+    sliceCreateSound.load();
+}
+function playSliceCreateSound() {
+    if (sliceCreateSound && typeof getSoundsEnabled === 'function' ? getSoundsEnabled() : true) {
+        try {
+            sliceCreateSound.currentTime = 0;
+            sliceCreateSound.play().catch(function(e) { console.log('Звук не воспроизведён:', e); });
+        } catch(e) { console.log('Ошибка звука:', e); }
+    }
+}
 
 // ========== ЗАГРУЗКА ЛЕНТЫ ==========
 function loadSlices() {
@@ -904,9 +920,8 @@ function toggleUserVerification(userId) {
         var isVerified = snap.val() === true;
         database.ref('users/' + userId + '/verified').set(!isVerified).then(function() {
             showNotification(isVerified ? 'Галочка снята' : 'Галочка выдана', 'success');
-            if (userId === currentUser.uid) {
-                // Если админ выдал галочку себе, обновляем данные
-                if (currentUserData) currentUserData.verified = !isVerified;
+            if (userId === currentUser.uid && currentUserData) {
+                currentUserData.verified = !isVerified;
             }
             openUserProfile(userId);
         });
@@ -1108,7 +1123,10 @@ function showSliceContextMenu(event, sliceId, sliceData) {
     
     setTimeout(function() {
         document.addEventListener('click', function closeSliceMenu(e) {
-            if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', closeSliceMenu); }
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeSliceMenu);
+            }
         });
     }, 10);
 }
@@ -1265,8 +1283,15 @@ async function publishSlice() {
             createdAt: firebase.database.ServerValue.TIMESTAMP
         };
         await database.ref('slices/').push(sliceData);
+        
+        // ВОСПРОИЗВОДИМ ЗВУК ПРИ СОЗДАНИИ СЛАЙСА
+        playSliceCreateSound();
+        
         showNotification('Пост опубликован! 🍕', 'success');
         closeCreateSliceModal();
         loadSlices();
     } catch (error) { console.error(error); showNotification('Ошибка публикации', 'error'); }
 }
+
+// Инициализация звуков при загрузке
+if (typeof initSliceSound === 'function') initSliceSound();
