@@ -1,6 +1,6 @@
-// SLICES (Слайсы) - ПОЛНАЯ ВЕРСИЯ 3.0
-// Лайки, репосты, комментарии, профиль, баннеры, верификация, поиск
-// + функции для профиля пользователя из чата
+// SLICES (Слайсы) - ПОЛНАЯ ВЕРСИЯ 4.0
+// Лайки, репосты, комментарии, профиль (только посты и репосты)
+// Баннер (цвета, картинка, GIF), подписчики, колокольчик, верификация
 
 var currentSlicesTab = 'feed';
 var pendingSliceFiles = [];
@@ -128,7 +128,6 @@ function createSliceCard(sliceId, sliceData) {
     var pinnedBadge = sliceData.pinned ? '<span class="slice-pinned-badge">📌 Закреплено</span>' : '';
     
     // Получаем данные о верификации автора
-    var verifiedBadge = '';
     database.ref('users/' + sliceData.authorId + '/verified').once('value').then(function(snap) {
         if (snap.val() === true) {
             var badgeSpan = div.querySelector('.verified-badge-placeholder');
@@ -503,7 +502,7 @@ function likeComment(sliceId, commentId) {
     });
 }
 
-// ========== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ (ДЛЯ СЛАЙСОВ И ЧАТА) ==========
+// ========== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ (ТОЛЬКО ПОСТЫ И РЕПОСТЫ) ==========
 function openUserProfile(userId) {
     window.viewingProfileUserId = userId;
     
@@ -532,72 +531,74 @@ function openUserProfile(userId) {
         window.viewingProfileUserAvatar = userAvatar;
         window.viewingProfileUserData = userData;
         
-        var bannerStyle = '';
-        if (userBanner) {
-            if (userBanner.startsWith('#')) {
-                bannerStyle = 'background: ' + userBanner + ';';
+        // Получаем количество подписчиков
+        database.ref('subscriptions/').orderByChild(userId).equalTo(true).once('value').then(function(subsSnap) {
+            var subscribersCount = subsSnap.val() ? Object.keys(subsSnap.val()).length : 0;
+            
+            var bannerStyle = '';
+            if (userBanner) {
+                if (userBanner.startsWith('#')) {
+                    bannerStyle = 'background: ' + userBanner + ';';
+                } else {
+                    bannerStyle = 'background-image: url(' + userBanner + '); background-size: cover; background-position: center;';
+                }
             } else {
-                bannerStyle = 'background-image: url(' + userBanner + '); background-size: cover; background-position: center;';
+                bannerStyle = 'background: linear-gradient(135deg, #228B22, #556B2F);';
             }
-        } else {
-            bannerStyle = 'background: linear-gradient(135deg, #228B22, #556B2F);';
-        }
-        
-        var statusText = isOnline ? '<span style="color: #32CD32;">● В сети</span>' : (lastSeen ? 'Был(а) ' + formatLastSeen(lastSeen) : 'Неизвестно');
-        
-        var modal = document.createElement('div');
-        modal.id = 'user-profile-modal';
-        modal.className = 'modal';
-        modal.innerHTML = `
-            <div class="profile-modal-content">
-                <div class="profile-banner" id="profile-banner" style="${bannerStyle}">
-                    ${canEdit ? '<button class="profile-banner-edit-btn" onclick="editProfileBanner()">✏️</button>' : ''}
-                    <button class="profile-close-btn" onclick="closeProfileModal()">×</button>
-                </div>
-                <div class="profile-avatar-wrapper">
-                    <div class="profile-avatar" id="profile-avatar" style="background-image: url(${userAvatar}); background-size: cover;">
-                        ${!userAvatar ? '👤' : ''}
-                        ${canEdit ? '<button class="profile-avatar-edit-btn" onclick="editProfileAvatar()">✏️</button>' : ''}
+            
+            var statusText = isOnline ? '<span style="color: #32CD32;">● В сети</span>' : (lastSeen ? 'Был(а) ' + formatLastSeen(lastSeen) : 'Неизвестно');
+            
+            var modal = document.createElement('div');
+            modal.id = 'user-profile-modal';
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="profile-modal-content">
+                    <div class="profile-banner" id="profile-banner" style="${bannerStyle}">
+                        ${canEdit ? '<button class="profile-banner-edit-btn" onclick="editProfileBanner()">✏️</button>' : ''}
+                        <button class="profile-close-btn" onclick="closeProfileModal()">×</button>
                     </div>
-                </div>
-                <div class="profile-info">
-                    <div class="profile-name-row">
-                        <div style="display: flex; align-items: center; gap: 5px;">
-                            <h2 class="profile-name" id="profile-name" ${canEdit ? 'ondblclick="editProfileName()" style="cursor:pointer;"' : ''}>${escapeHtml(userName)}</h2>
-                            ${userVerified ? '<img src="https://i.ibb.co/YTRCNHkq/4e9cba55-b083-46d3-8a30-bff7b1be94c7-1.png" style="width:18px; height:18px; cursor:pointer;" onclick="showVerifiedInfo()">' : ''}
-                            ${isAdmin && !isOwnProfile ? '<button onclick="toggleUserVerification(\''+userId+'\')" style="background:none; border:none; cursor:pointer; font-size:14px;">🔘 Выдать галочку</button>' : ''}
+                    <div class="profile-avatar-wrapper">
+                        <div class="profile-avatar" id="profile-avatar" style="background-image: url(${userAvatar}); background-size: cover;">
+                            ${!userAvatar ? '👤' : ''}
+                            ${canEdit ? '<button class="profile-avatar-edit-btn" onclick="editProfileAvatar()">✏️</button>' : ''}
                         </div>
-                        ${isOwnProfile ? '' : `
-                            <button class="profile-subscribe-btn" id="profile-subscribe-btn" onclick="toggleSubscription()">Подписаться</button>
-                            <button class="profile-notify-btn" id="profile-notify-btn" onclick="toggleNotifications()">🔔</button>
-                        `}
                     </div>
-                    <div class="profile-status">${statusText}</div>
-                    <p class="profile-bio" id="profile-bio" ${canEdit ? 'ondblclick="editProfileBio()" style="cursor:pointer;"' : ''}>${escapeHtml(userBio)}</p>
+                    <div class="profile-info">
+                        <div class="profile-name-row">
+                            <div style="display: flex; align-items: center; gap: 5px;">
+                                <h2 class="profile-name" id="profile-name" ${canEdit ? 'ondblclick="editProfileName()" style="cursor:pointer;"' : ''}>${escapeHtml(userName)}</h2>
+                                ${userVerified ? '<img src="https://i.ibb.co/YTRCNHkq/4e9cba55-b083-46d3-8a30-bff7b1be94c7-1.png" style="width:18px; height:18px; cursor:pointer;" onclick="showVerifiedInfo()">' : ''}
+                                ${isAdmin ? '<button onclick="toggleUserVerification(\''+userId+'\')" style="background:none; border:none; cursor:pointer; font-size:14px;">🔘 ' + (userVerified ? 'Снять галочку' : 'Выдать галочку') + '</button>' : ''}
+                            </div>
+                            ${isOwnProfile ? '' : `
+                                <button class="profile-subscribe-btn" id="profile-subscribe-btn" onclick="toggleSubscription()">Подписаться</button>
+                                <button class="profile-notify-btn" id="profile-notify-btn" onclick="toggleNotifications()">🔔</button>
+                            `}
+                        </div>
+                        <div class="profile-subscribers">👥 ${subscribersCount} подписчиков</div>
+                        <div class="profile-status">${statusText}</div>
+                        <p class="profile-bio" id="profile-bio" ${canEdit ? 'ondblclick="editProfileBio()" style="cursor:pointer;"' : ''}>${escapeHtml(userBio)}</p>
+                    </div>
+                    <div class="profile-tabs">
+                        <button class="profile-tab-btn active" onclick="switchProfileTab('posts', '${userId}')">📷 Посты</button>
+                        <button class="profile-tab-btn" onclick="switchProfileTab('reposts', '${userId}')">🔄 Репосты</button>
+                    </div>
+                    <div id="profile-content" class="profile-content">
+                        <div class="profile-loading">Загрузка...</div>
+                    </div>
                 </div>
-                <div class="profile-tabs">
-                    <button class="profile-tab-btn" onclick="switchProfileTab('posts', '${userId}')">📷 Посты</button>
-                    <button class="profile-tab-btn" onclick="switchProfileTab('reposts', '${userId}')">🔄 Репосты</button>
-                    <button class="profile-tab-btn" onclick="switchProfileTab('media', '${userId}')">📷 Медиа</button>
-                    <button class="profile-tab-btn" onclick="switchProfileTab('files', '${userId}')">📎 Файлы</button>
-                    <button class="profile-tab-btn" onclick="switchProfileTab('voice', '${userId}')">🎤 Голосовые</button>
-                    <button class="profile-tab-btn" onclick="switchProfileTab('links', '${userId}')">🔗 Ссылки</button>
-                </div>
-                <div id="profile-content" class="profile-content">
-                    <div class="profile-loading">Загрузка...</div>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        modal.classList.remove('hidden');
-        
-        if (!isOwnProfile) {
-            checkSubscriptionStatus(userId);
-            checkNotificationStatus(userId);
-        }
-        
-        switchProfileTab('posts', userId);
+            `;
+            
+            document.body.appendChild(modal);
+            modal.classList.remove('hidden');
+            
+            if (!isOwnProfile) {
+                checkSubscriptionStatus(userId);
+                checkNotificationStatus(userId);
+            }
+            
+            switchProfileTab('posts', userId);
+        });
     });
 }
 
@@ -636,6 +637,12 @@ function toggleSubscription() {
             showNotification('Вы подписались', 'success');
         }
         checkSubscriptionStatus(userId);
+        // Обновляем счетчик подписчиков в профиле
+        database.ref('subscriptions/').orderByChild(userId).equalTo(true).once('value').then(function(subsSnap) {
+            var count = subsSnap.val() ? Object.keys(subsSnap.val()).length : 0;
+            var subsDiv = document.querySelector('.profile-subscribers');
+            if (subsDiv) subsDiv.textContent = '👥 ' + count + ' подписчиков';
+        });
     });
 }
 
@@ -654,9 +661,7 @@ function toggleNotifications() {
             showNotification('Уведомления включены', 'success');
         }
         var notifBtn = document.getElementById('profile-notify-btn');
-        if (notifBtn) {
-            notifBtn.style.opacity = !currentState ? '1' : '0.5';
-        }
+        if (notifBtn) notifBtn.style.opacity = !currentState ? '1' : '0.5';
     });
 }
 
@@ -666,137 +671,38 @@ function switchProfileTab(tab, userId) {
     
     var btns = document.querySelectorAll('.profile-tab-btn');
     btns.forEach(function(btn) { btn.classList.remove('active'); });
-    var clickedBtn = Array.from(btns).find(function(btn) {
-        if (tab === 'posts' && btn.textContent.includes('Посты')) return true;
-        if (tab === 'reposts' && btn.textContent.includes('Репосты')) return true;
-        if (tab === 'media' && btn.textContent.includes('Медиа')) return true;
-        if (tab === 'files' && btn.textContent.includes('Файлы')) return true;
-        if (tab === 'voice' && btn.textContent.includes('Голосовые')) return true;
-        if (tab === 'links' && btn.textContent.includes('Ссылки')) return true;
-        return false;
-    });
-    if (clickedBtn) clickedBtn.classList.add('active');
+    if (tab === 'posts') {
+        if (btns[0]) btns[0].classList.add('active');
+    } else {
+        if (btns[1]) btns[1].classList.add('active');
+    }
     
     content.innerHTML = '<div class="profile-loading">Загрузка...</div>';
     
-    if (tab === 'posts') {
-        var query = database.ref('slices').orderByChild('authorId').equalTo(userId);
-        query.once('value').then(function(snapshot) {
-            var slices = snapshot.val();
-            content.innerHTML = '';
-            if (!slices) { content.innerHTML = '<div class="profile-empty">Нет постов</div>'; return; }
-            var slicesArray = [];
-            for (var id in slices) {
-                if (slices[id].type === 'repost') continue;
-                slicesArray.push({ id: id, data: slices[id] });
-            }
-            slicesArray.sort(function(a, b) { return (b.data.createdAt || 0) - (a.data.createdAt || 0); });
-            slicesArray.forEach(function(slice) {
-                content.appendChild(createProfileSliceCard(slice.id, slice.data));
-            });
-        });
-    } else if (tab === 'reposts') {
-        var query = database.ref('slices').orderByChild('authorId').equalTo(userId);
-        query.once('value').then(function(snapshot) {
-            var slices = snapshot.val();
-            content.innerHTML = '';
-            if (!slices) { content.innerHTML = '<div class="profile-empty">Нет репостов</div>'; return; }
-            var slicesArray = [];
-            for (var id in slices) {
-                if (slices[id].type !== 'repost') continue;
-                slicesArray.push({ id: id, data: slices[id] });
-            }
-            slicesArray.sort(function(a, b) { return (b.data.createdAt || 0) - (a.data.createdAt || 0); });
-            slicesArray.forEach(function(slice) {
-                content.appendChild(createProfileSliceCard(slice.id, slice.data));
-            });
-        });
-    } else {
-        // Для медиа, файлов, голосовых, ссылок — собираем из сообщений в чатах
-        loadChatMessagesForProfile(content, userId, tab);
-    }
-}
-
-function loadChatMessagesForProfile(container, userId, tab) {
-    var userChatsRef = database.ref('userChats/' + userId);
-    userChatsRef.once('value').then(function(chatsSnap) {
-        var chats = chatsSnap.val();
-        if (!chats) { container.innerHTML = '<div class="profile-empty">Нет данных</div>'; return; }
+    var query = database.ref('slices').orderByChild('authorId').equalTo(userId);
+    query.once('value').then(function(snapshot) {
+        var slices = snapshot.val();
+        content.innerHTML = '';
         
-        var allMessages = [];
-        var chatIds = Object.keys(chats);
-        var processed = 0;
-        
-        chatIds.forEach(function(chatId) {
-            database.ref('messages/' + chatId).once('value').then(function(messagesSnap) {
-                var messages = messagesSnap.val();
-                if (messages) {
-                    for (var msgId in messages) {
-                        var msg = messages[msgId];
-                        if (msg.senderId === userId) {
-                            allMessages.push(msg);
-                        }
-                    }
-                }
-                processed++;
-                if (processed === chatIds.length) {
-                    filterAndDisplayMessages(container, allMessages, tab);
-                }
-            });
-        });
-    });
-}
-
-function filterAndDisplayMessages(container, messages, tab) {
-    var filtered = [];
-    
-    messages.forEach(function(msg) {
-        if (tab === 'media' && (msg.type === 'image' || msg.type === 'video' || msg.type === 'gif')) {
-            filtered.push(msg);
-        } else if (tab === 'files' && msg.type === 'file') {
-            filtered.push(msg);
-        } else if (tab === 'voice' && msg.type === 'audio') {
-            filtered.push(msg);
-        } else if (tab === 'links' && msg.type === 'text' && msg.text && msg.text.match(/(https?:\/\/[^\s]+)/g)) {
-            filtered.push(msg);
-        }
-    });
-    
-    filtered.sort(function(a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
-    
-    container.innerHTML = '';
-    if (filtered.length === 0) {
-        var tabNames = { media: 'Медиа', files: 'Файлы', voice: 'Голосовые', links: 'Ссылки' };
-        container.innerHTML = '<div class="profile-empty">Нет ' + tabNames[tab] + '</div>';
-        return;
-    }
-    
-    filtered.forEach(function(item) {
-        var div = document.createElement('div');
-        div.className = 'profile-media-item';
-        
-        if (tab === 'media') {
-            if (item.type === 'image') {
-                div.innerHTML = '<img src="' + item.imageUrl + '" class="profile-media-img" onclick="openSliceLightbox(\'' + item.imageUrl + '\')">';
-            } else if (item.type === 'gif') {
-                div.innerHTML = '<img src="' + item.gifUrl + '" class="profile-media-img" onclick="openSliceLightbox(\'' + item.gifUrl + '\')"><span class="gif-badge-small">GIF</span>';
-            } else if (item.type === 'video') {
-                div.innerHTML = '<video src="' + item.videoUrl + '" class="profile-media-video" controls></video>';
-            }
-        } else if (tab === 'files') {
-            div.innerHTML = '<div class="profile-file-item">📎 <a href="' + item.fileUrl + '" target="_blank">' + escapeHtml(item.fileName) + '</a></div>';
-        } else if (tab === 'voice') {
-            div.innerHTML = '<div class="profile-voice-item">🎤 <audio src="' + item.audioUrl + '" controls></audio></div>';
-        } else if (tab === 'links') {
-            var urls = item.text.match(/(https?:\/\/[^\s]+)/g);
-            if (urls) {
-                urls.forEach(function(url) {
-                    div.innerHTML += '<div class="profile-link-item">🔗 <a href="' + url + '" target="_blank">' + url + '</a></div>';
-                });
-            }
+        if (!slices) {
+            content.innerHTML = '<div class="profile-empty">Нет постов</div>';
+            return;
         }
         
-        container.appendChild(div);
+        var slicesArray = [];
+        for (var id in slices) {
+            var slice = slices[id];
+            if (tab === 'reposts' && slice.type !== 'repost') continue;
+            if (tab === 'posts' && slice.type === 'repost') continue;
+            slicesArray.push({ id: id, data: slice });
+        }
+        
+        slicesArray.sort(function(a, b) { return (b.data.createdAt || 0) - (a.data.createdAt || 0); });
+        
+        slicesArray.forEach(function(slice) {
+            var card = createProfileSliceCard(slice.id, slice.data);
+            content.appendChild(card);
+        });
     });
 }
 
@@ -894,6 +800,8 @@ function setProfileBanner(colorOrUrl) {
         showNotification('Баннер обновлён', 'success');
         closeAllModals();
         openUserProfile(userId);
+    }).catch(function(err) {
+        showNotification('Ошибка: ' + err.message, 'error');
     });
 }
 
@@ -908,8 +816,8 @@ function uploadProfileBannerImage() {
             if (typeof uploadToImgBB === 'function') {
                 uploadToImgBB(file).then(function(data) {
                     setProfileBanner(data.url);
-                }).catch(function() {
-                    showNotification('Ошибка загрузки', 'error');
+                }).catch(function(err) {
+                    showNotification('Ошибка загрузки: ' + err.message, 'error');
                 });
             } else {
                 showNotification('Функция загрузки не найдена', 'error');
@@ -942,8 +850,8 @@ function editProfileAvatar() {
                         }
                         openUserProfile(userId);
                     });
-                }).catch(function() {
-                    showNotification('Ошибка загрузки', 'error');
+                }).catch(function(err) {
+                    showNotification('Ошибка загрузки: ' + err.message, 'error');
                 });
             } else {
                 showNotification('Функция загрузки не найдена', 'error');
@@ -996,6 +904,10 @@ function toggleUserVerification(userId) {
         var isVerified = snap.val() === true;
         database.ref('users/' + userId + '/verified').set(!isVerified).then(function() {
             showNotification(isVerified ? 'Галочка снята' : 'Галочка выдана', 'success');
+            if (userId === currentUser.uid) {
+                // Если админ выдал галочку себе, обновляем данные
+                if (currentUserData) currentUserData.verified = !isVerified;
+            }
             openUserProfile(userId);
         });
     });
@@ -1055,7 +967,7 @@ function goToSlide(sliceId, index) {
 function formatSliceText(text) {
     if (!text) return '';
     text = escapeHtml(text);
-    text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: var(--forest); text-decoration: none;">$1</a>');
+    text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #228B22; text-decoration: none;">$1</a>');
     text = text.replace(/@(\w+)/g, '<span class="slice-mention" onclick="searchByUser(\'$1\')">@$1</span>');
     return text;
 }
@@ -1357,9 +1269,4 @@ async function publishSlice() {
         closeCreateSliceModal();
         loadSlices();
     } catch (error) { console.error(error); showNotification('Ошибка публикации', 'error'); }
-}
-
-// ========== ФУНКЦИИ ДЛЯ ЧАТА (клик по аватарке/имени) ==========
-function openChatUserProfile(userId) {
-    openUserProfile(userId);
 }
