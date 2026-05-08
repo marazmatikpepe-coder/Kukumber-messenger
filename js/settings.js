@@ -311,20 +311,23 @@ function saveProfile() {
             closeEditProfileModal();
             showNotification(t.profile_updated, 'success');
             if (typeof updateUserDisplay === 'function') updateUserDisplay();
-            // Обновляем данные в текущем сеансе
             if (currentUserData) {
                 currentUserData.username = newUsername;
                 currentUserData.bio = newBio;
                 if (avatarUrl) currentUserData.avatar = avatarUrl;
             }
-        }).catch(function(err) { showNotification('Error', 'error'); });
+        }).catch(function(err) { showNotification('Ошибка: ' + err.message, 'error'); });
     }
     
     if (window.pendingAvatarFile) {
-        uploadImageToImgBB(window.pendingAvatarFile).then(function(data) {
-            window.pendingAvatarFile = null;
-            saveData(data.url);
-        }).catch(function() { saveData(null); });
+        if (typeof uploadToImgBB === 'function') {
+            uploadToImgBB(window.pendingAvatarFile).then(function(data) {
+                window.pendingAvatarFile = null;
+                saveData(data.url);
+            }).catch(function() { saveData(null); });
+        } else {
+            saveData(null);
+        }
     } else {
         saveData(null);
     }
