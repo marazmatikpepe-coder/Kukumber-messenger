@@ -830,7 +830,7 @@ function setProfileBanner(colorOrUrl) {
         showNotification('Баннер обновлён', 'success');
         closeColorPickerModal();
         
-        // Обновляем баннер в открытом профиле без перезагрузки
+        // ОБНОВЛЯЕМ БАННЕР В ОТКРЫТОМ ПРОФИЛЕ
         var bannerDiv = document.getElementById('profile-banner');
         if (bannerDiv) {
             if (colorOrUrl) {
@@ -841,6 +841,7 @@ function setProfileBanner(colorOrUrl) {
                     bannerDiv.style.backgroundImage = 'url(' + colorOrUrl + ')';
                     bannerDiv.style.backgroundSize = 'cover';
                     bannerDiv.style.backgroundPosition = 'center';
+                    bannerDiv.style.background = 'none';
                 }
             } else {
                 bannerDiv.style.background = 'linear-gradient(135deg, #228B22, #556B2F)';
@@ -848,15 +849,19 @@ function setProfileBanner(colorOrUrl) {
             }
         }
         
+        // ОБНОВЛЯЕМ ДАННЫЕ В ПАМЯТИ
         if (window.viewingProfileUserData) {
             window.viewingProfileUserData.banner = colorOrUrl || null;
         }
+        
+        // ОБНОВЛЯЕМ ВСЕ КАРТОЧКИ ПОСТОВ (если баннер пользователя виден где-то ещё)
+        var allCards = document.querySelectorAll('.slice-card');
+        // Не перезагружаем всю ленту, просто обновляем данные
     }).catch(function(err) {
         showNotification('Ошибка: ' + err.message, 'error');
         closeColorPickerModal();
     });
 }
-
 function uploadProfileBannerImage() {
     var input = document.createElement('input');
     input.type = 'file';
