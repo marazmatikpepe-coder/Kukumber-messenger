@@ -1,60 +1,104 @@
 // SOUNDS.JS - звуки для мессенджера
+// Звук отправки сообщения/создания слайса
+// Звук получения сообщения
 
 // Создаём аудио объекты
 var sendSound = null;
 var receiveSound = null;
+var sliceCreateSound = null;
 
-// Инициализация звуков (вызови при загрузке страницы)
+// URL твоих звуков
+var SEND_SOUND_URL = 'https://s33.aconvert.com/convert/p3r68-cdx67/rvt3w-3afhb.mp3';
+var RECEIVE_SOUND_URL = 'https://s33.aconvert.com/convert/p3r68-cdx67/stzi2-lrg6l.mp3';
+
+// Инициализация звуков
 function initSounds() {
-    // Звук отправки сообщения
+    // Звук отправки
     sendSound = new Audio();
-    sendSound.src = 'https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3';
-    // Если не работает, запасной вариант
-    sendSound.onerror = function() {
-        console.log('Звук отправки не загружен, использую резервный');
-        sendSound.src = 'https://cdn.pixabay.com/download/audio/2022/03/10/audio_c8c8f7c6b7.mp3';
-    };
-    
-    // Звук получения сообщения
-    receiveSound = new Audio();
-    receiveSound.src = 'https://www.soundjay.com/misc/sounds/notification-01.mp3';
-    receiveSound.onerror = function() {
-        console.log('Звук получения не загружен, использую резервный');
-        receiveSound.src = 'https://cdn.pixabay.com/download/audio/2021/08/04/audio_3c8f5e6c7d.mp3';
-    };
-    
-    // Предзагрузка
+    sendSound.src = SEND_SOUND_URL;
     sendSound.load();
+    sendSound.onerror = function() {
+        console.warn('Не удалось загрузить звук отправки');
+    };
+    
+    // Звук получения
+    receiveSound = new Audio();
+    receiveSound.src = RECEIVE_SOUND_URL;
     receiveSound.load();
+    receiveSound.onerror = function() {
+        console.warn('Не удалось загрузить звук получения');
+    };
+    
+    // Звук создания слайса (используем тот же, что и отправка)
+    sliceCreateSound = new Audio();
+    sliceCreateSound.src = SEND_SOUND_URL;
+    sliceCreateSound.load();
+    
+    console.log('Звуки инициализированы');
 }
 
 // Воспроизведение звука отправки
 function playSendSound() {
+    if (!soundsEnabled) return;
     if (!sendSound) initSounds();
     try {
         sendSound.currentTime = 0;
-        sendSound.play().catch(function(e) { console.log('Звук не воспроизведён:', e); });
-    } catch(e) { console.log('Ошибка звука:', e); }
+        sendSound.play().catch(function(e) {
+            console.log('Звук отправки не воспроизведён:', e);
+        });
+    } catch(e) {
+        console.log('Ошибка воспроизведения звука отправки:', e);
+    }
 }
 
 // Воспроизведение звука получения
 function playReceiveSound() {
+    if (!soundsEnabled) return;
     if (!receiveSound) initSounds();
     try {
         receiveSound.currentTime = 0;
-        receiveSound.play().catch(function(e) { console.log('Звук не воспроизведён:', e); });
-    } catch(e) { console.log('Ошибка звука:', e); }
+        receiveSound.play().catch(function(e) {
+            console.log('Звук получения не воспроизведён:', e);
+        });
+    } catch(e) {
+        console.log('Ошибка воспроизведения звука получения:', e);
+    }
 }
 
-// Включить/выключить звуки
+// Воспроизведение звука создания слайса
+function playSliceCreateSound() {
+    if (!soundsEnabled) return;
+    if (!sliceCreateSound) initSounds();
+    try {
+        sliceCreateSound.currentTime = 0;
+        sliceCreateSound.play().catch(function(e) {
+            console.log('Звук создания слайса не воспроизведён:', e);
+        });
+    } catch(e) {
+        console.log('Ошибка воспроизведения звука создания слайса:', e);
+    }
+}
+
+// Настройки звуков
 var soundsEnabled = localStorage.getItem('sounds_enabled') !== 'false';
 
+// Включить/выключить звуки
 function toggleSounds() {
     soundsEnabled = !soundsEnabled;
     localStorage.setItem('sounds_enabled', soundsEnabled);
-    showNotification(soundsEnabled ? 'Звуки включены' : 'Звуки выключены', 'info');
+    showNotification(soundsEnabled ? '🔊 Звуки включены' : '🔇 Звуки выключены', 'info');
 }
 
+// Получить статус звуков
 function getSoundsEnabled() {
     return soundsEnabled;
+}
+
+// Автоматическая инициализация при загрузке страницы
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        initSounds();
+    });
+} else {
+    initSounds();
 }
