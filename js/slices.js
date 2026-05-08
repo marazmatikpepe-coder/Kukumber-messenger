@@ -1,5 +1,6 @@
-// SLICES (Слайсы) - ПОЛНАЯ ВЕРСИЯ 2.0
+// SLICES (Слайсы) - ПОЛНАЯ ВЕРСИЯ 3.0
 // Лайки, репосты, комментарии, профиль, баннеры, верификация, поиск
+// + функции для профиля пользователя из чата
 
 var currentSlicesTab = 'feed';
 var pendingSliceFiles = [];
@@ -502,7 +503,7 @@ function likeComment(sliceId, commentId) {
     });
 }
 
-// ========== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ==========
+// ========== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ (ДЛЯ СЛАЙСОВ И ЧАТА) ==========
 function openUserProfile(userId) {
     window.viewingProfileUserId = userId;
     
@@ -523,6 +524,9 @@ function openUserProfile(userId) {
         var userBio = userData.bio || 'Нет описания';
         var userVerified = userData.verified === true;
         var userBanner = userData.banner || null;
+        var userStatus = userData.status || {};
+        var isOnline = userStatus.online === true;
+        var lastSeen = userStatus.lastSeen;
         
         window.viewingProfileUserName = userName;
         window.viewingProfileUserAvatar = userAvatar;
@@ -538,6 +542,8 @@ function openUserProfile(userId) {
         } else {
             bannerStyle = 'background: linear-gradient(135deg, #228B22, #556B2F);';
         }
+        
+        var statusText = isOnline ? '<span style="color: #32CD32;">● В сети</span>' : (lastSeen ? 'Был(а) ' + formatLastSeen(lastSeen) : 'Неизвестно');
         
         var modal = document.createElement('div');
         modal.id = 'user-profile-modal';
@@ -566,11 +572,16 @@ function openUserProfile(userId) {
                             <button class="profile-notify-btn" id="profile-notify-btn" onclick="toggleNotifications()">🔔</button>
                         `}
                     </div>
+                    <div class="profile-status">${statusText}</div>
                     <p class="profile-bio" id="profile-bio" ${canEdit ? 'ondblclick="editProfileBio()" style="cursor:pointer;"' : ''}>${escapeHtml(userBio)}</p>
                 </div>
                 <div class="profile-tabs">
-                    <button class="profile-tab-btn active" onclick="switchProfileTab('posts', '${userId}')">📷 Посты</button>
+                    <button class="profile-tab-btn" onclick="switchProfileTab('posts', '${userId}')">📷 Посты</button>
                     <button class="profile-tab-btn" onclick="switchProfileTab('reposts', '${userId}')">🔄 Репосты</button>
+                    <button class="profile-tab-btn" onclick="switchProfileTab('media', '${userId}')">📷 Медиа</button>
+                    <button class="profile-tab-btn" onclick="switchProfileTab('files', '${userId}')">📎 Файлы</button>
+                    <button class="profile-tab-btn" onclick="switchProfileTab('voice', '${userId}')">🎤 Голосовые</button>
+                    <button class="profile-tab-btn" onclick="switchProfileTab('links', '${userId}')">🔗 Ссылки</button>
                 </div>
                 <div id="profile-content" class="profile-content">
                     <div class="profile-loading">Загрузка...</div>
@@ -583,6 +594,7 @@ function openUserProfile(userId) {
         
         if (!isOwnProfile) {
             checkSubscriptionStatus(userId);
+            checkNotificationStatus(userId);
         }
         
         switchProfileTab('posts', userId);
@@ -598,10 +610,15 @@ function checkSubscriptionStatus(userId) {
             btn.style.background = isSubscribed ? '#555' : '#1a1a1a';
         }
     });
-    
+}
+
+function checkNotificationStatus(userId) {
     database.ref('subscriptionNotifications/' + currentUser.uid + '/' + userId).once('value').then(function(snap) {
         var notifBtn = document.getElementById('profile-notify-btn');
-        if (notifBtn) notifBtn.style.opacity = snap.val() === true ? '1' : '0.5';
+        if (notifBtn) {
+            notifBtn.style.opacity = snap.val() === true ? '1' : '0.5';
+            notifBtn.setAttribute('data-enabled', snap.val() === true ? 'true' : 'false');
+        }
     });
 }
 
@@ -628,7 +645,8 @@ function toggleNotifications() {
     
     var notifRef = database.ref('subscriptionNotifications/' + currentUser.uid + '/' + userId);
     notifRef.once('value').then(function(snap) {
-        if (snap.val() === true) {
+        var currentState = snap.val() === true;
+        if (currentState) {
             notifRef.remove();
             showNotification('Уведомления выключены', 'info');
         } else {
@@ -636,7 +654,9 @@ function toggleNotifications() {
             showNotification('Уведомления включены', 'success');
         }
         var notifBtn = document.getElementById('profile-notify-btn');
-        if (notifBtn) notifBtn.style.opacity = snap.val() === true ? '0.5' : '1';
+        if (notifBtn) {
+            notifBtn.style.opacity = !currentState ? '1' : '0.5';
+        }
     });
 }
 
@@ -646,38 +666,137 @@ function switchProfileTab(tab, userId) {
     
     var btns = document.querySelectorAll('.profile-tab-btn');
     btns.forEach(function(btn) { btn.classList.remove('active'); });
-    if (tab === 'posts') {
-        if (btns[0]) btns[0].classList.add('active');
-    } else {
-        if (btns[1]) btns[1].classList.add('active');
-    }
+    var clickedBtn = Array.from(btns).find(function(btn) {
+        if (tab === 'posts' && btn.textContent.includes('Посты')) return true;
+        if (tab === 'reposts' && btn.textContent.includes('Репосты')) return true;
+        if (tab === 'media' && btn.textContent.includes('Медиа')) return true;
+        if (tab === 'files' && btn.textContent.includes('Файлы')) return true;
+        if (tab === 'voice' && btn.textContent.includes('Голосовые')) return true;
+        if (tab === 'links' && btn.textContent.includes('Ссылки')) return true;
+        return false;
+    });
+    if (clickedBtn) clickedBtn.classList.add('active');
     
     content.innerHTML = '<div class="profile-loading">Загрузка...</div>';
     
-    var query = database.ref('slices').orderByChild('authorId').equalTo(userId);
-    query.once('value').then(function(snapshot) {
-        var slices = snapshot.val();
-        content.innerHTML = '';
-        
-        if (!slices) {
-            content.innerHTML = '<div class="profile-empty">Нет постов</div>';
-            return;
-        }
-        
-        var slicesArray = [];
-        for (var id in slices) {
-            var slice = slices[id];
-            if (tab === 'reposts' && slice.type !== 'repost') continue;
-            if (tab === 'posts' && slice.type === 'repost') continue;
-            slicesArray.push({ id: id, data: slice });
-        }
-        
-        slicesArray.sort(function(a, b) { return (b.data.createdAt || 0) - (a.data.createdAt || 0); });
-        
-        slicesArray.forEach(function(slice) {
-            var card = createProfileSliceCard(slice.id, slice.data);
-            content.appendChild(card);
+    if (tab === 'posts') {
+        var query = database.ref('slices').orderByChild('authorId').equalTo(userId);
+        query.once('value').then(function(snapshot) {
+            var slices = snapshot.val();
+            content.innerHTML = '';
+            if (!slices) { content.innerHTML = '<div class="profile-empty">Нет постов</div>'; return; }
+            var slicesArray = [];
+            for (var id in slices) {
+                if (slices[id].type === 'repost') continue;
+                slicesArray.push({ id: id, data: slices[id] });
+            }
+            slicesArray.sort(function(a, b) { return (b.data.createdAt || 0) - (a.data.createdAt || 0); });
+            slicesArray.forEach(function(slice) {
+                content.appendChild(createProfileSliceCard(slice.id, slice.data));
+            });
         });
+    } else if (tab === 'reposts') {
+        var query = database.ref('slices').orderByChild('authorId').equalTo(userId);
+        query.once('value').then(function(snapshot) {
+            var slices = snapshot.val();
+            content.innerHTML = '';
+            if (!slices) { content.innerHTML = '<div class="profile-empty">Нет репостов</div>'; return; }
+            var slicesArray = [];
+            for (var id in slices) {
+                if (slices[id].type !== 'repost') continue;
+                slicesArray.push({ id: id, data: slices[id] });
+            }
+            slicesArray.sort(function(a, b) { return (b.data.createdAt || 0) - (a.data.createdAt || 0); });
+            slicesArray.forEach(function(slice) {
+                content.appendChild(createProfileSliceCard(slice.id, slice.data));
+            });
+        });
+    } else {
+        // Для медиа, файлов, голосовых, ссылок — собираем из сообщений в чатах
+        loadChatMessagesForProfile(content, userId, tab);
+    }
+}
+
+function loadChatMessagesForProfile(container, userId, tab) {
+    var userChatsRef = database.ref('userChats/' + userId);
+    userChatsRef.once('value').then(function(chatsSnap) {
+        var chats = chatsSnap.val();
+        if (!chats) { container.innerHTML = '<div class="profile-empty">Нет данных</div>'; return; }
+        
+        var allMessages = [];
+        var chatIds = Object.keys(chats);
+        var processed = 0;
+        
+        chatIds.forEach(function(chatId) {
+            database.ref('messages/' + chatId).once('value').then(function(messagesSnap) {
+                var messages = messagesSnap.val();
+                if (messages) {
+                    for (var msgId in messages) {
+                        var msg = messages[msgId];
+                        if (msg.senderId === userId) {
+                            allMessages.push(msg);
+                        }
+                    }
+                }
+                processed++;
+                if (processed === chatIds.length) {
+                    filterAndDisplayMessages(container, allMessages, tab);
+                }
+            });
+        });
+    });
+}
+
+function filterAndDisplayMessages(container, messages, tab) {
+    var filtered = [];
+    
+    messages.forEach(function(msg) {
+        if (tab === 'media' && (msg.type === 'image' || msg.type === 'video' || msg.type === 'gif')) {
+            filtered.push(msg);
+        } else if (tab === 'files' && msg.type === 'file') {
+            filtered.push(msg);
+        } else if (tab === 'voice' && msg.type === 'audio') {
+            filtered.push(msg);
+        } else if (tab === 'links' && msg.type === 'text' && msg.text && msg.text.match(/(https?:\/\/[^\s]+)/g)) {
+            filtered.push(msg);
+        }
+    });
+    
+    filtered.sort(function(a, b) { return (b.timestamp || 0) - (a.timestamp || 0); });
+    
+    container.innerHTML = '';
+    if (filtered.length === 0) {
+        var tabNames = { media: 'Медиа', files: 'Файлы', voice: 'Голосовые', links: 'Ссылки' };
+        container.innerHTML = '<div class="profile-empty">Нет ' + tabNames[tab] + '</div>';
+        return;
+    }
+    
+    filtered.forEach(function(item) {
+        var div = document.createElement('div');
+        div.className = 'profile-media-item';
+        
+        if (tab === 'media') {
+            if (item.type === 'image') {
+                div.innerHTML = '<img src="' + item.imageUrl + '" class="profile-media-img" onclick="openSliceLightbox(\'' + item.imageUrl + '\')">';
+            } else if (item.type === 'gif') {
+                div.innerHTML = '<img src="' + item.gifUrl + '" class="profile-media-img" onclick="openSliceLightbox(\'' + item.gifUrl + '\')"><span class="gif-badge-small">GIF</span>';
+            } else if (item.type === 'video') {
+                div.innerHTML = '<video src="' + item.videoUrl + '" class="profile-media-video" controls></video>';
+            }
+        } else if (tab === 'files') {
+            div.innerHTML = '<div class="profile-file-item">📎 <a href="' + item.fileUrl + '" target="_blank">' + escapeHtml(item.fileName) + '</a></div>';
+        } else if (tab === 'voice') {
+            div.innerHTML = '<div class="profile-voice-item">🎤 <audio src="' + item.audioUrl + '" controls></audio></div>';
+        } else if (tab === 'links') {
+            var urls = item.text.match(/(https?:\/\/[^\s]+)/g);
+            if (urls) {
+                urls.forEach(function(url) {
+                    div.innerHTML += '<div class="profile-link-item">🔗 <a href="' + url + '" target="_blank">' + url + '</a></div>';
+                });
+            }
+        }
+        
+        container.appendChild(div);
     });
 }
 
@@ -936,7 +1055,7 @@ function goToSlide(sliceId, index) {
 function formatSliceText(text) {
     if (!text) return '';
     text = escapeHtml(text);
-    text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: var(--forest); text-decoration: none;">$1</a>');
     text = text.replace(/@(\w+)/g, '<span class="slice-mention" onclick="searchByUser(\'$1\')">@$1</span>');
     return text;
 }
@@ -953,7 +1072,7 @@ function formatSliceDate(timestamp) {
     return date.toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'2-digit'});
 }
 
-// ========== ПОИСК (ИСПРАВЛЕН) ==========
+// ========== ПОИСК ==========
 function searchByHashtag(tag) {
     var input = document.getElementById('slices-search-input');
     if (input) input.value = '#' + tag;
@@ -1002,7 +1121,6 @@ function performSearch() {
     }, 500);
 }
 
-// Обёртка для совместимости
 function searchSlices() {
     performSearch();
 }
@@ -1239,4 +1357,9 @@ async function publishSlice() {
         closeCreateSliceModal();
         loadSlices();
     } catch (error) { console.error(error); showNotification('Ошибка публикации', 'error'); }
+}
+
+// ========== ФУНКЦИИ ДЛЯ ЧАТА (клик по аватарке/имени) ==========
+function openChatUserProfile(userId) {
+    openUserProfile(userId);
 }
