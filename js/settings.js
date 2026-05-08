@@ -302,21 +302,32 @@ function saveProfile() {
     var newUsername = document.getElementById('edit-username').value.trim();
     if (!newUsername) { showNotification(t.enter_username, 'error'); return; }
     var newBio = document.getElementById('edit-bio').value.trim();
+    
     var updates = { username: newUsername, bio: newBio };
+    
     function saveData(avatarUrl) {
         if (avatarUrl) updates.avatar = avatarUrl;
         database.ref('users/' + currentUser.uid).update(updates).then(function() {
             closeEditProfileModal();
             showNotification(t.profile_updated, 'success');
             if (typeof updateUserDisplay === 'function') updateUserDisplay();
+            // Обновляем данные в текущем сеансе
+            if (currentUserData) {
+                currentUserData.username = newUsername;
+                currentUserData.bio = newBio;
+                if (avatarUrl) currentUserData.avatar = avatarUrl;
+            }
         }).catch(function(err) { showNotification('Error', 'error'); });
     }
+    
     if (window.pendingAvatarFile) {
         uploadImageToImgBB(window.pendingAvatarFile).then(function(data) {
             window.pendingAvatarFile = null;
             saveData(data.url);
         }).catch(function() { saveData(null); });
-    } else { saveData(null); }
+    } else {
+        saveData(null);
+    }
 }
 function showNotificationSettings() { var t = translations[currentLanguage]; showNotification(t.notifications + ': ' + t.in_development, 'info'); }
 function showPrivacySettings() { var t = translations[currentLanguage]; showNotification(t.privacy + ': ' + t.in_development, 'info'); }
