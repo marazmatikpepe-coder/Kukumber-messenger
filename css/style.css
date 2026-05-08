@@ -1217,3 +1217,55 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .banner-color-option:hover {
     transform: scale(1.1);
 }
+/* Для профиля из чата */
+.mutual-contact-item:hover {
+    background: var(--background);
+}
+
+.profile-subscribers {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 5px;
+}
+
+.profile-media-item {
+    margin-bottom: 10px;
+}
+
+.profile-media-img {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.profile-media-video {
+    width: 100%;
+    max-height: 200px;
+    border-radius: 12px;
+}
+
+.profile-file-item, .profile-voice-item, .profile-link-item {
+    padding: 8px 12px;
+    background: var(--background);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    word-break: break-all;
+}
+
+.profile-file-item a, .profile-link-item a {
+    color: var(--forest);
+    text-decoration: none;
+}
+
+.gif-badge-small {
+    position: relative;
+    top: -30px;
+    left: 10px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
