@@ -1,4 +1,7 @@
-// KUKUMBER MESSENGER - CHAT (полная версия с GIF)
+// KUKUMBER MESSENGER - CHAT.JS (полная версия)
+// Поддержка открытия профиля по клику на аватарку/имя
+// Кликабельные ссылки, все функции чата
+
 var selectedGroupMembers = [];
 var typingTimeout = null;
 
@@ -19,7 +22,7 @@ function showGlobalSearch() {
             var avatarContent = user.avatar ? '' : '👤';
             div.innerHTML = '<div class="avatar" style="'+avatarStyle+'">'+avatarContent+'</div><div class="user-item-info"><h4>'+escapeHtml(user.username)+'</h4></div><button onclick="addToContacts(\''+uid+'\',\''+escapeHtml(user.username)+'\')">➕ Добавить</button>';
             container.appendChild(div);
-        }
+        });
     });
 }
 
@@ -279,6 +282,28 @@ function openChat(chatId, chatData) {
         chatAvatar.style.backgroundImage = '';
         chatAvatar.textContent = chatData.type === 'group' ? '👥' : (chatData.type === 'channel' ? '📢' : '👤');
     }
+    
+    // Делаем шапку чата кликабельной для открытия профиля (для личных чатов)
+    if (chatData.type === 'private' && chatData.otherUserId) {
+        var chatHeader = document.querySelector('.chat-user-info');
+        if (chatHeader) {
+            chatHeader.style.cursor = 'pointer';
+            chatHeader.onclick = function() {
+                if (typeof openUserProfile === 'function') {
+                    openUserProfile(chatData.otherUserId);
+                } else {
+                    showNotification('Функция профиля не загружена', 'error');
+                }
+            };
+        }
+    } else {
+        var chatHeader = document.querySelector('.chat-user-info');
+        if (chatHeader) {
+            chatHeader.style.cursor = 'default';
+            chatHeader.onclick = function() { showChatInfo(); };
+        }
+    }
+    
     document.querySelectorAll('.chat-item').forEach(function(i) { i.classList.remove('active'); });
     loadMessages(chatId);
     setupTypingListener(chatId);
@@ -338,7 +363,7 @@ function createMessageElement(message) {
     // Типы сообщений
     if (message.type === 'image') {
         content = '<div class="message-image" onclick="openLightbox(\''+message.imageUrl+'\')"><img src="'+message.imageUrl+'" alt="Image" loading="lazy"></div>';
-        if (message.caption) content += '<div class="message-text">'+escapeHtml(message.caption)+'</div>';
+        if (message.caption) content += '<div class="message-text">'+formatMessageText(message.caption)+'</div>';
     } 
     else if (message.type === 'gif') {
         content = '<div class="gif-message" onclick="openLightbox(\''+message.gifUrl+'\')">' +
@@ -360,7 +385,7 @@ function createMessageElement(message) {
         content = '<div class="file-message"><span style="font-size:24px;">'+fileIcon+'</span><a href="'+message.fileUrl+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(message.fileName)+'</a></div>';
     }
     else {
-        var textContent = escapeHtml(message.text || '');
+        var textContent = formatMessageText(message.text || '');
         if (message.edited) textContent += ' <span style="font-size:10px; opacity:0.6;">(ред.)</span>';
         content = '<div class="message-text">'+textContent+'</div>';
     }
@@ -378,17 +403,36 @@ function createMessageElement(message) {
         }
     }
     
-    // Имя отправителя для групп/каналов
+    // Имя отправителя для групп/каналов (кликабельное для открытия профиля)
     var senderHtml = '';
     if (!isSent && (currentChatUser.type === 'group' || currentChatUser.type === 'channel')) {
         database.ref('users/'+message.senderId+'/username').once('value').then(function(snap) {
             var senderEl = div.querySelector('.message-sender');
             if (senderEl) senderEl.textContent = snap.val() || 'Пользователь';
         });
-        senderHtml = '<div class="message-sender">Загрузка...</div>';
+        senderHtml = '<div class="message-sender" style="cursor:pointer;" onclick="openChatUserProfile(\''+message.senderId+'\')">Загрузка...</div>';
+    } else if (!isSent && currentChatUser.type === 'private') {
+        // В личном чате имя отправителя не показываем, но аватарку можно сделать кликабельной
+        // Добавим клик по аватарке в сообщении
     }
     
-    div.innerHTML = '<div class="message-content">'+senderHtml+content+'<div class="message-time">'+formatTime(message.timestamp)+'</div><div class="message-reactions">'+reactionsHtml+'</div></div>';
+    // Аватарка для полученных сообщений (кликабельная)
+    var avatarHtml = '';
+    if (!isSent) {
+        var senderAvatar = '';
+        database.ref('users/'+message.senderId+'/avatar').once('value').then(function(snap) {
+            var avatarUrl = snap.val();
+            var avatarEl = div.querySelector('.message-avatar');
+            if (avatarEl && avatarUrl) {
+                avatarEl.style.backgroundImage = 'url(' + avatarUrl + ')';
+                avatarEl.style.backgroundSize = 'cover';
+                avatarEl.textContent = '';
+            }
+        });
+        avatarHtml = '<div class="message-avatar" style="cursor:pointer;" onclick="openChatUserProfile(\''+message.senderId+'\')"><div class="avatar" style="width:32px; height:32px;">👤</div></div>';
+    }
+    
+    div.innerHTML = '<div class="message-content-wrapper" style="display:flex; gap:8px; align-items:flex-start;">' + avatarHtml + '<div class="message-content" style="flex:1;">'+senderHtml+content+'<div class="message-time">'+formatTime(message.timestamp)+'</div><div class="message-reactions">'+reactionsHtml+'</div></div></div>';
     
     // Контекстное меню
     div.addEventListener('contextmenu', function(e) {
@@ -397,8 +441,28 @@ function createMessageElement(message) {
         showMessageContextMenu(e, message.id, message.senderId, message.text, message.type, message.imageUrl || message.gifUrl);
     });
     
+    var touchTimer = null;
+    div.addEventListener('touchstart', function(e) {
+        touchTimer = setTimeout(function() {
+            showMessageContextMenu(e, message.id, message.senderId, message.text, message.type, message.imageUrl || message.gifUrl);
+        }, 500);
+    });
+    div.addEventListener('touchend', function() { if (touchTimer) clearTimeout(touchTimer); });
+    div.addEventListener('touchmove', function() { if (touchTimer) clearTimeout(touchTimer); });
+    
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
+}
+
+// Форматирование текста сообщения (ссылки, упоминания)
+function formatMessageText(text) {
+    if (!text) return '';
+    text = escapeHtml(text);
+    // Ссылки делаем кликабельными
+    text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #228B22; text-decoration: none;">$1</a>');
+    // Упоминания (если нужны)
+    text = text.replace(/@(\w+)/g, '<span style="color:#228B22; cursor:pointer;" onclick="searchByUser(\'$1\')">@$1</span>');
+    return text;
 }
 
 function updateMessageElement(message) {
@@ -406,7 +470,7 @@ function updateMessageElement(message) {
     if (existingDiv) {
         var textDiv = existingDiv.querySelector('.message-text');
         if (textDiv && message.text) {
-            var newText = escapeHtml(message.text);
+            var newText = formatMessageText(message.text);
             if (message.edited) newText += ' <span style="font-size:10px; opacity:0.6;">(ред.)</span>';
             textDiv.innerHTML = newText;
         }
@@ -425,6 +489,16 @@ function updateMessageElement(message) {
             }
             reactionsDiv.innerHTML = reactionsHtml;
         }
+    }
+}
+
+// Функция для открытия профиля из чата
+function openChatUserProfile(userId) {
+    if (typeof openUserProfile === 'function') {
+        openUserProfile(userId);
+    } else {
+        // fallback если slices.js не загружен
+        showNotification('Профиль пользователя будет доступен в разделе Slices', 'info');
     }
 }
 
@@ -466,21 +540,21 @@ function showMessageContextMenu(event, messageId, senderId, messageText, message
     
     menuHtml += '<div class="context-menu-item" onclick="openForwardDialog(\''+messageId+'\', \''+escapeHtml(messageText || '').replace(/'/g, "\\'")+'\', \''+(messageType || 'text')+'\', \''+(mediaUrl || '')+'\')">↗️ Переслать</div>';
     
+    menuHtml += '<div class="context-menu-item" onclick="openChatUserProfile(\''+senderId+'\')">👤 Профиль пользователя</div>';
+    
     menu.innerHTML = menuHtml;
     document.body.appendChild(menu);
     
     var x = event.clientX, y = event.clientY;
+    if (event.touches) { x = event.touches[0].clientX; y = event.touches[0].clientY; }
+    
     var menuRect = menu.getBoundingClientRect();
     var windowWidth = window.innerWidth;
     var windowHeight = window.innerHeight;
-    
     if (x + menuRect.width > windowWidth) x = windowWidth - menuRect.width - 10;
     if (y + menuRect.height > windowHeight) y = windowHeight - menuRect.height - 10;
-    if (x < 10) x = 10;
-    if (y < 10) y = 10;
-    
-    menu.style.left = x + 'px';
-    menu.style.top = y + 'px';
+    if (x < 10) x = 10; if (y < 10) y = 10;
+    menu.style.left = x + 'px'; menu.style.top = y + 'px';
     
     setTimeout(function() {
         document.addEventListener('click', function closeMenu(e) {
@@ -1008,7 +1082,7 @@ function loadMembersList(members, admins) {
             var avatarContent = avatar ? '' : '👤';
             var div = document.createElement('div');
             div.className = 'member-item';
-            div.innerHTML = '<div class="avatar" style="'+avatarStyle+'">'+avatarContent+'</div><span class="member-name">'+escapeHtml(user.username)+'</span>'+(isAdmin ? '<span class="member-role">админ</span>' : '');
+            div.innerHTML = '<div class="avatar" style="'+avatarStyle+'">'+avatarContent+'</div><span class="member-name" style="flex:1;">'+escapeHtml(user.username)+'</span>'+(isAdmin ? '<span class="member-role">админ</span>' : '');
             list.appendChild(div);
         });
     });
@@ -1147,6 +1221,11 @@ chatStyles.textContent = `
     }
     .context-menu-item:hover {
         background: var(--background);
+    }
+    .message-avatar .avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
     }
     @media (max-width: 768px) {
         .gif-message { max-width: 220px; }
