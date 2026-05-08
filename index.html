@@ -381,5 +381,28 @@
         });
     </script>
     <script src="js/chat-profile.js"></script>
+    <script src="js/sounds.js"></script>
+    <script>
+    // Обновление статуса звуков в настройках
+    function updateSoundsStatus() {
+        var statusEl = document.getElementById('sounds-status');
+        if (statusEl) {
+            var enabled = localStorage.getItem('sounds_enabled') !== 'false';
+            statusEl.textContent = enabled ? 'Включены' : 'Выключены';
+        }
+    }
+    
+    // Вызываем при загрузке и при каждом открытии настроек
+    if (typeof switchToTab === 'function') {
+        var originalSwitchToTab = switchToTab;
+        switchToTab = function(tabName) {
+            originalSwitchToTab(tabName);
+            if (tabName === 'settings') {
+                updateSoundsStatus();
+            }
+        };
+    }
+    updateSoundsStatus();
+</script>
 </body>
 </html>
