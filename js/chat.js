@@ -1,9 +1,42 @@
 // KUKUMBER MESSENGER - CHAT.JS (полная версия)
-// Поддержка открытия профиля через openUserProfile (из slices.js)
-// Кликабельные ссылки, все функции чата
+// Исправлено дублирование чатов
+// Звуки при отправке и получении сообщений
+// Кликабельные ссылки, профили, все функции
 
 var selectedGroupMembers = [];
 var typingTimeout = null;
+
+// ========== ЗВУКИ ==========
+var sendSound = null;
+var receiveSound = null;
+
+function initChatSounds() {
+    sendSound = new Audio('https://s33.aconvert.com/convert/p3r68-cdx67/rvt3w-3afhb.mp3');
+    receiveSound = new Audio('https://s33.aconvert.com/convert/p3r68-cdx67/stzi2-lrg6l.mp3');
+    sendSound.load();
+    receiveSound.load();
+}
+
+function playSendSound() {
+    if (sendSound && (typeof getSoundsEnabled === 'function' ? getSoundsEnabled() : true)) {
+        try {
+            sendSound.currentTime = 0;
+            sendSound.play().catch(function(e) { console.log('Звук не воспроизведён:', e); });
+        } catch(e) { console.log('Ошибка звука:', e); }
+    }
+}
+
+function playReceiveSound() {
+    if (receiveSound && (typeof getSoundsEnabled === 'function' ? getSoundsEnabled() : true)) {
+        try {
+            receiveSound.currentTime = 0;
+            receiveSound.play().catch(function(e) { console.log('Звук не воспроизведён:', e); });
+        } catch(e) { console.log('Ошибка звука:', e); }
+    }
+}
+
+// Инициализируем звуки
+initChatSounds();
 
 // ========== ГЛОБАЛЬНЫЙ ПОИСК И КОНТАКТЫ ==========
 function showGlobalSearch() {
@@ -152,20 +185,49 @@ function subscribeToPublicChannel(chatId, channel) {
     }).catch(function(err) { showNotification('Ошибка', 'error'); });
 }
 
+// ========== ЧАТЫ (ИСПРАВЛЕНО ДУБЛИРОВАНИЕ) ==========
 function loadChats() {
     if (!currentUser) return;
-    database.ref('userChats/'+currentUser.uid).on('value', function(snapshot) {
+    
+    var chatsList = document.getElementById('chats-list');
+    if (!chatsList) return;
+    
+    // Отключаем предыдущий слушатель, чтобы не было дублей
+    if (window.chatsListener) {
+        window.chatsListener.off();
+    }
+    
+    window.chatsListener = database.ref('userChats/' + currentUser.uid);
+    window.chatsListener.on('value', function(snapshot) {
         var chatsData = snapshot.val();
-        var chatsList = document.getElementById('chats-list');
-        if (!chatsData) { chatsList.innerHTML = '<div class="empty-chats">Нет чатов</div>'; return; }
+        
+        if (!chatsData) { 
+            chatsList.innerHTML = '<div class="empty-chats">Нет чатов</div>'; 
+            return; 
+        }
+        
         var chatIds = Object.keys(chatsData);
-        var loadedChats = [], count = 0;
+        // Убираем дубликаты
+        chatIds = [...new Set(chatIds)];
+        
+        if (chatIds.length === 0) {
+            chatsList.innerHTML = '<div class="empty-chats">Нет чатов</div>';
+            return;
+        }
+        
+        var loadedChats = [];
+        var count = 0;
+        
         chatIds.forEach(function(chatId) {
-            database.ref('chats/'+chatId).once('value').then(function(chatSnap) {
+            database.ref('chats/' + chatId).once('value').then(function(chatSnap) {
                 var chatData = chatSnap.val();
-                if (chatData) loadedChats.push({ chatId: chatId, data: chatData });
+                if (chatData && !loadedChats.some(c => c.chatId === chatId)) {
+                    loadedChats.push({ chatId: chatId, data: chatData });
+                }
                 count++;
-                if (count === chatIds.length) renderChats(loadedChats);
+                if (count === chatIds.length) {
+                    renderChats(loadedChats);
+                }
             });
         });
     });
@@ -173,8 +235,24 @@ function loadChats() {
 
 function renderChats(chats) {
     var chatsList = document.getElementById('chats-list');
+    if (!chatsList) return;
+    
+    // Очищаем перед отрисовкой
     chatsList.innerHTML = '';
+    
+    // Убираем дубликаты по chatId
+    var uniqueChats = [];
+    var seenIds = {};
+    for (var i = 0; i < chats.length; i++) {
+        if (!seenIds[chats[i].chatId]) {
+            seenIds[chats[i].chatId] = true;
+            uniqueChats.push(chats[i]);
+        }
+    }
+    chats = uniqueChats;
+    
     chats.sort(function(a,b) { return (b.data.lastMessageTime||0) - (a.data.lastMessageTime||0); });
+    
     var filtered = chats.filter(function(chat) {
         if (currentTab === 'all') return true;
         if (currentTab === 'private') return chat.data.type === 'private' || !chat.data.type;
@@ -182,8 +260,15 @@ function renderChats(chats) {
         if (currentTab === 'channels') return chat.data.type === 'channel';
         return true;
     });
-    if (filtered.length === 0) { chatsList.innerHTML = '<div class="empty-chats">Нет чатов</div>'; return; }
-    filtered.forEach(function(chat) { createChatItem(chat.chatId, chat.data); });
+    
+    if (filtered.length === 0) { 
+        chatsList.innerHTML = '<div class="empty-chats">Нет чатов</div>'; 
+        return; 
+    }
+    
+    filtered.forEach(function(chat) { 
+        createChatItem(chat.chatId, chat.data); 
+    });
 }
 
 function createChatItem(chatId, chatData) {
@@ -228,7 +313,8 @@ function createChatItem(chatId, chatData) {
         var preview = chatData.lastMessage || 'Нет сообщений';
         div.innerHTML = '<div class="chat-item-avatar"><div class="avatar" style="'+avatarStyle+'">'+avatarContent+'</div>'+(isOnline?'<div class="online-indicator"></div>':'')+badge+'</div><div class="chat-item-info"><div class="chat-item-header"><span class="chat-item-name">'+escapeHtml(name)+'</span><span class="chat-item-time">'+time+'</span></div><div class="chat-item-preview">'+escapeHtml(preview)+'</div></div>';
         div.onclick = function() { openChat(chatId, chatData); };
-        document.getElementById('chats-list').appendChild(div);
+        var chatsList = document.getElementById('chats-list');
+        if (chatsList) chatsList.appendChild(div);
     }
 }
 
@@ -337,6 +423,11 @@ function loadMessages(chatId) {
         var message = snapshot.val();
         message.id = snapshot.key;
         createMessageElement(message);
+        
+        // ВОСПРОИЗВОДИМ ЗВУК ПОЛУЧЕНИЯ (только если сообщение не от текущего пользователя)
+        if (message.senderId !== currentUser.uid) {
+            playReceiveSound();
+        }
     });
     database.ref('messages/'+chatId).on('child_changed', function(snapshot) {
         var message = snapshot.val();
@@ -790,6 +881,8 @@ function sendMessage() {
     database.ref('messages/'+currentChatId).push(message).then(function() {
         var lastMsg = text.length > 50 ? text.substring(0,50)+'...' : text;
         database.ref('chats/'+currentChatId).update({ lastMessage: lastMsg, lastMessageTime: firebase.database.ServerValue.TIMESTAMP });
+        // ВОСПРОИЗВОДИМ ЗВУК ОТПРАВКИ
+        playSendSound();
     }).catch(function(err) { showNotification('Ошибка', 'error'); input.value = text; });
     document.getElementById('emoji-picker').classList.add('hidden');
 }
