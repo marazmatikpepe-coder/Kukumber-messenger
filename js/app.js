@@ -1,4 +1,4 @@
-// KUKUMBER MESSENGER - APP.JS (исправленный)
+// KUKUMBER MESSENGER - APP.JS (исправленный: поиск, настройки, профиль)
 var firebaseConfig = {
     apiKey: "AIzaSyBYNJPhbs8YaNAhdjSUIdj1Ok433N19GJM",
     authDomain: "kukumber-messenger.firebaseapp.com",
@@ -9,12 +9,10 @@ var firebaseConfig = {
     appId: "1:738635892211:web:4bf2a45b562d22e41b3e86"
 };
 
-// Инициализация Firebase
 firebase.initializeApp(firebaseConfig);
 var auth = firebase.auth();
 var database = firebase.database();
 
-// Глобальные переменные
 var currentUser = null;
 var currentUserData = null;
 var currentChatId = null;
@@ -23,18 +21,15 @@ var messagesListener = null;
 var currentTab = 'chats';
 var isSuperAdmin = false;
 
-// Загрузка страницы
 window.addEventListener('load', function() {
-    // Показываем загрузку 1.5 секунды
     setTimeout(function() {
-        var loadingScreen = document.getElementById('loading-screen');
-        if (loadingScreen) loadingScreen.classList.add('hidden');
+        var loading = document.getElementById('loading-screen');
+        if (loading) loading.classList.add('hidden');
         checkAuthState();
     }, 1500);
     initEmojiPicker();
 });
 
-// Проверка авторизации
 function checkAuthState() {
     auth.onAuthStateChanged(function(user) {
         if (user) {
@@ -48,22 +43,14 @@ function checkAuthState() {
     });
 }
 
-// Загрузка данных пользователя
 function loadUserData() {
     if (!currentUser) return;
-    
-    var userRef = database.ref('users/' + currentUser.uid);
-    userRef.on('value', function(snapshot) {
+    database.ref('users/' + currentUser.uid).on('value', function(snapshot) {
         currentUserData = snapshot.val();
-        
         if (currentUserData) {
-            // Обновляем отображение
             updateUserDisplay();
             checkSuperAdmin();
-            
-            // Показываем главный экран
             showMainScreen();
-            
             // Обновляем аватарку в Slices
             var slicesAvatar = document.getElementById('slices-user-avatar');
             if (slicesAvatar) {
@@ -77,12 +64,9 @@ function loadUserData() {
                 }
             }
         }
-    }, function(error) {
-        console.error('Ошибка загрузки данных пользователя:', error);
     });
 }
 
-// Проверка суперадмина
 function checkSuperAdmin() {
     database.ref('users/' + currentUser.uid + '/isSuperAdmin').once('value').then(function(snap) {
         isSuperAdmin = snap.val() === true;
@@ -90,23 +74,13 @@ function checkSuperAdmin() {
     });
 }
 
-// Обновление отображения пользователя
 function updateUserDisplay() {
     if (!currentUserData) return;
-    
     var username = currentUserData.username || 'Пользователь';
     var avatar = currentUserData.avatar || '';
-    
-    // Обновляем имя везде
-    var usernameElements = ['current-username', 'settings-username'];
-    usernameElements.forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) el.textContent = username;
-    });
-    
-    // Обновляем аватарку
-    var avatarElements = ['user-avatar', 'settings-avatar'];
-    avatarElements.forEach(function(id) {
+    document.getElementById('current-username').textContent = username;
+    document.getElementById('settings-username').textContent = username;
+    ['user-avatar', 'settings-avatar'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) {
             if (avatar) {
@@ -121,94 +95,44 @@ function updateUserDisplay() {
     });
 }
 
-// Показать экран авторизации
 function showAuthScreen() {
-    var authScreen = document.getElementById('auth-screen');
-    var mainScreen = document.getElementById('main-screen');
-    if (authScreen) authScreen.classList.remove('hidden');
-    if (mainScreen) mainScreen.classList.add('hidden');
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('main-screen').classList.add('hidden');
 }
 
-// Показать главный экран
 function showMainScreen() {
-    var authScreen = document.getElementById('auth-screen');
-    var mainScreen = document.getElementById('main-screen');
-    
-    if (authScreen) authScreen.classList.add('hidden');
-    if (mainScreen) mainScreen.classList.remove('hidden');
-    
-    // Загружаем чаты
-    if (typeof loadChats === 'function') {
-        loadChats();
-    }
-    
-    // Загружаем Slices с небольшой задержкой
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('main-screen').classList.remove('hidden');
+    if (typeof loadChats === 'function') loadChats();
     setTimeout(function() {
-        if (typeof loadSlices === 'function') {
-            loadSlices();
-        }
+        if (typeof loadSlices === 'function') loadSlices();
     }, 300);
 }
 
-// Переключение вкладок
 function switchToTab(tabName) {
-    if (!tabName) return;
-    
     currentTab = tabName;
-    
-    // Скрываем все вкладки
-    var tabs = ['chats-tab', 'reels-tab', 'settings-tab'];
-    tabs.forEach(function(tab) {
-        var el = document.getElementById(tab);
-        if (el) el.classList.add('hidden');
-    });
-    
-    // Убираем active со всех кнопок
-    var navBtns = ['nav-chats', 'nav-reels', 'nav-settings'];
-    navBtns.forEach(function(btn) {
-        var el = document.getElementById(btn);
-        if (el) el.classList.remove('active');
-    });
-    
-    // Показываем выбранную вкладку
-    var activeTab = document.getElementById(tabName + '-tab');
-    if (activeTab) activeTab.classList.remove('hidden');
-    
-    // Активируем кнопку
-    var activeBtn = document.getElementById('nav-' + tabName);
-    if (activeBtn) activeBtn.classList.add('active');
-    
-    // Действия при переключении
-    if (tabName === 'reels') {
-        if (typeof loadSlices === 'function') {
-            loadSlices();
-        }
-    }
-    if (tabName === 'settings') {
-        updateUserDisplay();
-    }
-    if (tabName === 'chats') {
-        if (typeof loadChats === 'function') {
-            loadChats();
-        }
-    }
-    
-    // Закрываем боковое меню на мобильных
+    document.getElementById('chats-tab').classList.add('hidden');
+    document.getElementById('reels-tab').classList.add('hidden');
+    document.getElementById('settings-tab').classList.add('hidden');
+    document.getElementById('nav-chats').classList.remove('active');
+    document.getElementById('nav-reels').classList.remove('active');
+    document.getElementById('nav-settings').classList.remove('active');
+    document.getElementById(tabName + '-tab').classList.remove('hidden');
+    document.getElementById('nav-' + tabName).classList.add('active');
+    if (tabName === 'reels' && typeof loadSlices === 'function') loadSlices();
+    if (tabName === 'settings') updateUserDisplay();
+    if (tabName === 'chats' && typeof loadChats === 'function') loadChats();
     closeSidebar();
 }
 
-// Открыть/закрыть боковое меню
 function toggleSidebar() {
-    var sidebar = document.getElementById('sidebar');
-    if (sidebar) sidebar.classList.toggle('open');
+    document.getElementById('sidebar').classList.toggle('open');
 }
 
 function closeSidebar() {
-    var sidebar = document.getElementById('sidebar');
-    if (sidebar) sidebar.classList.remove('open');
+    document.getElementById('sidebar').classList.remove('open');
 }
 
-// Экранирование HTML
 function escapeHtml(text) {
     if (!text) return '';
     var div = document.createElement('div');
@@ -216,62 +140,46 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Форматирование времени
 function formatTime(timestamp) {
     if (!timestamp) return '';
     var date = new Date(timestamp);
     var now = new Date();
     var diff = now - date;
-    
     if (diff < 60000) return 'сейчас';
     if (diff < 3600000) return Math.floor(diff / 60000) + ' мин';
-    if (date.toDateString() === now.toDateString()) {
-        return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-    }
+    if (date.toDateString() === now.toDateString()) return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
 }
 
-// Форматирование последнего визита
 function formatLastSeen(timestamp) {
     if (!timestamp) return 'неизвестно';
     var date = new Date(timestamp);
     var now = new Date();
     var diff = Math.floor((now - date) / 1000);
-    
     if (diff < 60) return 'только что';
     if (diff < 3600) return Math.floor(diff/60) + ' минут назад';
-    if (diff < 86400) {
-        return 'сегодня в ' + date.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
-    }
+    if (diff < 86400) return 'сегодня в ' + date.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
     return date.toLocaleDateString('ru-RU') + ' в ' + date.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
 }
 
-// Генерация ID чата
 function generateChatId(userId1, userId2) {
     return userId1 < userId2 ? userId1 + '_' + userId2 : userId2 + '_' + userId1;
 }
 
-// Показать уведомление
 function showNotification(message, type) {
     type = type || 'info';
     var container = document.getElementById('notifications-container');
     if (!container) return;
-    
     var notif = document.createElement('div');
     notif.className = 'notification ' + type;
     notif.textContent = message;
     container.appendChild(notif);
-    
-    setTimeout(function() {
-        if (notif && notif.remove) notif.remove();
-    }, 3000);
+    setTimeout(function() { if (notif) notif.remove(); }, 3000);
 }
 
-// Инициализация эмодзи
 function initEmojiPicker() {
     var emojis = ['😀','😂','🥰','😎','🤔','😢','😡','👍','👎','❤️','🔥','✨','🎉','🥒','💚','🌿','🍀','🌱','👋','🙏','😊','😍','🤣','😘','😜','🙄','😴','🤮','💪','🎂','🎁','🎄','☀️','🌙','⭐','🌈'];
     var grid = document.querySelector('.emoji-grid');
-    
     if (grid) {
         grid.innerHTML = '';
         emojis.forEach(function(emoji) {
@@ -283,7 +191,6 @@ function initEmojiPicker() {
     }
 }
 
-// Показать/скрыть панель эмодзи
 function toggleEmojiPicker() {
     var picker = document.getElementById('emoji-picker');
     if (picker) picker.classList.toggle('hidden');
@@ -297,7 +204,6 @@ function insertEmoji(emoji) {
     }
 }
 
-// Закрытие модалок по Escape
 document.addEventListener('click', function(e) {
     var picker = document.getElementById('emoji-picker');
     if (picker && !picker.classList.contains('hidden') && !picker.contains(e.target) && !e.target.closest('.emoji-btn')) {
@@ -315,4 +221,30 @@ function closeAllModals() {
     });
     var picker = document.getElementById('emoji-picker');
     if (picker) picker.classList.add('hidden');
+}
+
+// Функции для настроек (чтобы не падали ошибки)
+function showNotificationSettings() { showNotification('Уведомления: в разработке', 'info'); }
+function showPrivacySettings() { showNotification('Конфиденциальность: в разработке', 'info'); }
+function showThemeSettings() { showNotification('Тема: в разработке', 'info'); }
+function showLanguageSettings() { 
+    if (typeof window.showLanguageSettings === 'function') {
+        window.showLanguageSettings();
+    } else {
+        showNotification('Язык: в разработке', 'info');
+    }
+}
+function showStorageSettings() { showNotification('Данные и память: в разработке', 'info'); }
+function showAbout() { alert('Kukumber Messenger v1.0\nСвежее общение каждый день 🥒'); }
+function showHelp() { showNotification('Помощь: в разработке', 'info'); }
+function logout() {
+    if (!confirm('Вы уверены, что хотите выйти?')) return;
+    if (messagesListener) messagesListener.off();
+    auth.signOut().then(function() {
+        currentUser = null;
+        currentUserData = null;
+        currentChatId = null;
+        currentChatUser = null;
+        showNotification('Вы вышли', 'info');
+    }).catch(function() { showNotification('Ошибка выхода', 'error'); });
 }
