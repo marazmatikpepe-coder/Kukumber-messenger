@@ -1,5 +1,5 @@
-// SLICES (Слайсы) - ПОЛНАЯ ВЕРСИЯ
-// Лайки, репосты, комментарии, профиль, подписки, верификация
+// SLICES (Слайсы) - ПОЛНАЯ ВЕРСИЯ 2.0
+// Лайки, репосты, комментарии, профиль, баннеры, верификация, поиск
 
 var currentSlicesTab = 'feed';
 var pendingSliceFiles = [];
@@ -66,7 +66,6 @@ function createSliceCard(sliceId, sliceData) {
         showSliceContextMenu(e, sliceId, sliceData);
     });
     
-    // Долгое нажатие для мобильных
     var touchTimer = null;
     div.addEventListener('touchstart', function(e) {
         touchTimer = setTimeout(function() {
@@ -76,7 +75,7 @@ function createSliceCard(sliceId, sliceData) {
     div.addEventListener('touchend', function() { if (touchTimer) clearTimeout(touchTimer); });
     div.addEventListener('touchmove', function() { if (touchTimer) clearTimeout(touchTimer); });
     
-    // Шапка
+    // Шапка с кликабельной аватаркой
     var avatarStyle = sliceData.authorAvatar ? 'background-image:url('+sliceData.authorAvatar+');background-size:cover;' : '';
     var avatarContent = sliceData.authorAvatar ? '' : '👤';
     
@@ -109,7 +108,6 @@ function createSliceCard(sliceId, sliceData) {
         }
     }
     
-    // Текст поста
     var textHtml = '';
     if (sliceData.text) {
         var displayText = sliceData.text;
@@ -117,7 +115,6 @@ function createSliceCard(sliceId, sliceData) {
         textHtml = '<div class="slice-text">'+formatSliceText(displayText)+'</div>';
     }
     
-    // Хештеги
     var hashtagsHtml = '';
     if (sliceData.hashtags && sliceData.hashtags.length) {
         hashtagsHtml = '<div class="slice-hashtags">';
@@ -127,10 +124,19 @@ function createSliceCard(sliceId, sliceData) {
         hashtagsHtml += '</div>';
     }
     
-    // Закреплённый значок
     var pinnedBadge = sliceData.pinned ? '<span class="slice-pinned-badge">📌 Закреплено</span>' : '';
     
-    // КНОПКИ ДЕЙСТВИЙ
+    // Получаем данные о верификации автора
+    var verifiedBadge = '';
+    database.ref('users/' + sliceData.authorId + '/verified').once('value').then(function(snap) {
+        if (snap.val() === true) {
+            var badgeSpan = div.querySelector('.verified-badge-placeholder');
+            if (badgeSpan) {
+                badgeSpan.innerHTML = '<img src="https://i.ibb.co/YTRCNHkq/4e9cba55-b083-46d3-8a30-bff7b1be94c7-1.png" style="width:16px; height:16px; cursor:pointer;" onclick="event.stopPropagation(); showVerifiedInfo()">';
+            }
+        }
+    });
+    
     var likeIcon = sliceData.userLiked ? 
         '<img src="https://i.ibb.co/0HFsXGK/1-CD2632-B-7-DD7-46-D4-8920-FBBE5-B29-D34-D.png" style="width:24px; height:24px;">' : 
         '<img src="https://i.ibb.co/4wPS6NB6/7-B6-E9-A78-01-E0-4481-9135-005-C4-F238-FD8.png" style="width:24px; height:24px;">';
@@ -140,12 +146,12 @@ function createSliceCard(sliceId, sliceData) {
     
     div.innerHTML = `
         <div class="slice-header">
-            <div class="slice-author" onclick="openUserProfile('${sliceData.authorId}', '${escapeHtml(sliceData.authorName)}', '${sliceData.authorAvatar || ''}')" style="cursor:pointer;">
+            <div class="slice-author" onclick="openUserProfile('${sliceData.authorId}')" style="cursor:pointer;">
                 <div class="avatar" style="${avatarStyle}">${avatarContent}</div>
                 <div class="slice-author-info">
                     <div style="display:flex; align-items:center; gap:5px;">
                         <span class="slice-author-name">${escapeHtml(sliceData.authorName)}</span>
-                        ${sliceData.verified ? '<img src="https://i.ibb.co/YTRCNHkq/4e9cba55-b083-46d3-8a30-bff7b1be94c7-1.png" style="width:16px; height:16px; cursor:pointer;" onclick="event.stopPropagation(); showVerifiedInfo()">' : ''}
+                        <span class="verified-badge-placeholder"></span>
                     </div>
                     <span class="slice-date">${formatSliceDate(sliceData.createdAt)}</span>
                 </div>
@@ -179,12 +185,10 @@ function createSliceCard(sliceId, sliceData) {
         </div>
     `;
     
-    // Инициализация слайдера
     if (sliceData.mediaType === 'multiple' && sliceData.mediaUrls && sliceData.mediaUrls.length > 1) {
         setTimeout(function() { initSliceSlider(sliceId, sliceData.mediaUrls.length); }, 100);
     }
     
-    // Просмотры
     var viewedKey = 'viewed_slice_' + sliceId;
     if (!sessionStorage.getItem(viewedKey)) {
         sessionStorage.setItem(viewedKey, 'true');
@@ -194,7 +198,7 @@ function createSliceCard(sliceId, sliceData) {
     return div;
 }
 
-// ========== ЛАЙКИ (без дублей) ==========
+// ========== ЛАЙКИ ==========
 function likeSlice(sliceId) {
     if (pendingLikeRequests[sliceId]) return;
     pendingLikeRequests[sliceId] = true;
@@ -233,7 +237,6 @@ function likeSlice(sliceId) {
                 likeBtn.innerHTML = '<img src="https://i.ibb.co/0HFsXGK/1-CD2632-B-7-DD7-46-D4-8920-FBBE5-B29-D34-D.png" style="width:24px; height:24px;"> <span class="like-count">' + (currentCount + 1) + '</span>';
             }
         }
-        
         setTimeout(function() { delete pendingLikeRequests[sliceId]; }, 500);
     }).catch(function() { delete pendingLikeRequests[sliceId]; });
 }
@@ -247,10 +250,8 @@ function repostSlice(sliceId) {
     
     repostRef.once('value').then(function(snap) {
         if (snap.exists()) {
-            // Удаляем репост
             repostRef.remove();
             database.ref('slices/' + sliceId + '/repostsCount').transaction(function(c) { return Math.max((c || 1) - 1, 0); });
-            
             var userRepostQuery = database.ref('slices').orderByChild('originalId').equalTo(sliceId);
             userRepostQuery.once('value').then(function(repostSnap) {
                 repostSnap.forEach(function(child) {
@@ -262,7 +263,6 @@ function repostSlice(sliceId) {
             showNotification('Репост удалён', 'info');
             loadSlices();
         } else {
-            // Создаём репост
             database.ref('slices/' + sliceId).once('value').then(function(snapshot) {
                 var originalSlice = snapshot.val();
                 if (!originalSlice) return;
@@ -291,7 +291,6 @@ function repostSlice(sliceId) {
                 });
             });
         }
-        
         setTimeout(function() { delete pendingRepostRequests[sliceId]; }, 1000);
     }).catch(function() { delete pendingRepostRequests[sliceId]; });
 }
@@ -317,7 +316,6 @@ function loadComments(sliceId) {
     
     database.ref('sliceComments/' + sliceId).orderByChild('createdAt').once('value').then(function(snapshot) {
         var comments = snapshot.val();
-        
         var commentsHtml = '<div class="comments-list">';
         
         if (!comments) {
@@ -351,10 +349,9 @@ function renderComment(commentId, comment, sliceId, level) {
     
     var avatarStyle = comment.authorAvatar ? 'background-image:url('+comment.authorAvatar+');background-size:cover;' : '';
     var avatarContent = comment.authorAvatar ? '' : '👤';
-    
     var marginLeft = level * 40;
     
-    var html = `
+    return `
         <div class="comment-item" data-comment-id="${commentId}" style="margin-left: ${marginLeft}px;">
             <div class="comment-header">
                 <div class="comment-author-avatar" style="${avatarStyle}">${avatarContent}</div>
@@ -373,13 +370,10 @@ function renderComment(commentId, comment, sliceId, level) {
             <div id="replies-container-${commentId}" class="replies-container"></div>
         </div>
     `;
-    
-    return html;
 }
 
 function addComment(sliceId, parentId) {
-    var textInput;
-    var text;
+    var textInput, text;
     
     if (parentId) {
         textInput = document.getElementById('reply-text-' + parentId);
@@ -473,7 +467,6 @@ function loadReplies(sliceId, parentId) {
                 </div>
             `;
         });
-        
         repliesHtml += '</div>';
         
         var existingForm = container.querySelector('.reply-form');
@@ -510,64 +503,90 @@ function likeComment(sliceId, commentId) {
 }
 
 // ========== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ==========
-function openUserProfile(userId, userName, userAvatar) {
+function openUserProfile(userId) {
     window.viewingProfileUserId = userId;
-    window.viewingProfileUserName = userName;
-    window.viewingProfileUserAvatar = userAvatar;
     
     var oldModal = document.getElementById('user-profile-modal');
     if (oldModal) oldModal.remove();
     
     var isOwnProfile = (userId === currentUser.uid);
+    var isAdmin = window.isSuperAdmin === true;
+    var canEdit = isOwnProfile || isAdmin;
     
-    var modal = document.createElement('div');
-    modal.id = 'user-profile-modal';
-    modal.className = 'modal';
-    modal.innerHTML = `
-        <div class="profile-modal-content">
-            <div class="profile-banner" id="profile-banner" style="background: linear-gradient(135deg, var(--forest), var(--olive));">
-                <button class="profile-close-btn" onclick="closeProfileModal()">×</button>
-            </div>
-            <div class="profile-avatar-wrapper">
-                <div class="profile-avatar" id="profile-avatar" style="background-image: url(${userAvatar || ''}); background-size: cover;">
-                    ${!userAvatar ? '👤' : ''}
-                </div>
-            </div>
-            <div class="profile-info">
-                <div class="profile-name-row">
-                    <h2 class="profile-name">${escapeHtml(userName)}</h2>
-                    ${isOwnProfile ? '' : `
-                        <button class="profile-subscribe-btn" id="profile-subscribe-btn" onclick="toggleSubscription()">Подписаться</button>
-                        <button class="profile-notify-btn" id="profile-notify-btn" onclick="toggleNotifications()">🔔</button>
-                    `}
-                </div>
-                <p class="profile-bio" id="profile-bio">${isOwnProfile ? (currentUserData?.bio || '') : 'Загрузка...'}</p>
-            </div>
-            <div class="profile-tabs">
-                <button class="profile-tab-btn active" onclick="switchProfileTab('posts', '${userId}')">📷 Посты</button>
-                <button class="profile-tab-btn" onclick="switchProfileTab('reposts', '${userId}')">🔄 Репосты</button>
-            </div>
-            <div id="profile-content" class="profile-content">
-                <div class="profile-loading">Загрузка...</div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    modal.classList.remove('hidden');
-    
-    database.ref('users/' + userId).once('value').then(function(snap) {
-        var userData = snap.val();
-        if (userData && userData.bio) {
-            var bioEl = document.getElementById('profile-bio');
-            if (bioEl) bioEl.textContent = userData.bio;
+    // Загружаем данные пользователя
+    database.ref('users/' + userId).once('value').then(function(userSnap) {
+        var userData = userSnap.val();
+        if (!userData) return;
+        
+        var userName = userData.username || 'Пользователь';
+        var userAvatar = userData.avatar || '';
+        var userBio = userData.bio || 'Нет описания';
+        var userVerified = userData.verified === true;
+        var userBanner = userData.banner || null;
+        
+        window.viewingProfileUserName = userName;
+        window.viewingProfileUserAvatar = userAvatar;
+        window.viewingProfileUserData = userData;
+        
+        var bannerStyle = '';
+        if (userBanner) {
+            if (userBanner.startsWith('#')) {
+                bannerStyle = 'background: ' + userBanner + ';';
+            } else {
+                bannerStyle = 'background-image: url(' + userBanner + '); background-size: cover; background-position: center;';
+            }
+        } else {
+            bannerStyle = 'background: linear-gradient(135deg, #228B22, #556B2F);';
         }
+        
+        var modal = document.createElement('div');
+        modal.id = 'user-profile-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="profile-modal-content">
+                <div class="profile-banner" id="profile-banner" style="${bannerStyle}">
+                    ${canEdit ? '<button class="profile-banner-edit-btn" onclick="editProfileBanner()">✏️</button>' : ''}
+                    <button class="profile-close-btn" onclick="closeProfileModal()">×</button>
+                </div>
+                <div class="profile-avatar-wrapper">
+                    <div class="profile-avatar" id="profile-avatar" style="background-image: url(${userAvatar}); background-size: cover;">
+                        ${!userAvatar ? '👤' : ''}
+                        ${canEdit ? '<button class="profile-avatar-edit-btn" onclick="editProfileAvatar()">✏️</button>' : ''}
+                    </div>
+                </div>
+                <div class="profile-info">
+                    <div class="profile-name-row">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <h2 class="profile-name" id="profile-name" ${canEdit ? 'ondblclick="editProfileName()" style="cursor:pointer;"' : ''}>${escapeHtml(userName)}</h2>
+                            ${userVerified ? '<img src="https://i.ibb.co/YTRCNHkq/4e9cba55-b083-46d3-8a30-bff7b1be94c7-1.png" style="width:18px; height:18px; cursor:pointer;" onclick="showVerifiedInfo()">' : ''}
+                            ${isAdmin && !isOwnProfile ? '<button onclick="toggleUserVerification(\''+userId+'\')" style="background:none; border:none; cursor:pointer; font-size:14px;">🔘 Выдать галочку</button>' : ''}
+                        </div>
+                        ${isOwnProfile ? '' : `
+                            <button class="profile-subscribe-btn" id="profile-subscribe-btn" onclick="toggleSubscription()">Подписаться</button>
+                            <button class="profile-notify-btn" id="profile-notify-btn" onclick="toggleNotifications()">🔔</button>
+                        `}
+                    </div>
+                    <p class="profile-bio" id="profile-bio" ${canEdit ? 'ondblclick="editProfileBio()" style="cursor:pointer;"' : ''}>${escapeHtml(userBio)}</p>
+                </div>
+                <div class="profile-tabs">
+                    <button class="profile-tab-btn active" onclick="switchProfileTab('posts', '${userId}')">📷 Посты</button>
+                    <button class="profile-tab-btn" onclick="switchProfileTab('reposts', '${userId}')">🔄 Репосты</button>
+                </div>
+                <div id="profile-content" class="profile-content">
+                    <div class="profile-loading">Загрузка...</div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        modal.classList.remove('hidden');
+        
         if (!isOwnProfile) {
             checkSubscriptionStatus(userId);
         }
+        
+        switchProfileTab('posts', userId);
     });
-    
-    switchProfileTab('posts', userId);
 }
 
 function checkSubscriptionStatus(userId) {
@@ -628,9 +647,9 @@ function switchProfileTab(tab, userId) {
     var btns = document.querySelectorAll('.profile-tab-btn');
     btns.forEach(function(btn) { btn.classList.remove('active'); });
     if (tab === 'posts') {
-        btns[0].classList.add('active');
+        if (btns[0]) btns[0].classList.add('active');
     } else {
-        btns[1].classList.add('active');
+        if (btns[1]) btns[1].classList.add('active');
     }
     
     content.innerHTML = '<div class="profile-loading">Загрузка...</div>';
@@ -678,7 +697,6 @@ function createProfileSliceCard(sliceId, sliceData) {
     }
     
     var textHtml = sliceData.text ? '<div class="slice-text">'+formatSliceText(sliceData.text)+'</div>' : '';
-    
     var repostBadge = sliceData.type === 'repost' ? '<div class="repost-badge">🔄 Репостнуто с @' + escapeHtml(sliceData.originalAuthorName) + '</div>' : '';
     
     div.innerHTML = `
@@ -707,6 +725,161 @@ function createProfileSliceCard(sliceId, sliceData) {
 function closeProfileModal() {
     var modal = document.getElementById('user-profile-modal');
     if (modal) modal.remove();
+}
+
+// ========== РЕДАКТИРОВАНИЕ ПРОФИЛЯ (АДМИН/ВЛАДЕЛЕЦ) ==========
+function editProfileBanner() {
+    var userId = window.viewingProfileUserId;
+    var isOwnProfile = (userId === currentUser.uid);
+    var isAdmin = window.isSuperAdmin === true;
+    
+    if (!isOwnProfile && !isAdmin) return;
+    
+    var colors = ['#228B22', '#556B2F', '#1a5c1a', '#32CD32', '#6b8e6b', '#000000', '#1E90FF', '#FFD700', '#FFA500', '#FF69B4', '#87CEEB', '#9370DB'];
+    
+    var modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 350px;">
+            <div class="modal-header">
+                <h3>Выберите баннер</h3>
+                <button onclick="this.closest('.modal').remove()" class="btn-close">×</button>
+            </div>
+            <div class="banner-color-picker">
+                ${colors.map(c => `<div class="banner-color-option" style="background: ${c};" onclick="setProfileBanner('${c}')"></div>`).join('')}
+            </div>
+            <div style="padding: 10px; text-align: center;">
+                <button onclick="uploadProfileBannerImage()" class="btn-primary" style="width: auto; padding: 8px 20px;">📷 Загрузить картинку/GIF</button>
+            </div>
+            <div style="padding: 10px; text-align: center;">
+                <button onclick="setProfileBanner('')" class="btn-secondary">Сбросить</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.classList.remove('hidden');
+}
+
+function setProfileBanner(colorOrUrl) {
+    var userId = window.viewingProfileUserId;
+    if (!userId) return;
+    
+    var updateData = {};
+    if (colorOrUrl) {
+        updateData.banner = colorOrUrl;
+    } else {
+        updateData.banner = null;
+    }
+    
+    database.ref('users/' + userId).update(updateData).then(function() {
+        showNotification('Баннер обновлён', 'success');
+        closeAllModals();
+        openUserProfile(userId);
+    });
+}
+
+function uploadProfileBannerImage() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,image/gif';
+    input.onchange = function(e) {
+        var file = e.target.files[0];
+        if (file) {
+            showNotification('Загрузка...', 'info');
+            if (typeof uploadToImgBB === 'function') {
+                uploadToImgBB(file).then(function(data) {
+                    setProfileBanner(data.url);
+                }).catch(function() {
+                    showNotification('Ошибка загрузки', 'error');
+                });
+            } else {
+                showNotification('Функция загрузки не найдена', 'error');
+            }
+        }
+    };
+    input.click();
+}
+
+function editProfileAvatar() {
+    var userId = window.viewingProfileUserId;
+    var isOwnProfile = (userId === currentUser.uid);
+    var isAdmin = window.isSuperAdmin === true;
+    
+    if (!isOwnProfile && !isAdmin) return;
+    
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = function(e) {
+        var file = e.target.files[0];
+        if (file) {
+            showNotification('Загрузка...', 'info');
+            if (typeof uploadToImgBB === 'function') {
+                uploadToImgBB(file).then(function(data) {
+                    database.ref('users/' + userId + '/avatar').set(data.url).then(function() {
+                        showNotification('Аватар обновлён', 'success');
+                        if (window.viewingProfileUserId === currentUser.uid && typeof updateUserDisplay === 'function') {
+                            updateUserDisplay();
+                        }
+                        openUserProfile(userId);
+                    });
+                }).catch(function() {
+                    showNotification('Ошибка загрузки', 'error');
+                });
+            } else {
+                showNotification('Функция загрузки не найдена', 'error');
+            }
+        }
+    };
+    input.click();
+}
+
+function editProfileName() {
+    var userId = window.viewingProfileUserId;
+    var isOwnProfile = (userId === currentUser.uid);
+    var isAdmin = window.isSuperAdmin === true;
+    
+    if (!isOwnProfile && !isAdmin) return;
+    
+    var newName = prompt('Введите новое имя:', window.viewingProfileUserName);
+    if (newName && newName.trim()) {
+        database.ref('users/' + userId + '/username').set(newName.trim()).then(function() {
+            showNotification('Имя обновлено', 'success');
+            if (window.viewingProfileUserId === currentUser.uid && typeof updateUserDisplay === 'function') {
+                updateUserDisplay();
+            }
+            openUserProfile(userId);
+        });
+    }
+}
+
+function editProfileBio() {
+    var userId = window.viewingProfileUserId;
+    var isOwnProfile = (userId === currentUser.uid);
+    var isAdmin = window.isSuperAdmin === true;
+    
+    if (!isOwnProfile && !isAdmin) return;
+    
+    var currentBio = document.getElementById('profile-bio')?.textContent || '';
+    var newBio = prompt('Введите новое описание:', currentBio === 'Нет описания' ? '' : currentBio);
+    if (newBio !== null) {
+        database.ref('users/' + userId + '/bio').set(newBio.trim()).then(function() {
+            showNotification('Описание обновлено', 'success');
+            openUserProfile(userId);
+        });
+    }
+}
+
+function toggleUserVerification(userId) {
+    if (!window.isSuperAdmin) return;
+    
+    database.ref('users/' + userId + '/verified').once('value').then(function(snap) {
+        var isVerified = snap.val() === true;
+        database.ref('users/' + userId + '/verified').set(!isVerified).then(function() {
+            showNotification(isVerified ? 'Галочка снята' : 'Галочка выдана', 'success');
+            openUserProfile(userId);
+        });
+    });
 }
 
 function showVerifiedInfo() {
@@ -759,7 +932,7 @@ function goToSlide(sliceId, index) {
     window['sliceCurrentIndex_' + sliceId] = index;
 }
 
-// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+// ========== ФОРМАТИРОВАНИЕ ==========
 function formatSliceText(text) {
     if (!text) return '';
     text = escapeHtml(text);
@@ -780,19 +953,20 @@ function formatSliceDate(timestamp) {
     return date.toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'2-digit'});
 }
 
+// ========== ПОИСК (ИСПРАВЛЕН) ==========
 function searchByHashtag(tag) {
     var input = document.getElementById('slices-search-input');
     if (input) input.value = '#' + tag;
-    searchSlices();
+    performSearch();
 }
 
 function searchByUser(username) {
     var input = document.getElementById('slices-search-input');
     if (input) input.value = '@' + username;
-    searchSlices();
+    performSearch();
 }
 
-function searchSlices() {
+function performSearch() {
     var query = document.getElementById('slices-search-input').value.trim().toLowerCase();
     if (searchTimeout) clearTimeout(searchTimeout);
     searchTimeout = setTimeout(function() {
@@ -828,6 +1002,12 @@ function searchSlices() {
     }, 500);
 }
 
+// Обёртка для совместимости
+function searchSlices() {
+    performSearch();
+}
+
+// ========== ОБЩИЕ ФУНКЦИИ ==========
 function shareSlice(sliceId) {
     var url = window.location.href + '?slice=' + sliceId;
     if (navigator.share) {
@@ -849,11 +1029,11 @@ function openSliceLightbox(url) {
 
 function openSlicesProfile() {
     if (currentUser) {
-        openUserProfile(currentUser.uid, currentUserData.username, currentUserData.avatar);
+        openUserProfile(currentUser.uid);
     }
 }
 
-// ========== КОНТЕКСТНОЕ МЕНЮ (админ/владелец) ==========
+// ========== КОНТЕКСТНОЕ МЕНЮ ==========
 function showSliceContextMenu(event, sliceId, sliceData) {
     event.preventDefault();
     event.stopPropagation();
@@ -1038,8 +1218,13 @@ async function publishSlice() {
     try {
         var mediaUrls = [];
         for (var i = 0; i < pendingSliceFiles.length; i++) {
-            var url = await uploadToImgBB(pendingSliceFiles[i]);
-            mediaUrls.push(url);
+            if (typeof uploadToImgBB === 'function') {
+                var url = await uploadToImgBB(pendingSliceFiles[i]);
+                mediaUrls.push(url);
+            } else {
+                showNotification('Функция загрузки не найдена', 'error');
+                return;
+            }
         }
         var sliceData = {
             authorId: currentUser.uid, authorName: currentUserData.username || 'Пользователь',
