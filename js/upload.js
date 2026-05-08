@@ -1,4 +1,16 @@
 // UPLOAD - мульти-отправка фото и GIF через ImgBB
+async function uploadToImgBB(file) {
+    var IMGBB_API_KEY = '03a5a914cba6f919ff317ebb6d9ed4f9';
+    var formData = new FormData();
+    formData.append('image', file);
+    var response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        method: 'POST',
+        body: formData
+    });
+    var data = await response.json();
+    if (!data.success) throw new Error(data.error?.message || 'Ошибка загрузки');
+    return { url: data.data.url };
+}
 var IMGBB_API_KEY = '03a5a914cba6f919ff317ebb6d9ed4f9';
 var pendingImages = []; // массив объектов {file, caption}
 var currentImageIndex = 0;
