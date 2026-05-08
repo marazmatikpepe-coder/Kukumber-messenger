@@ -891,3 +891,329 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
     width: 24px;
     height: 24px;
 }
+/* ===== НАСТРОЙКИ КАК В TELEGRAM ===== */
+.settings-container {
+    background: var(--background);
+    height: 100%;
+    overflow-y: auto;
+}
+
+.settings-header {
+    background: white;
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.settings-header h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.settings-profile {
+    background: white;
+    margin: 10px 15px;
+    border-radius: 16px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.settings-profile:hover {
+    background: var(--background);
+}
+
+.settings-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--sage);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    background-size: cover;
+}
+
+.settings-profile-info {
+    flex: 1;
+}
+
+.settings-profile-info h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.settings-profile-info p {
+    font-size: 13px;
+    color: var(--text-light);
+}
+
+.settings-section {
+    background: white;
+    margin: 10px 15px;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.settings-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.settings-item:last-child {
+    border-bottom: none;
+}
+
+.settings-item:hover {
+    background: var(--background);
+}
+
+.settings-icon {
+    font-size: 22px;
+    width: 32px;
+    text-align: center;
+}
+
+.settings-item span:nth-child(2) {
+    flex: 1;
+    font-size: 16px;
+}
+
+.settings-value {
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.settings-item.danger span:nth-child(2) {
+    color: var(--error);
+}
+
+.arrow {
+    color: var(--text-muted);
+    font-size: 20px;
+}
+
+.settings-footer {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* ===== ИСПРАВЛЕННАЯ ПЕЧАТНАЯ СТРОКА (ТЕЛЕФОН/ПК) ===== */
+.message-input-area {
+    background: white;
+    border-top: 1px solid var(--border);
+    padding: 8px 12px;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.attach-btn {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.attach-btn img {
+    width: 36px;
+    height: 36px;
+}
+
+.voice-btn, .emoji-btn {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.voice-btn:hover, .emoji-btn:hover, .attach-btn:hover {
+    background: var(--background);
+}
+
+.message-input-area input[type="text"] {
+    flex: 1;
+    min-width: 100px;
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 28px;
+    font-size: 16px;
+    background: white;
+    outline: none;
+}
+
+.message-input-area input:focus {
+    border-color: var(--forest);
+}
+
+.send-btn {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--forest), var(--lime));
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Мобильная адаптация печатной строки */
+@media (max-width: 768px) {
+    .message-input-area {
+        padding: 8px 10px;
+        gap: 6px;
+    }
+    
+    .attach-btn, .voice-btn, .emoji-btn, .send-btn {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .attach-btn img {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .message-input-area input[type="text"] {
+        padding: 10px 14px;
+        font-size: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .attach-btn, .voice-btn, .emoji-btn, .send-btn {
+        width: 38px;
+        height: 38px;
+    }
+    
+    .attach-btn img {
+        width: 30px;
+        height: 30px;
+    }
+}
+
+/* ===== ПРОФИЛЬ: АВАТАРКА ПЕРЕКРЫВАЕТ БАННЕР ===== */
+.profile-modal-content {
+    background: white;
+    border-radius: 24px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 85vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.profile-banner {
+    height: 140px;
+    position: relative;
+    border-radius: 24px 24px 0 0;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+}
+
+.profile-banner-edit-btn {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.6);
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.profile-avatar-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: -50px;
+    position: relative;
+    z-index: 10;
+}
+
+.profile-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: var(--sage);
+    border: 4px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    position: relative;
+}
+
+.profile-avatar-edit-btn {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: var(--forest);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+/* Цвета баннера */
+.banner-color-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px;
+    justify-content: center;
+}
+
+.banner-color-option {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.banner-color-option:hover {
+    transform: scale(1.1);
+}
