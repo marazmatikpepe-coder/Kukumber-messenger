@@ -1,9 +1,8 @@
-// SLICES (Слайсы) - ПОЛНАЯ РАБОЧАЯ ВЕРСИЯ 5.1
+// SLICES (Слайсы) - ПОЛНАЯ РАБОЧАЯ ВЕРСИЯ 5.1 (ИСПРАВЛЕНА)
+// Исправлены: загрузка и обновление аватаров и баннеров, функция uploadToImgBB
 // Лайки, репосты, комментарии, профиль (только посты и репосты)
-// Баннер (цвета, картинка, GIF) - ИСПРАВЛЕН
-// Подписчики, колокольчик, верификация
 // Звук при создании слайса
-// Модальные окна не перекрываются - ИСПРАВЛЕНО
+// Модальные окна не перекрываются
 
 var currentSlicesTab = 'feed';
 var pendingSliceFiles = [];
@@ -12,6 +11,22 @@ var slicesListener = null;
 var openCommentsSliceId = null;
 var pendingLikeRequests = {};
 var pendingRepostRequests = {};
+
+// ========== ФУНКЦИЯ ЗАГРУЗКИ НА ImgBB (ЕСЛИ НЕ ОПРЕДЕЛЕНА В upload.js) ==========
+if (typeof uploadToImgBB !== 'function') {
+    window.uploadToImgBB = async function(file) {
+        var IMGBB_API_KEY = '03a5a914cba6f919ff317ebb6d9ed4f9';
+        var formData = new FormData();
+        formData.append('image', file);
+        var response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+            method: 'POST',
+            body: formData
+        });
+        var data = await response.json();
+        if (!data.success) throw new Error(data.error?.message || 'Ошибка загрузки');
+        return { url: data.data.url };
+    };
+}
 
 // Звук при создании слайса
 var sliceCreateSound = null;
@@ -216,7 +231,7 @@ function createSliceCard(sliceId, sliceData) {
     return div;
 }
 
-// ========== ЛАЙКИ ==========
+// ========== ЛАЙКИ, РЕПОСТЫ, КОММЕНТАРИИ (без изменений) ==========
 function likeSlice(sliceId) {
     if (pendingLikeRequests[sliceId]) return;
     pendingLikeRequests[sliceId] = true;
@@ -259,7 +274,6 @@ function likeSlice(sliceId) {
     }).catch(function() { delete pendingLikeRequests[sliceId]; });
 }
 
-// ========== РЕПОСТЫ ==========
 function repostSlice(sliceId) {
     if (pendingRepostRequests[sliceId]) return;
     pendingRepostRequests[sliceId] = true;
@@ -313,7 +327,6 @@ function repostSlice(sliceId) {
     }).catch(function() { delete pendingRepostRequests[sliceId]; });
 }
 
-// ========== КОММЕНТАРИИ ==========
 function toggleComments(sliceId) {
     var commentsBlock = document.getElementById('comments-block-' + sliceId);
     if (!commentsBlock) return;
@@ -524,7 +537,6 @@ function likeComment(sliceId, commentId) {
 function openUserProfile(userId) {
     window.viewingProfileUserId = userId;
     
-    // Закрываем предыдущее окно профиля
     var oldModal = document.getElementById('user-profile-modal');
     if (oldModal) oldModal.remove();
     
@@ -767,11 +779,10 @@ function createProfileSliceCard(sliceId, sliceData) {
 function closeProfileModal() {
     var modal = document.getElementById('user-profile-modal');
     if (modal) modal.remove();
-    // Закрываем палитру цветов, если она открыта
     closeColorPickerModal();
 }
 
-// ========== РЕДАКТИРОВАНИЕ ПРОФИЛЯ (ИСПРАВЛЕНО - МОДАЛКИ НЕ ПЕРЕКРЫВАЮТСЯ) ==========
+// ========== РЕДАКТИРОВАНИЕ ПРОФИЛЯ (ИСПРАВЛЕНО) ==========
 function editProfileBanner() {
     var userId = window.viewingProfileUserId;
     var isOwnProfile = (userId === currentUser.uid);
@@ -781,7 +792,6 @@ function editProfileBanner() {
     
     var colors = ['#228B22', '#556B2F', '#1a5c1a', '#32CD32', '#6b8e6b', '#000000', '#1E90FF', '#FFD700', '#FFA500', '#FF69B4', '#87CEEB', '#9370DB'];
     
-    // Закрываем предыдущее окно выбора цвета
     var oldColorModal = document.getElementById('color-picker-modal');
     if (oldColorModal) oldColorModal.remove();
     
@@ -830,7 +840,6 @@ function setProfileBanner(colorOrUrl) {
         showNotification('Баннер обновлён', 'success');
         closeColorPickerModal();
         
-        // ОБНОВЛЯЕМ БАННЕР В ОТКРЫТОМ ПРОФИЛЕ
         var bannerDiv = document.getElementById('profile-banner');
         if (bannerDiv) {
             if (colorOrUrl) {
@@ -849,19 +858,15 @@ function setProfileBanner(colorOrUrl) {
             }
         }
         
-        // ОБНОВЛЯЕМ ДАННЫЕ В ПАМЯТИ
         if (window.viewingProfileUserData) {
             window.viewingProfileUserData.banner = colorOrUrl || null;
         }
-        
-        // ОБНОВЛЯЕМ ВСЕ КАРТОЧКИ ПОСТОВ (если баннер пользователя виден где-то ещё)
-        var allCards = document.querySelectorAll('.slice-card');
-        // Не перезагружаем всю ленту, просто обновляем данные
     }).catch(function(err) {
         showNotification('Ошибка: ' + err.message, 'error');
         closeColorPickerModal();
     });
 }
+
 function uploadProfileBannerImage() {
     var input = document.createElement('input');
     input.type = 'file';
@@ -883,6 +888,8 @@ function uploadProfileBannerImage() {
     };
     input.click();
 }
+
+// ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ АВАТАРА ==========
 function editProfileAvatar() {
     var userId = window.viewingProfileUserId;
     var isOwnProfile = (userId === currentUser.uid);
@@ -901,85 +908,95 @@ function editProfileAvatar() {
         if (typeof uploadToImgBB === 'function') {
             uploadToImgBB(file).then(function(data) {
                 var avatarUrl = data.url;
-                database.ref('users/' + userId + '/avatar').set(avatarUrl).then(function() {
-                    showNotification('Аватар обновлён', 'success');
-                    
-                    // ОБНОВЛЯЕМ АВАТАР В ОТКРЫТОМ ПРОФИЛЕ
-                    var avatarDiv = document.getElementById('profile-avatar');
-                    if (avatarDiv) {
-                        avatarDiv.style.backgroundImage = 'url(' + avatarUrl + ')';
-                        avatarDiv.style.backgroundSize = 'cover';
-                        avatarDiv.textContent = '';
-                    }
-                    
-                    // ОБНОВЛЯЕМ АВАТАР В БОКОВОЙ ПАНЕЛИ
-                    if (userId === currentUser.uid && typeof updateUserDisplay === 'function') {
-                        updateUserDisplay();
-                    }
-                    
-                    // ОБНОВЛЯЕМ АВАТАР В ЛЕНТЕ (ВСЕ ПОСТЫ ПОЛЬЗОВАТЕЛЯ)
-                    var allCards = document.querySelectorAll('.slice-card');
-                    allCards.forEach(function(card) {
-                        var authorId = card.querySelector('.slice-author')?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
-                        if (authorId === userId) {
-                            var avatarElement = card.querySelector('.slice-author .avatar');
-                            if (avatarElement) {
-                                avatarElement.style.backgroundImage = 'url(' + avatarUrl + ')';
-                                avatarElement.style.backgroundSize = 'cover';
-                                avatarElement.textContent = '';
-                            }
+                return database.ref('users/' + userId + '/avatar').set(avatarUrl);
+            }).then(function() {
+                showNotification('Аватар обновлён!', 'success');
+                
+                // 1. Обновляем аватар в открытом профиле
+                var profileAvatar = document.getElementById('profile-avatar');
+                if (profileAvatar) {
+                    profileAvatar.style.backgroundImage = 'url(' + avatarUrl + ')';
+                    profileAvatar.style.backgroundSize = 'cover';
+                    profileAvatar.textContent = '';
+                }
+                
+                // 2. Обновляем аватар в боковой панели (если это свой профиль)
+                if (userId === currentUser.uid && typeof updateUserDisplay === 'function') {
+                    updateUserDisplay();
+                }
+                
+                // 3. Обновляем аватар во всех постах этого пользователя в ленте
+                var allCards = document.querySelectorAll('.slice-card');
+                allCards.forEach(function(card) {
+                    var authorAttr = card.querySelector('.slice-author')?.getAttribute('onclick');
+                    if (authorAttr && authorAttr.includes(userId)) {
+                        var avatarEl = card.querySelector('.slice-author .avatar');
+                        if (avatarEl) {
+                            avatarEl.style.backgroundImage = 'url(' + avatarUrl + ')';
+                            avatarEl.style.backgroundSize = 'cover';
+                            avatarEl.textContent = '';
                         }
-                    });
-                    
-                    // ОБНОВЛЯЕМ АВАТАР В ЧАТАХ (если чат открыт)
+                    }
+                });
+                
+                // 4. Обновляем аватар в открытом чате (если этот пользователь — собеседник)
+                if (currentChatUser && currentChatUser.otherUserId === userId) {
                     var chatAvatar = document.getElementById('chat-avatar');
-                    if (chatAvatar && userId === currentChatUser?.otherUserId) {
+                    if (chatAvatar) {
                         chatAvatar.style.backgroundImage = 'url(' + avatarUrl + ')';
                         chatAvatar.style.backgroundSize = 'cover';
                         chatAvatar.textContent = '';
                     }
-                    
-                    // ОБНОВЛЯЕМ АВАТАР В СПИСКЕ ЧАТОВ
-                    var chatItems = document.querySelectorAll('.chat-item');
-                    chatItems.forEach(function(item) {
-                        // Проверяем, относится ли этот чат к пользователю
-                        var chatName = item.querySelector('.chat-item-name')?.textContent;
-                        if (chatName === window.viewingProfileUserName) {
-                            var chatAvatarEl = item.querySelector('.avatar');
-                            if (chatAvatarEl) {
-                                chatAvatarEl.style.backgroundImage = 'url(' + avatarUrl + ')';
-                                chatAvatarEl.style.backgroundSize = 'cover';
-                                chatAvatarEl.textContent = '';
-                            }
-                        }
-                    });
-                    
-                    // ОБНОВЛЯЕМ АВАТАР В НАСТРОЙКАХ
-                    if (userId === currentUser.uid) {
-                        var settingsAvatar = document.getElementById('settings-avatar');
-                        if (settingsAvatar) {
-                            settingsAvatar.style.backgroundImage = 'url(' + avatarUrl + ')';
-                            settingsAvatar.style.backgroundSize = 'cover';
-                            settingsAvatar.textContent = '';
+                }
+                
+                // 5. Обновляем аватар в списке чатов (ищем чаты с этим пользователем)
+                var chatItems = document.querySelectorAll('.chat-item');
+                chatItems.forEach(function(item) {
+                    // Ищем чат, где имя пользователя совпадает (или можно по data-атрибуту, но проще по имени)
+                    var nameSpan = item.querySelector('.chat-item-name');
+                    if (nameSpan && nameSpan.textContent === window.viewingProfileUserName) {
+                        var chatAvatarEl = item.querySelector('.avatar');
+                        if (chatAvatarEl) {
+                            chatAvatarEl.style.backgroundImage = 'url(' + avatarUrl + ')';
+                            chatAvatarEl.style.backgroundSize = 'cover';
+                            chatAvatarEl.textContent = '';
                         }
                     }
-                    
-                    // ОБНОВЛЯЕМ АВАТАР В SLICES-ПАНЕЛИ
+                });
+                
+                // 6. Обновляем аватар в настройках (свой профиль)
+                if (userId === currentUser.uid) {
+                    var settingsAvatar = document.getElementById('settings-avatar');
+                    if (settingsAvatar) {
+                        settingsAvatar.style.backgroundImage = 'url(' + avatarUrl + ')';
+                        settingsAvatar.style.backgroundSize = 'cover';
+                        settingsAvatar.textContent = '';
+                    }
+                }
+                
+                // 7. Обновляем аватар в правом верхнем углу Slices (свой профиль)
+                if (userId === currentUser.uid) {
                     var slicesUserAvatar = document.getElementById('slices-user-avatar');
-                    if (slicesUserAvatar && userId === currentUser.uid) {
+                    if (slicesUserAvatar) {
                         slicesUserAvatar.style.backgroundImage = 'url(' + avatarUrl + ')';
                         slicesUserAvatar.style.backgroundSize = 'cover';
                         slicesUserAvatar.textContent = '';
                     }
-                    
-                    // ПЕРЕЗАГРУЖАЕМ ПРОФИЛЬ, ЧТОБЫ ОБНОВИТЬ ВСЁ
-                    setTimeout(function() {
-                        openUserProfile(userId);
-                    }, 500);
-                    
-                }).catch(function(err) {
-                    showNotification('Ошибка обновления аватара: ' + err.message, 'error');
-                });
+                }
+                
+                // 8. Обновляем данные в памяти
+                if (window.viewingProfileUserData) {
+                    window.viewingProfileUserData.avatar = avatarUrl;
+                }
+                if (userId === currentUser.uid && currentUserData) {
+                    currentUserData.avatar = avatarUrl;
+                }
+                
+                // 9. Перезагружаем профиль (чтобы обновить все поля, но не обязательно, можно убрать)
+                setTimeout(function() {
+                    openUserProfile(userId);
+                }, 300);
+                
             }).catch(function(err) {
                 showNotification('Ошибка загрузки: ' + err.message, 'error');
             });
@@ -989,38 +1006,7 @@ function editProfileAvatar() {
     };
     input.click();
 }
-function updateAllAvatars(userId, avatarUrl) {
-    // Обновляем аватары во всех постах пользователя в ленте
-    var allCards = document.querySelectorAll('.slice-card');
-    allCards.forEach(function(card) {
-        var authorLink = card.querySelector('.slice-author');
-        if (authorLink) {
-            var onclickAttr = authorLink.getAttribute('onclick');
-            if (onclickAttr && onclickAttr.includes(userId)) {
-                var avatarEl = card.querySelector('.slice-author .avatar');
-                if (avatarEl) {
-                    avatarEl.style.backgroundImage = 'url(' + avatarUrl + ')';
-                    avatarEl.style.backgroundSize = 'cover';
-                    avatarEl.textContent = '';
-                }
-            }
-        }
-    });
-    
-    // Обновляем в списке чатов
-    var chatItems = document.querySelectorAll('.chat-item');
-    chatItems.forEach(function(item) {
-        var nameEl = item.querySelector('.chat-item-name');
-        if (nameEl && nameEl.textContent === window.viewingProfileUserName) {
-            var chatAvatar = item.querySelector('.avatar');
-            if (chatAvatar) {
-                chatAvatar.style.backgroundImage = 'url(' + avatarUrl + ')';
-                chatAvatar.style.backgroundSize = 'cover';
-                chatAvatar.textContent = '';
-            }
-        }
-    });
-}
+
 function editProfileName() {
     var userId = window.viewingProfileUserId;
     var isOwnProfile = (userId === currentUser.uid);
@@ -1411,8 +1397,8 @@ async function publishSlice() {
         var mediaUrls = [];
         for (var i = 0; i < pendingSliceFiles.length; i++) {
             if (typeof uploadToImgBB === 'function') {
-                var url = await uploadToImgBB(pendingSliceFiles[i]);
-                mediaUrls.push(url);
+                var result = await uploadToImgBB(pendingSliceFiles[i]);
+                mediaUrls.push(result.url); // исправлено: берём url из объекта
             } else {
                 showNotification('Функция загрузки не найдена', 'error');
                 return;
