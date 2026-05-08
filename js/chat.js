@@ -1,5 +1,5 @@
 // KUKUMBER MESSENGER - CHAT.JS (полная версия)
-// Поддержка открытия профиля по клику на аватарку/имя
+// Поддержка открытия профиля через openUserProfile (из slices.js)
 // Кликабельные ссылки, все функции чата
 
 var selectedGroupMembers = [];
@@ -22,7 +22,7 @@ function showGlobalSearch() {
             var avatarContent = user.avatar ? '' : '👤';
             div.innerHTML = '<div class="avatar" style="'+avatarStyle+'">'+avatarContent+'</div><div class="user-item-info"><h4>'+escapeHtml(user.username)+'</h4></div><button onclick="addToContacts(\''+uid+'\',\''+escapeHtml(user.username)+'\')">➕ Добавить</button>';
             container.appendChild(div);
-        });
+        }
     });
 }
 
@@ -283,7 +283,7 @@ function openChat(chatId, chatData) {
         chatAvatar.textContent = chatData.type === 'group' ? '👥' : (chatData.type === 'channel' ? '📢' : '👤');
     }
     
-    // Делаем шапку чата кликабельной для открытия профиля (для личных чатов)
+    // Делаем шапку чата кликабельной для открытия профиля (только для личных чатов)
     if (chatData.type === 'private' && chatData.otherUserId) {
         var chatHeader = document.querySelector('.chat-user-info');
         if (chatHeader) {
@@ -403,7 +403,7 @@ function createMessageElement(message) {
         }
     }
     
-    // Имя отправителя для групп/каналов (кликабельное для открытия профиля)
+    // Имя отправителя для групп/каналов (кликабельное)
     var senderHtml = '';
     if (!isSent && (currentChatUser.type === 'group' || currentChatUser.type === 'channel')) {
         database.ref('users/'+message.senderId+'/username').once('value').then(function(snap) {
@@ -411,28 +411,24 @@ function createMessageElement(message) {
             if (senderEl) senderEl.textContent = snap.val() || 'Пользователь';
         });
         senderHtml = '<div class="message-sender" style="cursor:pointer;" onclick="openChatUserProfile(\''+message.senderId+'\')">Загрузка...</div>';
-    } else if (!isSent && currentChatUser.type === 'private') {
-        // В личном чате имя отправителя не показываем, но аватарку можно сделать кликабельной
-        // Добавим клик по аватарке в сообщении
     }
     
     // Аватарка для полученных сообщений (кликабельная)
     var avatarHtml = '';
     if (!isSent) {
-        var senderAvatar = '';
         database.ref('users/'+message.senderId+'/avatar').once('value').then(function(snap) {
             var avatarUrl = snap.val();
-            var avatarEl = div.querySelector('.message-avatar');
+            var avatarEl = div.querySelector('.message-avatar .avatar');
             if (avatarEl && avatarUrl) {
                 avatarEl.style.backgroundImage = 'url(' + avatarUrl + ')';
                 avatarEl.style.backgroundSize = 'cover';
                 avatarEl.textContent = '';
             }
         });
-        avatarHtml = '<div class="message-avatar" style="cursor:pointer;" onclick="openChatUserProfile(\''+message.senderId+'\')"><div class="avatar" style="width:32px; height:32px;">👤</div></div>';
+        avatarHtml = '<div class="message-avatar" style="cursor:pointer;" onclick="openChatUserProfile(\''+message.senderId+'\')"><div class="avatar" style="width:36px; height:36px;">👤</div></div>';
     }
     
-    div.innerHTML = '<div class="message-content-wrapper" style="display:flex; gap:8px; align-items:flex-start;">' + avatarHtml + '<div class="message-content" style="flex:1;">'+senderHtml+content+'<div class="message-time">'+formatTime(message.timestamp)+'</div><div class="message-reactions">'+reactionsHtml+'</div></div></div>';
+    div.innerHTML = '<div class="message-content-wrapper" style="display:flex; gap:10px; align-items:flex-start;">' + avatarHtml + '<div class="message-content" style="flex:1;">'+senderHtml+content+'<div class="message-time">'+formatTime(message.timestamp)+'</div><div class="message-reactions">'+reactionsHtml+'</div></div></div>';
     
     // Контекстное меню
     div.addEventListener('contextmenu', function(e) {
@@ -454,15 +450,25 @@ function createMessageElement(message) {
     container.scrollTop = container.scrollHeight;
 }
 
-// Форматирование текста сообщения (ссылки, упоминания)
+// Форматирование текста сообщения (ссылки кликабельные)
 function formatMessageText(text) {
     if (!text) return '';
     text = escapeHtml(text);
-    // Ссылки делаем кликабельными
     text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #228B22; text-decoration: none;">$1</a>');
-    // Упоминания (если нужны)
-    text = text.replace(/@(\w+)/g, '<span style="color:#228B22; cursor:pointer;" onclick="searchByUser(\'$1\')">@$1</span>');
+    text = text.replace(/@(\w+)/g, '<span style="color:#228B22; cursor:pointer;" onclick="openUserProfileByUsername(\'$1\')">@$1</span>');
     return text;
+}
+
+// Открытие профиля по имени пользователя (для упоминаний)
+function openUserProfileByUsername(username) {
+    database.ref('usernames/' + username.toLowerCase()).once('value').then(function(snap) {
+        var userId = snap.val();
+        if (userId && typeof openUserProfile === 'function') {
+            openUserProfile(userId);
+        } else {
+            showNotification('Пользователь не найден', 'error');
+        }
+    });
 }
 
 function updateMessageElement(message) {
@@ -492,12 +498,11 @@ function updateMessageElement(message) {
     }
 }
 
-// Функция для открытия профиля из чата
+// Функция для открытия профиля из чата (использует slices.js)
 function openChatUserProfile(userId) {
     if (typeof openUserProfile === 'function') {
         openUserProfile(userId);
     } else {
-        // fallback если slices.js не загружен
         showNotification('Профиль пользователя будет доступен в разделе Slices', 'info');
     }
 }
@@ -1223,13 +1228,14 @@ chatStyles.textContent = `
         background: var(--background);
     }
     .message-avatar .avatar {
-        width: 32px;
-        height: 32px;
-        font-size: 16px;
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
     }
     @media (max-width: 768px) {
         .gif-message { max-width: 220px; }
         .gif-image { max-height: 200px; }
+        .message-avatar .avatar { width: 32px; height: 32px; font-size: 16px; }
     }
 `;
 document.head.appendChild(chatStyles);
