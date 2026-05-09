@@ -1371,3 +1371,8 @@ input, textarea {
     display: block;
     margin: 0 auto;
 }
+.cucumber-icon::before,
+.cucumber-icon::after {
+    display: none !important;
+    content: none !important;
+}
