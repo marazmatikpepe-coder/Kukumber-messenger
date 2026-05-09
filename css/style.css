@@ -1269,3 +1269,28 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
     padding: 2px 6px;
     border-radius: 10px;
 }
+/* Управление z-index модальных окон */
+.modal {
+    z-index: 10000;
+}
+#user-profile-modal { z-index: 10001; }
+#color-picker-modal { z-index: 10002; }
+#image-preview-modal { z-index: 10003; }
+#image-lightbox { z-index: 10004; }
+#call-modal { z-index: 10005; }
+#incoming-call-modal { z-index: 10006; }
+#message-context-menu { z-index: 10007; }
+#slice-context-menu { z-index: 10008; }
+.emoji-picker { z-index: 10009; }
+
+/* Анимации для быстрого открытия */
+.modal {
+    transition: opacity 0.15s ease;
+}
+.modal:not(.hidden) {
+    opacity: 1;
+}
+.modal.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
