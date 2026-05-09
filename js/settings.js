@@ -352,3 +352,118 @@ function detectUserLanguage() {
     applyTranslations();
 }
 detectUserLanguage();
+// Добавьте эти функции в существующий settings.js
+
+function showEditProfileModal() {
+    document.getElementById('edit-profile-modal').classList.remove('hidden');
+    document.getElementById('edit-username').value = currentUserData?.username || '';
+    document.getElementById('edit-usertag').value = (currentUserData?.userTag || '').replace('@', '');
+    document.getElementById('edit-bio').value = currentUserData?.bio || '';
+    
+    var preview = document.getElementById('edit-avatar-preview');
+    if (currentUserData?.avatar) {
+        preview.style.backgroundImage = 'url(' + currentUserData.avatar + ')';
+        preview.style.backgroundSize = 'cover';
+        preview.textContent = '';
+    } else {
+        preview.style.backgroundImage = '';
+        preview.textContent = '🥒';
+    }
+}
+
+function closeEditProfileModal() {
+    document.getElementById('edit-profile-modal').classList.add('hidden');
+}
+
+function previewEditAvatar(event) {
+    var file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+        window.pendingAvatarFile = file;
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            var preview = document.getElementById('edit-avatar-preview');
+            if (preview) {
+                preview.style.backgroundImage = 'url(' + ev.target.result + ')';
+                preview.style.backgroundSize = 'cover';
+                preview.textContent = '';
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function saveProfile() {
+    var newUsername = document.getElementById('edit-username').value.trim();
+    var newUserTagRaw = document.getElementById('edit-usertag').value.trim().toLowerCase();
+    var newBio = document.getElementById('edit-bio').value.trim();
+    
+    if (!newUsername) {
+        showNotification('Введите отображаемое имя', 'error');
+        return;
+    }
+    
+    var updates = { username: newUsername, bio: newBio };
+    var oldUserTag = currentUserData.userTag;
+    var newUserTag = '@' + newUserTagRaw.replace(/[^a-z0-9_]/g, '');
+    
+    function saveData(avatarUrl) {
+        if (avatarUrl) updates.avatar = avatarUrl;
+        
+        if (newUserTag !== oldUserTag && newUserTagRaw.length >= 3) {
+            database.ref('userTags/' + newUserTag).once('value').then(function(snap) {
+                if (snap.exists() && snap.val() !== currentUser.uid) {
+                    showNotification('Юзернейм ' + newUserTag + ' уже занят', 'error');
+                    return;
+                }
+                updates.userTag = newUserTag;
+                return database.ref('users/' + currentUser.uid).update(updates);
+            }).then(function() {
+                if (newUserTag !== oldUserTag) {
+                    return database.ref('userTags/' + oldUserTag).remove();
+                }
+            }).then(function() {
+                if (newUserTag !== oldUserTag) {
+                    return database.ref('userTags/' + newUserTag).set(currentUser.uid);
+                }
+            }).then(function() {
+                closeEditProfileModal();
+                showNotification('Профиль обновлён!', 'success');
+                if (typeof updateUserDisplay === 'function') updateUserDisplay();
+                if (currentUserData) {
+                    currentUserData.username = newUsername;
+                    currentUserData.userTag = newUserTag;
+                    currentUserData.bio = newBio;
+                    if (avatarUrl) currentUserData.avatar = avatarUrl;
+                }
+            }).catch(function(err) {
+                showNotification('Ошибка: ' + err.message, 'error');
+            });
+        } else {
+            database.ref('users/' + currentUser.uid).update(updates).then(function() {
+                closeEditProfileModal();
+                showNotification('Профиль обновлён!', 'success');
+                if (typeof updateUserDisplay === 'function') updateUserDisplay();
+                if (currentUserData) {
+                    currentUserData.username = newUsername;
+                    currentUserData.bio = newBio;
+                    if (avatarUrl) currentUserData.avatar = avatarUrl;
+                }
+            }).catch(function(err) {
+                showNotification('Ошибка: ' + err.message, 'error');
+            });
+        }
+    }
+    
+    if (window.pendingAvatarFile) {
+        if (typeof uploadToImgBB === 'function') {
+            uploadToImgBB(window.pendingAvatarFile).then(function(data) {
+                window.pendingAvatarFile = null;
+                saveData(data);
+            }).catch(function() { saveData(null); });
+        } else {
+            saveData(null);
+        }
+    } else {
+        saveData(null);
+    }
+}
