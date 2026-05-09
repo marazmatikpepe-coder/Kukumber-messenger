@@ -235,7 +235,7 @@ function showLanguageSettings() {
     }
 }
 function showStorageSettings() { showNotification('Данные и память: в разработке', 'info'); }
-function showAbout() { alert('Kukumber Messenger v1.0\nСвежее общение каждый день 🥒'); }
+function showAbout() { alert('K Messenger v1.0\nСвежее общение каждый день 🥒'); }
 function showHelp() { showNotification('Помощь: в разработке', 'info'); }
 function logout() {
     if (!confirm('Вы уверены, что хотите выйти?')) return;
