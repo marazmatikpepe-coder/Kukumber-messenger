@@ -1469,3 +1469,18 @@ html, body {
         font-size: 13px;
     }
 }
+.attach-btn {
+    font-size: 28px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.attach-btn:hover {
+    background: var(--background);
+}
