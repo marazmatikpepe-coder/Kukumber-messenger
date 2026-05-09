@@ -516,67 +516,27 @@ html, body {
 }
 
 .message {
-    max-width: 75%;
+    max-width: 80%;
     min-width: 60px;
     animation: msgIn 0.2s;
-}
-
-@keyframes msgIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
 }
 
 .message.sent {
     align-self: flex-end;
-    background: linear-gradient(135deg, var(--forest), var(--cucumber));
-    color: white;
-    border-radius: 18px 18px 4px 18px;
+    flex-direction: row-reverse;
 }
 
 .message.received {
     align-self: flex-start;
-    background: white;
-    border-radius: 18px 18px 18px 4px;
-    box-shadow: 0 1px 3px var(--shadow);
+    flex-direction: row;
 }
 
-/* Обертка содержимого сообщения */
-.message-content-wrapper {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    width: 100%;
-}
-
-/* Контент сообщения */
-.message-content {
-    flex: 1;
-    min-width: 0;
-    max-width: 100%;
-    padding: 8px 12px;
-}
-
-/* Текст сообщения */
-.message-text {
-    font-size: 15px;
-    line-height: 1.4;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    white-space: normal;
-    margin-bottom: 4px;
-}
-
-/* Для длинных слов без пробелов */
-.message-text a {
-    word-break: break-all;
-    display: inline-block;
-    max-width: 100%;
-}
-
-/* Аватар в сообщении */
+/* Аватар */
 .message-avatar {
     flex-shrink: 0;
-    cursor: pointer;
 }
 
 .message-avatar .avatar {
@@ -585,17 +545,40 @@ html, body {
     font-size: 18px;
 }
 
-/* Имя отправителя */
-.message-sender {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--forest);
-    margin-bottom: 4px;
-    word-break: break-word;
+/* Контент */
+.message-content {
+    max-width: 100%;
+    padding: 10px 14px;
+    border-radius: 18px;
 }
 
-.message.sent .message-sender {
-    color: rgba(255, 255, 255, 0.8);
+.message.sent .message-content {
+    background: linear-gradient(135deg, var(--forest), var(--cucumber));
+    color: white;
+    border-radius: 18px 18px 4px 18px;
+}
+
+.message.received .message-content {
+    background: white;
+    color: var(--text-dark);
+    border-radius: 18px 18px 18px 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Текст */
+.message-text {
+    font-size: 15px;
+    line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+
+/* Подпись под картинкой */
+.message-caption {
+    font-size: 13px;
+    margin-top: 6px;
+    word-break: break-word;
 }
 
 /* Время */
@@ -606,6 +589,26 @@ html, body {
     margin-top: 4px;
 }
 
+/* Реакции */
+.message-reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+    justify-content: flex-end;
+}
+
+.message.received .message-reactions {
+    justify-content: flex-start;
+}
+
+.reaction-badge {
+    background: rgba(0,0,0,0.08);
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    cursor: pointer;
+}
 /* КАРТИНКИ В ЧАТЕ */
 .message-image {
     border-radius: 16px;
