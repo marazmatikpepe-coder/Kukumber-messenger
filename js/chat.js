@@ -592,9 +592,11 @@ function createMessageElement(message) {
     
     // Типы сообщений
     if (message.type === 'image') {
-        content = '<div class="message-image" onclick="openLightbox(\''+message.imageUrl+'\')"><img data-src="'+message.imageUrl+'" class="lazy-message" loading="lazy"></div>';
-        if (message.caption) content += '<div class="message-text">'+formatMessageText(message.caption)+'</div>';
-    } 
+    content = '<div class="message-image" onclick="openLightbox(\''+message.imageUrl+'\')"><img data-src="'+message.imageUrl+'" class="lazy-message" loading="lazy"></div>';
+    if (message.caption && message.caption.trim()) {
+        content += '<div class="message-caption">' + formatMessageText(message.caption) + '</div>';
+    }
+}
    else if (message.type === 'gif') {
     content = '<div class="gif-message" onclick="openLightbox(\''+message.gifUrl+'\')">' +
         '<img data-src="'+message.gifUrl+'" alt="GIF" class="gif-image lazy-message" loading="lazy">' +
