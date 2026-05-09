@@ -1791,3 +1791,85 @@ chatStyles.textContent = `
         cursor: pointer;
         border-radius: 16px;
         overflow: hidden
+// ========== КОНТАКТЫ (ДЛЯ НОВОГО ЧАТА) ==========
+var contactsCache = {};
+var contactsCacheTime = 0;
+var CONTACTS_CACHE_TTL = 30000;
+
+function loadContacts(forceRefresh) {
+    var now = Date.now();
+    if (!forceRefresh && Object.keys(contactsCache).length > 0 && (now - contactsCacheTime) < CONTACTS_CACHE_TTL) {
+        renderContactsList(contactsCache);
+        return;
+    }
+    
+    var list = document.getElementById('users-list');
+    if (!list) return;
+    list.innerHTML = '<div style="padding:20px; text-align:center;">🔄 Загрузка контактов...</div>';
+    
+    database.ref('contacts/' + currentUser.uid).once('value').then(function(snapshot) {
+        var contacts = snapshot.val();
+        contactsCache = contacts || {};
+        contactsCacheTime = Date.now();
+        renderContactsList(contactsCache);
+    }).catch(function() {
+        list.innerHTML = '<div style="padding:20px; text-align:center;">Ошибка загрузки контактов</div>';
+    });
+}
+
+function renderContactsList(contacts) {
+    var list = document.getElementById('users-list');
+    if (!list) return;
+    
+    if (!contacts || Object.keys(contacts).length === 0) {
+        list.innerHTML = '<div style="padding:20px; text-align:center;">Нет контактов. Добавьте через поиск 🔍</div>';
+        return;
+    }
+    
+    var userIds = Object.keys(contacts);
+    list.innerHTML = '';
+    var pending = userIds.length;
+    
+    userIds.forEach(function(uid) {
+        database.ref('users/' + uid).once('value').then(function(userSnap) {
+            var user = userSnap.val();
+            if (user) {
+                var div = document.createElement('div');
+                div.className = 'user-item';
+                div.style.cursor = 'pointer';
+                var avatarStyle = user.avatar ? 'background-image:url('+user.avatar+');background-size:cover;' : '';
+                var avatarContent = user.avatar ? '' : '👤';
+                div.innerHTML = `
+                    <div class="avatar" style="${avatarStyle}">${avatarContent}</div>
+                    <div class="user-item-info">
+                        <h4>${escapeHtml(user.username)}</h4>
+                        <p style="font-size:11px; color:var(--text-muted);">${escapeHtml(user.userTag)}</p>
+                    </div>
+                `;
+                div.onclick = (function(uid, user) {
+                    return function() { 
+                        startPrivateChat(uid, user);
+                        var modal = document.getElementById('new-chat-modal');
+                        if (modal) modal.classList.add('hidden');
+                    };
+                })(uid, user);
+                list.appendChild(div);
+            }
+            pending--;
+            if (pending === 0 && list.children.length === 0) {
+                list.innerHTML = '<div style="padding:20px; text-align:center;">Нет доступных контактов</div>';
+            }
+        });
+    });
+}
+
+function showNewChatDialog() {
+    var modal = document.getElementById('new-chat-modal');
+    if (modal) modal.classList.remove('hidden');
+    loadContacts();
+}
+
+function closeNewChatDialog() {
+    var modal = document.getElementById('new-chat-modal');
+    if (modal) modal.classList.add('hidden');
+}
