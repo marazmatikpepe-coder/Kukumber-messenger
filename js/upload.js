@@ -565,7 +565,10 @@ async function confirmImageSend() {
 }
 
 async function sendAnyFile(file) {
-    if (!currentChatId) { showNotification('Ошибка: чат не выбран', 'error'); return; }
+    if (!currentChatId) { 
+        showNotification('Ошибка: чат не выбран', 'error'); 
+        return; 
+    }
     showNotification('📤 Загрузка...', 'info');
     
     try {
@@ -589,7 +592,6 @@ async function sendAnyFile(file) {
         showNotification('❌ Ошибка загрузки', 'error');
     }
 }
-
 // Голосовые сообщения
 var mediaRecorder = null;
 var audioChunks = [];
