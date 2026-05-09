@@ -1376,3 +1376,85 @@ input, textarea {
     display: none !important;
     content: none !important;
 }
+/* Настройки уведомлений */
+.back-btn-notifications:hover {
+    background: var(--background);
+    border-radius: 50%;
+}
+
+.notification-switch {
+    width: 44px;
+    height: 24px;
+    background: #ccc;
+    border-radius: 24px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: inline-block;
+}
+
+.notification-switch.active {
+    background: var(--forest);
+}
+
+.notification-switch::after {
+    content: "";
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    transition: left 0.2s;
+}
+
+.notification-switch.active::after {
+    left: 21px;
+}
+
+.notification-setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.notification-setting-label {
+    font-size: 15px;
+}
+
+.notification-setting-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.sound-picker {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.sound-option {
+    padding: 8px 16px;
+    background: var(--background);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.sound-option.active {
+    background: var(--forest);
+    color: white;
+}
+
+.reset-notifications {
+    text-align: center;
+    padding: 20px;
+    color: var(--error);
+    cursor: pointer;
+    font-weight: 600;
+}
