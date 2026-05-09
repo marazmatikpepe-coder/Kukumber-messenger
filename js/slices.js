@@ -1,9 +1,7 @@
-// SLICES (Слайсы) - ПОЛНАЯ РАБОЧАЯ ВЕРСИЯ 5.1 (ИСПРАВЛЕНА)
-// Исправлены: загрузка и обновление аватаров и баннеров, функция uploadToImgBB
-// Лайки, репосты, комментарии, профиль (только посты и репосты)
-// Звук при создании слайса
-// Модальные окна не перекрываются
+// KUKUMBER SLICES - ПОЛНАЯ ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
+// Фичи: кэширование, ленивая загрузка, бесконечная прокрутка, быстрый поиск
 
+// ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
 var currentSlicesTab = 'feed';
 var pendingSliceFiles = [];
 var searchTimeout = null;
@@ -12,7 +10,21 @@ var openCommentsSliceId = null;
 var pendingLikeRequests = {};
 var pendingRepostRequests = {};
 
-// ========== ФУНКЦИЯ ЗАГРУЗКИ НА ImgBB (ЕСЛИ НЕ ОПРЕДЕЛЕНА В upload.js) ==========
+// Кэши
+var slicesCache = [];
+var slicesRendered = new Set();
+var isLoadingMore = false;
+var userProfileCache = {};
+var searchResultsCache = {};
+var loadedMessageIds = new Set();
+
+// Константы
+var PROFILE_CACHE_TTL = 60000;
+var SEARCH_CACHE_TTL = 30000;
+var SLICES_BATCH_SIZE = 5;
+var SLICES_LIMIT = 20;
+
+// ========== ФУНКЦИЯ ЗАГРУЗКИ НА ImgBB ==========
 if (typeof uploadToImgBB !== 'function') {
     window.uploadToImgBB = async function(file) {
         var IMGBB_API_KEY = '03a5a914cba6f919ff317ebb6d9ed4f9';
@@ -24,26 +36,27 @@ if (typeof uploadToImgBB !== 'function') {
         });
         var data = await response.json();
         if (!data.success) throw new Error(data.error?.message || 'Ошибка загрузки');
-        return { url: data.data.url };
+        return data.data.url;
     };
 }
 
-// Звук при создании слайса
+// ========== ЗВУК ПРИ СОЗДАНИИ ==========
 var sliceCreateSound = null;
 function initSliceSound() {
-    sliceCreateSound = new Audio('https://s33.aconvert.com/convert/p3r68-cdx67/rvt3w-3afhb.mp3');
+    sliceCreateSound = new Audio('https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3');
     sliceCreateSound.load();
+    sliceCreateSound.volume = 0.3;
 }
 function playSliceCreateSound() {
     if (sliceCreateSound && (typeof getSoundsEnabled === 'function' ? getSoundsEnabled() : true)) {
         try {
             sliceCreateSound.currentTime = 0;
-            sliceCreateSound.play().catch(function(e) { console.log('Звук не воспроизведён:', e); });
-        } catch(e) { console.log('Ошибка звука:', e); }
+            sliceCreateSound.play().catch(function(e) {});
+        } catch(e) {}
     }
 }
 
-// ========== ЗАГРУЗКА ЛЕНТЫ ==========
+// ========== ЗАГРУЗКА ЛЕНТЫ (оптимизированная) ==========
 function loadSlices() {
     var feed = document.getElementById('slices-feed');
     if (!feed) return;
@@ -51,11 +64,11 @@ function loadSlices() {
     var searchInput = document.getElementById('slices-search-input');
     if (searchInput) searchInput.value = '';
     
-    feed.innerHTML = '<div class="empty-slices"><span>🍕</span><p>Загрузка...</p></div>';
-    
     if (slicesListener) slicesListener.off();
     
-    slicesListener = database.ref('slices').orderByChild('createdAt').limitToLast(100);
+    feed.innerHTML = '<div class="empty-slices"><span>🍕</span><p>Загрузка...</p></div>';
+    
+    slicesListener = database.ref('slices').orderByChild('createdAt').limitToLast(SLICES_LIMIT);
     slicesListener.on('value', function(snapshot) {
         var slices = snapshot.val();
         feed.innerHTML = '';
@@ -76,18 +89,134 @@ function loadSlices() {
             return (b.data.createdAt || 0) - (a.data.createdAt || 0);
         });
         
-        slicesArray.forEach(function(slice) {
-            var likeRef = database.ref('sliceLikes/' + slice.id + '/' + currentUser.uid);
-            likeRef.once('value').then(function(snap) {
-                slice.data.userLiked = snap.exists();
-                var card = createSliceCard(slice.id, slice.data);
-                feed.appendChild(card);
-            });
+        slicesCache = slicesArray;
+        slicesRendered.clear();
+        
+        // Рендерим партиями
+        renderSlicesBatch(0, SLICES_BATCH_SIZE);
+        setupInfiniteScroll();
+    });
+}
+
+function renderSlicesBatch(startIndex, batchSize) {
+    var feed = document.getElementById('slices-feed');
+    if (!feed) return;
+    
+    var endIndex = Math.min(startIndex + batchSize, slicesCache.length);
+    if (startIndex >= endIndex) return;
+    
+    var sliceBatch = slicesCache.slice(startIndex, endIndex);
+    var pending = sliceBatch.length;
+    
+    sliceBatch.forEach(function(slice) {
+        if (slicesRendered.has(slice.id)) {
+            pending--;
+            return;
+        }
+        
+        var likeRef = database.ref('sliceLikes/' + slice.id + '/' + currentUser.uid);
+        likeRef.once('value').then(function(snap) {
+            slice.data.userLiked = snap.exists();
+            var card = createSliceCard(slice.id, slice.data);
+            feed.appendChild(card);
+            slicesRendered.add(slice.id);
+            pending--;
+            
+            if (pending === 0 && endIndex < slicesCache.length) {
+                setTimeout(function() {
+                    renderSlicesBatch(endIndex, batchSize);
+                }, 150);
+            }
+        }).catch(function() {
+            pending--;
         });
     });
 }
 
-// ========== СОЗДАНИЕ КАРТОЧКИ ПОСТА ==========
+function setupInfiniteScroll() {
+    var feed = document.getElementById('slices-feed');
+    if (!feed) return;
+    
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting && !isLoadingMore && slicesCache.length > 0) {
+                var lastCard = feed.querySelector('.slice-card:last-child');
+                if (lastCard && lastCard === entry.target) {
+                    loadMoreSlices();
+                }
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '100px' });
+    
+    function observeLast() {
+        var lastCard = feed.querySelector('.slice-card:last-child');
+        if (lastCard) observer.observe(lastCard);
+    }
+    
+    var originalAppendChild = feed.appendChild;
+    feed.appendChild = function(node) {
+        originalAppendChild.call(feed, node);
+        observeLast();
+    };
+    feed.appendChild = originalAppendChild;
+    observeLast();
+}
+
+function loadMoreSlices() {
+    if (isLoadingMore) return;
+    isLoadingMore = true;
+    
+    if (slicesCache.length === 0) {
+        isLoadingMore = false;
+        return;
+    }
+    
+    var oldestSlice = slicesCache[slicesCache.length - 1];
+    var oldestTimestamp = oldestSlice.data.createdAt;
+    
+    database.ref('slices').orderByChild('createdAt').endAt(oldestTimestamp - 1).limitToLast(SLICES_LIMIT).once('value').then(function(snapshot) {
+        var newSlices = snapshot.val();
+        if (newSlices) {
+            var newArray = [];
+            for (var id in newSlices) {
+                if (!slicesCache.some(function(s) { return s.id === id; })) {
+                    newArray.push({ id: id, data: newSlices[id] });
+                }
+            }
+            if (newArray.length > 0) {
+                newArray.sort(function(a, b) {
+                    return (b.data.createdAt || 0) - (a.data.createdAt || 0);
+                });
+                slicesCache = slicesCache.concat(newArray);
+                renderSlicesBatch(slicesCache.length - newArray.length, newArray.length);
+            }
+        }
+        isLoadingMore = false;
+    }).catch(function() {
+        isLoadingMore = false;
+    });
+}
+
+// ========== ПОЛУЧЕНИЕ ПРОФИЛЯ С КЭШЕМ ==========
+function getUserProfileData(userId) {
+    return new Promise(function(resolve, reject) {
+        var cached = userProfileCache[userId];
+        if (cached && (Date.now() - cached.time) < PROFILE_CACHE_TTL) {
+            resolve(cached.data);
+            return;
+        }
+        
+        database.ref('users/' + userId).once('value').then(function(snap) {
+            var data = snap.val();
+            if (data) {
+                userProfileCache[userId] = { data: data, time: Date.now() };
+            }
+            resolve(data);
+        }).catch(reject);
+    });
+}
+
+// ========== СОЗДАНИЕ КАРТОЧКИ ПОСТА (оптимизированное) ==========
 function createSliceCard(sliceId, sliceData) {
     var div = document.createElement('div');
     div.className = 'slice-card';
@@ -109,11 +238,11 @@ function createSliceCard(sliceId, sliceData) {
     div.addEventListener('touchend', function() { if (touchTimer) clearTimeout(touchTimer); });
     div.addEventListener('touchmove', function() { if (touchTimer) clearTimeout(touchTimer); });
     
-    // Шапка с кликабельной аватаркой
+    // Аватар автора
     var avatarStyle = sliceData.authorAvatar ? 'background-image:url('+sliceData.authorAvatar+');background-size:cover;' : '';
     var avatarContent = sliceData.authorAvatar ? '' : '👤';
     
-    // Медиа контент
+    // Медиа контент с ленивой загрузкой
     var mediaHtml = '';
     if (sliceData.mediaType === 'multiple' && sliceData.mediaUrls && sliceData.mediaUrls.length > 0) {
         mediaHtml = '<div class="slice-media-multiple" id="slice-media-'+sliceId+'">';
@@ -121,9 +250,9 @@ function createSliceCard(sliceId, sliceData) {
         sliceData.mediaUrls.forEach(function(url, idx) {
             var isGif = url.toLowerCase().endsWith('.gif');
             if (isGif) {
-                mediaHtml += '<div class="slice-slide"><img src="'+url+'" class="slice-gif" loading="lazy" onclick="event.stopPropagation(); openSliceLightbox(\''+url+'\')"></div>';
+                mediaHtml += '<div class="slice-slide"><img data-src="'+url+'" class="slice-gif lazy" loading="lazy" onclick="event.stopPropagation(); openSliceLightbox(\''+url+'\')"></div>';
             } else {
-                mediaHtml += '<div class="slice-slide"><img src="'+url+'" class="slice-image" loading="lazy" onclick="event.stopPropagation(); openSliceLightbox(\''+url+'\')"></div>';
+                mediaHtml += '<div class="slice-slide"><img data-src="'+url+'" class="slice-image lazy" loading="lazy" onclick="event.stopPropagation(); openSliceLightbox(\''+url+'\')"></div>';
             }
         });
         mediaHtml += '</div>';
@@ -136,9 +265,9 @@ function createSliceCard(sliceId, sliceData) {
     } else if (sliceData.mediaUrl) {
         var isGif = sliceData.mediaUrl.toLowerCase().endsWith('.gif');
         if (isGif) {
-            mediaHtml = '<div class="slice-media"><img src="'+sliceData.mediaUrl+'" class="slice-gif" loading="lazy" onclick="event.stopPropagation(); openSliceLightbox(\''+sliceData.mediaUrl+'\')"></div>';
+            mediaHtml = '<div class="slice-media"><img data-src="'+sliceData.mediaUrl+'" class="slice-gif lazy" loading="lazy" onclick="event.stopPropagation(); openSliceLightbox(\''+sliceData.mediaUrl+'\')"></div>';
         } else {
-            mediaHtml = '<div class="slice-media"><img src="'+sliceData.mediaUrl+'" class="slice-image" loading="lazy" onclick="event.stopPropagation(); openSliceLightbox(\''+sliceData.mediaUrl+'\')"></div>';
+            mediaHtml = '<div class="slice-media"><img data-src="'+sliceData.mediaUrl+'" class="slice-image lazy" loading="lazy" onclick="event.stopPropagation(); openSliceLightbox(\''+sliceData.mediaUrl+'\')"></div>';
         }
     }
     
@@ -160,9 +289,9 @@ function createSliceCard(sliceId, sliceData) {
     
     var pinnedBadge = sliceData.pinned ? '<span class="slice-pinned-badge">📌 Закреплено</span>' : '';
     
-    // Получаем данные о верификации автора
-    database.ref('users/' + sliceData.authorId + '/verified').once('value').then(function(snap) {
-        if (snap.val() === true) {
+    // Верификация
+    getUserProfileData(sliceData.authorId).then(function(userData) {
+        if (userData && userData.verified === true) {
             var badgeSpan = div.querySelector('.verified-badge-placeholder');
             if (badgeSpan) {
                 badgeSpan.innerHTML = '<img src="https://i.ibb.co/YTRCNHkq/4e9cba55-b083-46d3-8a30-bff7b1be94c7-1.png" style="width:16px; height:16px; cursor:pointer;" onclick="event.stopPropagation(); showVerifiedInfo()">';
@@ -218,20 +347,35 @@ function createSliceCard(sliceId, sliceData) {
         </div>
     `;
     
+    // Инициализация слайдера
     if (sliceData.mediaType === 'multiple' && sliceData.mediaUrls && sliceData.mediaUrls.length > 1) {
         setTimeout(function() { initSliceSlider(sliceId, sliceData.mediaUrls.length); }, 100);
     }
     
+    // Просмотр
     var viewedKey = 'viewed_slice_' + sliceId;
     if (!sessionStorage.getItem(viewedKey)) {
         sessionStorage.setItem(viewedKey, 'true');
         database.ref('slices/' + sliceId + '/viewsCount').transaction(function(v) { return (v || 0) + 1; });
     }
     
+    // Ленивая загрузка изображений
+    setTimeout(function() {
+        var lazyImages = div.querySelectorAll('.lazy');
+        lazyImages.forEach(function(img) {
+            var src = img.getAttribute('data-src');
+            if (src) {
+                img.src = src;
+                img.onload = function() { img.classList.add('loaded'); };
+                img.removeAttribute('data-src');
+            }
+        });
+    }, 50);
+    
     return div;
 }
 
-// ========== ЛАЙКИ, РЕПОСТЫ, КОММЕНТАРИИ (без изменений) ==========
+// ========== ЛАЙКИ ==========
 function likeSlice(sliceId) {
     if (pendingLikeRequests[sliceId]) return;
     pendingLikeRequests[sliceId] = true;
@@ -274,6 +418,7 @@ function likeSlice(sliceId) {
     }).catch(function() { delete pendingLikeRequests[sliceId]; });
 }
 
+// ========== РЕПОСТЫ ==========
 function repostSlice(sliceId) {
     if (pendingRepostRequests[sliceId]) return;
     pendingRepostRequests[sliceId] = true;
@@ -319,6 +464,7 @@ function repostSlice(sliceId) {
                     repostRef.set(true);
                     database.ref('slices/' + sliceId + '/repostsCount').transaction(function(c) { return (c || 0) + 1; });
                     showNotification('Репостнуто!', 'success');
+                    playSliceCreateSound();
                     loadSlices();
                 });
             });
@@ -327,6 +473,7 @@ function repostSlice(sliceId) {
     }).catch(function() { delete pendingRepostRequests[sliceId]; });
 }
 
+// ========== КОММЕНТАРИИ ==========
 function toggleComments(sliceId) {
     var commentsBlock = document.getElementById('comments-block-' + sliceId);
     if (!commentsBlock) return;
@@ -533,7 +680,7 @@ function likeComment(sliceId, commentId) {
     });
 }
 
-// ========== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ (ИСПРАВЛЕН - БАННЕР РАБОТАЕТ) ==========
+// ========== ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ ==========
 function openUserProfile(userId) {
     window.viewingProfileUserId = userId;
     
@@ -544,8 +691,7 @@ function openUserProfile(userId) {
     var isAdmin = window.isSuperAdmin === true;
     var canEdit = isOwnProfile || isAdmin;
     
-    database.ref('users/' + userId).once('value').then(function(userSnap) {
-        var userData = userSnap.val();
+    getUserProfileData(userId).then(function(userData) {
         if (!userData) return;
         
         var userName = userData.username || 'Пользователь';
@@ -745,9 +891,9 @@ function createProfileSliceCard(sliceId, sliceData) {
     
     var mediaHtml = '';
     if (sliceData.mediaUrl) {
-        mediaHtml = '<div class="slice-media"><img src="'+sliceData.mediaUrl+'" class="slice-image" onclick="openSliceLightbox(\''+sliceData.mediaUrl+'\')"></div>';
+        mediaHtml = '<div class="slice-media"><img data-src="'+sliceData.mediaUrl+'" class="slice-image lazy" loading="lazy" onclick="openSliceLightbox(\''+sliceData.mediaUrl+'\')"></div>';
     } else if (sliceData.mediaUrls && sliceData.mediaUrls.length) {
-        mediaHtml = '<div class="slice-media"><img src="'+sliceData.mediaUrls[0]+'" class="slice-image" onclick="openSliceLightbox(\''+sliceData.mediaUrls[0]+'\')"></div>';
+        mediaHtml = '<div class="slice-media"><img data-src="'+sliceData.mediaUrls[0]+'" class="slice-image lazy" loading="lazy" onclick="openSliceLightbox(\''+sliceData.mediaUrls[0]+'\')"></div>';
     }
     
     var textHtml = sliceData.text ? '<div class="slice-text">'+formatSliceText(sliceData.text)+'</div>' : '';
@@ -773,6 +919,18 @@ function createProfileSliceCard(sliceId, sliceData) {
         </div>
     `;
     
+    setTimeout(function() {
+        var lazyImages = div.querySelectorAll('.lazy');
+        lazyImages.forEach(function(img) {
+            var src = img.getAttribute('data-src');
+            if (src) {
+                img.src = src;
+                img.onload = function() { img.classList.add('loaded'); };
+                img.removeAttribute('data-src');
+            }
+        });
+    }, 50);
+    
     return div;
 }
 
@@ -782,7 +940,7 @@ function closeProfileModal() {
     closeColorPickerModal();
 }
 
-// ========== РЕДАКТИРОВАНИЕ ПРОФИЛЯ (ИСПРАВЛЕНО) ==========
+// ========== РЕДАКТИРОВАНИЕ ПРОФИЛЯ ==========
 function editProfileBanner() {
     var userId = window.viewingProfileUserId;
     var isOwnProfile = (userId === currentUser.uid);
@@ -861,6 +1019,11 @@ function setProfileBanner(colorOrUrl) {
         if (window.viewingProfileUserData) {
             window.viewingProfileUserData.banner = colorOrUrl || null;
         }
+        
+        // Обновляем кэш
+        if (userProfileCache[userId]) {
+            userProfileCache[userId].data.banner = colorOrUrl || null;
+        }
     }).catch(function(err) {
         showNotification('Ошибка: ' + err.message, 'error');
         closeColorPickerModal();
@@ -877,131 +1040,73 @@ function uploadProfileBannerImage() {
         showNotification('Загрузка баннера...', 'info');
         
         if (typeof uploadToImgBB === 'function') {
-            uploadToImgBB(file).then(function(data) {
-                setProfileBanner(data.url);
+            uploadToImgBB(file).then(function(url) {
+                setProfileBanner(url);
             }).catch(function(err) {
                 showNotification('Ошибка загрузки: ' + err.message, 'error');
             });
         } else {
-            showNotification('Функция загрузки не найдена, проверьте upload.js', 'error');
+            showNotification('Функция загрузки не найдена', 'error');
         }
     };
     input.click();
 }
 
-// ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ АВАТАРА ==========
 function editProfileAvatar() {
     var userId = window.viewingProfileUserId;
     var isOwnProfile = (userId === currentUser.uid);
     var isAdmin = window.isSuperAdmin === true;
     
-    if (!isOwnProfile && !isAdmin) return;
+    if (!isOwnProfile && !isAdmin) {
+        showNotification('Вы не можете редактировать чужой профиль', 'error');
+        return;
+    }
     
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.onchange = function(e) {
+    input.onchange = async function(e) {
         var file = e.target.files[0];
         if (!file) return;
+        
         showNotification('Загрузка аватара...', 'info');
         
-        if (typeof uploadToImgBB === 'function') {
-            uploadToImgBB(file).then(function(data) {
-                var avatarUrl = data.url;
-                return database.ref('users/' + userId + '/avatar').set(avatarUrl);
-            }).then(function() {
-                showNotification('Аватар обновлён!', 'success');
-                
-                // 1. Обновляем аватар в открытом профиле
-                var profileAvatar = document.getElementById('profile-avatar');
-                if (profileAvatar) {
-                    profileAvatar.style.backgroundImage = 'url(' + avatarUrl + ')';
-                    profileAvatar.style.backgroundSize = 'cover';
-                    profileAvatar.textContent = '';
-                }
-                
-                // 2. Обновляем аватар в боковой панели (если это свой профиль)
-                if (userId === currentUser.uid && typeof updateUserDisplay === 'function') {
-                    updateUserDisplay();
-                }
-                
-                // 3. Обновляем аватар во всех постах этого пользователя в ленте
-                var allCards = document.querySelectorAll('.slice-card');
-                allCards.forEach(function(card) {
-                    var authorAttr = card.querySelector('.slice-author')?.getAttribute('onclick');
-                    if (authorAttr && authorAttr.includes(userId)) {
-                        var avatarEl = card.querySelector('.slice-author .avatar');
-                        if (avatarEl) {
-                            avatarEl.style.backgroundImage = 'url(' + avatarUrl + ')';
-                            avatarEl.style.backgroundSize = 'cover';
-                            avatarEl.textContent = '';
-                        }
-                    }
-                });
-                
-                // 4. Обновляем аватар в открытом чате (если этот пользователь — собеседник)
-                if (currentChatUser && currentChatUser.otherUserId === userId) {
-                    var chatAvatar = document.getElementById('chat-avatar');
-                    if (chatAvatar) {
-                        chatAvatar.style.backgroundImage = 'url(' + avatarUrl + ')';
-                        chatAvatar.style.backgroundSize = 'cover';
-                        chatAvatar.textContent = '';
-                    }
-                }
-                
-                // 5. Обновляем аватар в списке чатов (ищем чаты с этим пользователем)
-                var chatItems = document.querySelectorAll('.chat-item');
-                chatItems.forEach(function(item) {
-                    // Ищем чат, где имя пользователя совпадает (или можно по data-атрибуту, но проще по имени)
-                    var nameSpan = item.querySelector('.chat-item-name');
-                    if (nameSpan && nameSpan.textContent === window.viewingProfileUserName) {
-                        var chatAvatarEl = item.querySelector('.avatar');
-                        if (chatAvatarEl) {
-                            chatAvatarEl.style.backgroundImage = 'url(' + avatarUrl + ')';
-                            chatAvatarEl.style.backgroundSize = 'cover';
-                            chatAvatarEl.textContent = '';
-                        }
-                    }
-                });
-                
-                // 6. Обновляем аватар в настройках (свой профиль)
-                if (userId === currentUser.uid) {
-                    var settingsAvatar = document.getElementById('settings-avatar');
-                    if (settingsAvatar) {
-                        settingsAvatar.style.backgroundImage = 'url(' + avatarUrl + ')';
-                        settingsAvatar.style.backgroundSize = 'cover';
-                        settingsAvatar.textContent = '';
-                    }
-                }
-                
-                // 7. Обновляем аватар в правом верхнем углу Slices (свой профиль)
-                if (userId === currentUser.uid) {
-                    var slicesUserAvatar = document.getElementById('slices-user-avatar');
-                    if (slicesUserAvatar) {
-                        slicesUserAvatar.style.backgroundImage = 'url(' + avatarUrl + ')';
-                        slicesUserAvatar.style.backgroundSize = 'cover';
-                        slicesUserAvatar.textContent = '';
-                    }
-                }
-                
-                // 8. Обновляем данные в памяти
-                if (window.viewingProfileUserData) {
-                    window.viewingProfileUserData.avatar = avatarUrl;
-                }
-                if (userId === currentUser.uid && currentUserData) {
-                    currentUserData.avatar = avatarUrl;
-                }
-                
-                // 9. Перезагружаем профиль (чтобы обновить все поля, но не обязательно, можно убрать)
-                setTimeout(function() {
-                    openUserProfile(userId);
-                }, 300);
-                
-            }).catch(function(err) {
-                showNotification('Ошибка загрузки: ' + err.message, 'error');
-            });
-        } else {
-            showNotification('Функция загрузки не найдена, проверьте upload.js', 'error');
+        try {
+            var avatarUrl = await uploadToImgBB(file);
+            await database.ref('users/' + userId + '/avatar').set(avatarUrl);
+            showNotification('Аватар обновлён!', 'success');
+            
+            // Получаем имя пользователя
+            var userName = window.viewingProfileUserName;
+            if (!userName) {
+                var userSnap = await database.ref('users/' + userId + '/username').once('value');
+                userName = userSnap.val();
+            }
+            
+            // Обновляем везде
+            if (typeof updateAvatarEverywhere === 'function') {
+                updateAvatarEverywhere(userId, avatarUrl, userName);
+            }
+            
+            // Обновляем данные в памяти
+            if (userId === currentUser?.uid && currentUserData) {
+                currentUserData.avatar = avatarUrl;
+            }
+            if (window.viewingProfileUserData) {
+                window.viewingProfileUserData.avatar = avatarUrl;
+            }
+            if (userProfileCache[userId]) {
+                userProfileCache[userId].data.avatar = avatarUrl;
+            }
+            
+            // Перезагружаем профиль
+            setTimeout(function() {
+                openUserProfile(userId);
+            }, 300);
+            
+        } catch (err) {
+            console.error(err);
+            showNotification('Ошибка загрузки: ' + err.message, 'error');
         }
     };
     input.click();
@@ -1021,6 +1126,10 @@ function editProfileName() {
             if (window.viewingProfileUserId === currentUser.uid && typeof updateUserDisplay === 'function') {
                 updateUserDisplay();
             }
+            // Обновляем кэш
+            if (userProfileCache[userId]) {
+                userProfileCache[userId].data.username = newName.trim();
+            }
             openUserProfile(userId);
         });
     }
@@ -1038,6 +1147,9 @@ function editProfileBio() {
     if (newBio !== null) {
         database.ref('users/' + userId + '/bio').set(newBio.trim()).then(function() {
             showNotification('Описание обновлено', 'success');
+            if (userProfileCache[userId]) {
+                userProfileCache[userId].data.bio = newBio.trim();
+            }
             openUserProfile(userId);
         });
     }
@@ -1052,6 +1164,9 @@ function toggleUserVerification(userId) {
             showNotification(isVerified ? 'Галочка снята' : 'Галочка выдана', 'success');
             if (userId === currentUser.uid && currentUserData) {
                 currentUserData.verified = !isVerified;
+            }
+            if (userProfileCache[userId]) {
+                userProfileCache[userId].data.verified = !isVerified;
             }
             openUserProfile(userId);
         });
@@ -1129,7 +1244,7 @@ function formatSliceDate(timestamp) {
     return date.toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'2-digit'});
 }
 
-// ========== ПОИСК ==========
+// ========== ПОИСК (оптимизированный) ==========
 function searchByHashtag(tag) {
     var input = document.getElementById('slices-search-input');
     if (input) input.value = '#' + tag;
@@ -1145,37 +1260,69 @@ function searchByUser(username) {
 function performSearch() {
     var query = document.getElementById('slices-search-input').value.trim().toLowerCase();
     if (searchTimeout) clearTimeout(searchTimeout);
+    
     searchTimeout = setTimeout(function() {
         var feed = document.getElementById('slices-feed');
         if (!feed) return;
-        if (!query) { loadSlices(); return; }
+        
+        if (!query) { 
+            loadSlices(); 
+            return; 
+        }
+        
+        if (searchResultsCache[query]) {
+            renderSearchResults(searchResultsCache[query]);
+            return;
+        }
         
         feed.innerHTML = '<div class="empty-slices"><span>🔍</span><p>Поиск...</p></div>';
         
-        database.ref('slices').orderByChild('createdAt').limitToLast(100).once('value').then(function(snapshot) {
+        database.ref('slices').orderByChild('createdAt').limitToLast(200).once('value').then(function(snapshot) {
             var slices = snapshot.val();
             var results = [];
+            
             for (var id in slices) {
                 var slice = slices[id];
                 var match = false;
                 if (slice.text && slice.text.toLowerCase().includes(query)) match = true;
-                if (slice.hashtags && slice.hashtags.some(function(tag) { return '#' + tag.toLowerCase().includes(query) || tag.toLowerCase().includes(query.replace('#', '')); })) match = true;
+                if (slice.hashtags && slice.hashtags.some(function(tag) { 
+                    return '#' + tag.toLowerCase().includes(query) || tag.toLowerCase().includes(query.replace('#', '')); 
+                })) match = true;
                 if (slice.authorName && slice.authorName.toLowerCase().includes(query.replace('@', ''))) match = true;
                 if (match) results.push({ id: id, data: slice });
             }
             
-            feed.innerHTML = '';
-            if (results.length === 0) { feed.innerHTML = '<div class="empty-slices"><span>🔍</span><p>Ничего не найдено</p></div>'; return; }
-            results.sort(function(a, b) { return (b.data.createdAt || 0) - (a.data.createdAt || 0); });
-            results.forEach(function(result) {
-                var likeRef = database.ref('sliceLikes/' + result.id + '/' + currentUser.uid);
-                likeRef.once('value').then(function(snap) {
-                    result.data.userLiked = snap.exists();
-                    feed.appendChild(createSliceCard(result.id, result.data));
-                });
-            });
+            searchResultsCache[query] = results;
+            renderSearchResults(results);
         });
-    }, 500);
+    }, 300);
+}
+
+function renderSearchResults(results) {
+    var feed = document.getElementById('slices-feed');
+    if (!feed) return;
+    
+    feed.innerHTML = '';
+    if (results.length === 0) { 
+        feed.innerHTML = '<div class="empty-slices"><span>🔍</span><p>Ничего не найдено</p></div>'; 
+        return; 
+    }
+    
+    results.sort(function(a, b) { 
+        return (b.data.createdAt || 0) - (a.data.createdAt || 0); 
+    });
+    
+    var limited = results.slice(0, 50);
+    var pending = limited.length;
+    
+    limited.forEach(function(result) {
+        var likeRef = database.ref('sliceLikes/' + result.id + '/' + currentUser.uid);
+        likeRef.once('value').then(function(snap) {
+            result.data.userLiked = snap.exists();
+            feed.appendChild(createSliceCard(result.id, result.data));
+            pending--;
+        });
+    });
 }
 
 function searchSlices() {
@@ -1223,7 +1370,7 @@ function showSliceContextMenu(event, sliceId, sliceData) {
     
     var menu = document.createElement('div');
     menu.id = 'slice-context-menu';
-    menu.style.cssText = 'position:fixed; z-index:10001; background:white; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.2); min-width:180px; overflow:hidden;';
+    menu.style.cssText = 'position:fixed; z-index:10008; background:white; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.2); min-width:180px; overflow:hidden;';
     
     var menuHtml = '';
     if (isOwner || isAdmin) {
@@ -1268,9 +1415,17 @@ function editSlice(sliceId) {
         var newText = prompt('Редактировать текст поста:', slice.text || '');
         if (newText === null) return;
         var newHashtags = extractHashtags(newText);
-        database.ref('slices/' + sliceId).update({ text: newText, hashtags: newHashtags, editedAt: firebase.database.ServerValue.TIMESTAMP, edited: true })
-            .then(function() { showNotification('Пост отредактирован!', 'success'); loadSlices(); })
-            .catch(function() { showNotification('Ошибка редактирования', 'error'); });
+        database.ref('slices/' + sliceId).update({ 
+            text: newText, 
+            hashtags: newHashtags, 
+            editedAt: firebase.database.ServerValue.TIMESTAMP, 
+            edited: true 
+        }).then(function() { 
+            showNotification('Пост отредактирован!', 'success'); 
+            loadSlices(); 
+        }).catch(function() { 
+            showNotification('Ошибка редактирования', 'error'); 
+        });
     });
     closeSliceContextMenu();
 }
@@ -1282,7 +1437,9 @@ function deleteSlice(sliceId) {
         database.ref('sliceComments/' + sliceId).remove();
         showNotification('Пост удалён', 'success');
         loadSlices();
-    }).catch(function() { showNotification('Ошибка удаления', 'error'); });
+    }).catch(function() { 
+        showNotification('Ошибка удаления', 'error'); 
+    });
     closeSliceContextMenu();
 }
 
@@ -1302,13 +1459,20 @@ function reportSlice(sliceId) {
     var reason = prompt('Укажите причину жалобы:');
     if (!reason) return;
     database.ref('reports/slices/' + sliceId).push({
-        userId: currentUser.uid, userName: currentUserData?.username || 'Пользователь',
-        reason: reason, timestamp: firebase.database.ServerValue.TIMESTAMP
-    }).then(function() { showNotification('Жалоба отправлена администрации', 'success'); });
+        userId: currentUser.uid, 
+        userName: currentUserData?.username || 'Пользователь',
+        reason: reason, 
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    }).then(function() { 
+        showNotification('Жалоба отправлена администрации', 'success'); 
+    });
     closeSliceContextMenu();
 }
 
-function closeSliceContextMenu() { var menu = document.getElementById('slice-context-menu'); if (menu) menu.remove(); }
+function closeSliceContextMenu() { 
+    var menu = document.getElementById('slice-context-menu'); 
+    if (menu) menu.remove(); 
+}
 
 // ========== СОЗДАНИЕ ПОСТА ==========
 function showCreateSliceModal() {
@@ -1328,7 +1492,10 @@ function showCreateSliceModal() {
     updateSlicePreviewCounter();
 }
 
-function closeCreateSliceModal() { var modal = document.getElementById('create-slice-modal'); if (modal) modal.classList.add('hidden'); }
+function closeCreateSliceModal() { 
+    var modal = document.getElementById('create-slice-modal'); 
+    if (modal) modal.classList.add('hidden'); 
+}
 
 function addSliceMedia() {
     var input = document.createElement('input');
@@ -1338,7 +1505,10 @@ function addSliceMedia() {
     input.onchange = function(e) {
         var files = Array.from(e.target.files);
         files.forEach(function(file) {
-            if (file.size > 15 * 1024 * 1024) { showNotification('Файл слишком большой (макс. 15MB)', 'error'); return; }
+            if (file.size > 15 * 1024 * 1024) { 
+                showNotification('Файл слишком большой (макс. 15MB)', 'error'); 
+                return; 
+            }
             pendingSliceFiles.push(file);
         });
         updateSlicePreview();
@@ -1376,16 +1546,29 @@ function updateSlicePreview() {
     updateSlicePreviewCounter();
 }
 
-function updateSlicePreviewCounter() { var counter = document.getElementById('slice-preview-counter'); if (counter) counter.textContent = pendingSliceFiles.length; }
+function updateSlicePreviewCounter() { 
+    var counter = document.getElementById('slice-preview-counter'); 
+    if (counter) counter.textContent = pendingSliceFiles.length; 
+}
 
-function removeSliceMedia(index) { pendingSliceFiles.splice(index, 1); updateSlicePreview(); }
+function removeSliceMedia(index) { 
+    pendingSliceFiles.splice(index, 1); 
+    updateSlicePreview(); 
+}
 
-function extractHashtags(text) { var hashtags = text.match(/#[а-яА-Яa-zA-Z0-9_]+/g); if (!hashtags) return []; return hashtags.map(function(tag) { return tag.substring(1); }); }
+function extractHashtags(text) { 
+    var hashtags = text.match(/#[а-яА-Яa-zA-Z0-9_]+/g); 
+    if (!hashtags) return []; 
+    return hashtags.map(function(tag) { return tag.substring(1); }); 
+}
 
 async function publishSlice() {
     var text = document.getElementById('slice-text').value.trim();
     var hashtagsInput = document.getElementById('slice-hashtags-input').value.trim();
-    if (pendingSliceFiles.length === 0 && !text) { showNotification('Добавьте текст или фото', 'error'); return; }
+    if (pendingSliceFiles.length === 0 && !text) { 
+        showNotification('Добавьте текст или фото', 'error'); 
+        return; 
+    }
     if (hashtagsInput) {
         var extraTags = hashtagsInput.split(/[ ,]+/).filter(function(t) { return t; });
         if (text) text += ' ' + extraTags.map(function(t) { return '#' + t; }).join(' ');
@@ -1393,34 +1576,62 @@ async function publishSlice() {
     }
     var hashtags = extractHashtags(text);
     showNotification('Публикация...', 'info');
+    
     try {
         var mediaUrls = [];
         for (var i = 0; i < pendingSliceFiles.length; i++) {
             if (typeof uploadToImgBB === 'function') {
-                var result = await uploadToImgBB(pendingSliceFiles[i]);
-                mediaUrls.push(result.url); // исправлено: берём url из объекта
+                var url = await uploadToImgBB(pendingSliceFiles[i]);
+                mediaUrls.push(url);
             } else {
                 showNotification('Функция загрузки не найдена', 'error');
                 return;
             }
         }
+        
         var sliceData = {
-            authorId: currentUser.uid, authorName: currentUserData.username || 'Пользователь',
-            authorAvatar: currentUserData.avatar || '', text: text, hashtags: hashtags,
+            authorId: currentUser.uid, 
+            authorName: currentUserData.username || 'Пользователь',
+            authorAvatar: currentUserData.avatar || '', 
+            text: text, 
+            hashtags: hashtags,
             mediaType: mediaUrls.length > 1 ? 'multiple' : (mediaUrls.length === 1 ? 'single' : 'none'),
-            mediaUrls: mediaUrls.length > 0 ? mediaUrls : null, mediaUrl: mediaUrls.length === 1 ? mediaUrls[0] : null,
-            likesCount: 0, commentsCount: 0, repostsCount: 0, viewsCount: 0, pinned: false,
+            mediaUrls: mediaUrls.length > 0 ? mediaUrls : null, 
+            mediaUrl: mediaUrls.length === 1 ? mediaUrls[0] : null,
+            likesCount: 0, 
+            commentsCount: 0, 
+            repostsCount: 0, 
+            viewsCount: 0, 
+            pinned: false,
             createdAt: firebase.database.ServerValue.TIMESTAMP
         };
+        
         await database.ref('slices/').push(sliceData);
-        
         playSliceCreateSound();
-        
         showNotification('Пост опубликован! 🍕', 'success');
         closeCreateSliceModal();
         loadSlices();
-    } catch (error) { console.error(error); showNotification('Ошибка публикации', 'error'); }
+    } catch (error) { 
+        console.error(error); 
+        showNotification('Ошибка публикации', 'error'); 
+    }
 }
 
-// Инициализация звуков
-if (typeof initSliceSound === 'function') initSliceSound();
+// ========== ИНИЦИАЛИЗАЦИЯ ==========
+initSliceSound();
+
+// Ленивая загрузка изображений
+setInterval(function() {
+    var lazyImages = document.querySelectorAll('.lazy[data-src]');
+    lazyImages.forEach(function(img) {
+        var rect = img.getBoundingClientRect();
+        if (rect.top < window.innerHeight + 200 && rect.bottom > -200) {
+            var src = img.getAttribute('data-src');
+            if (src) {
+                img.src = src;
+                img.onload = function() { img.classList.add('loaded'); };
+                img.removeAttribute('data-src');
+            }
+        }
+    });
+}, 500);
