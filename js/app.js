@@ -245,6 +245,7 @@ function logout() {
         currentUserData = null;
         currentChatId = null;
         currentChatUser = null;
-               showNotification('Вы вышли', 'info');
+        showNotification('Вы вышли', 'info');
     }).catch(function() { showNotification('Ошибка выхода', 'error'); });
-    }
+}
+// КОНЕЦ ФАЙЛА - больше ничего не должно быть
