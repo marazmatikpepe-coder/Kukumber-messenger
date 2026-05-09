@@ -538,7 +538,7 @@ async function confirmImageSend() {
     
     if (successCount > 0) {
         var lastMsg = successCount === 1 ? '📷 Фото' : `📷 ${successCount} фото`;
-        await database.ref('chats/' + currentChatId').update({
+        await database.ref('chats/' + currentChatId).update({
             lastMessage: lastMsg,
             lastMessageTime: firebase.database.ServerValue.TIMESTAMP
         });
