@@ -1432,3 +1432,37 @@ html, body {
     background: var(--sage);
     border-radius: 3px;
 }
+/* Мобильная адаптация для сообщений */
+@media (max-width: 768px) {
+    .message {
+        max-width: 85%;
+    }
+    
+    .message-content {
+        padding: 6px 10px;
+    }
+    
+    .message-text {
+        font-size: 14px;
+    }
+    
+    .message-image img {
+        max-width: 220px;
+        max-height: 250px;
+    }
+    
+    .gif-message {
+        max-width: 220px;
+    }
+    
+    .message-avatar .avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 16px;
+    }
+    
+    .file-message a {
+        max-width: 150px;
+        font-size: 13px;
+    }
+}
