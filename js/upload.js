@@ -509,24 +509,23 @@ async function confirmImageSend() {
     if (!currentChatId) { showNotification('Выберите чат', 'error'); return; }
     
     var captionInput = document.getElementById('image-caption');
-    if (captionInput && pendingImages[currentImageIndex]) {
-        pendingImages[currentImageIndex].caption = captionInput.value;
-    }
+    var currentCaption = captionInput ? captionInput.value.trim() : '';
     
     showNotification(`📤 Отправка ${pendingImages.length} фото...`, 'info');
     var successCount = 0, failCount = 0;
     
     for (var i = 0; i < pendingImages.length; i++) {
         try {
-            showNotification(`📤 Отправка ${i+1}/${pendingImages.length}...`, 'info');
             var imageUrl = await uploadToImgBB(pendingImages[i].file);
+            
             var message = {
                 type: 'image',
                 imageUrl: imageUrl,
-                caption: pendingImages[i].caption || '',
+                caption: pendingImages[i].caption || currentCaption || '',
                 senderId: currentUser.uid,
                 timestamp: firebase.database.ServerValue.TIMESTAMP
             };
+            
             await database.ref('messages/' + currentChatId).push(message);
             successCount++;
             await new Promise(r => setTimeout(r, 300));
@@ -536,6 +535,20 @@ async function confirmImageSend() {
         }
     }
     
+    if (successCount > 0) {
+        var lastMsg = successCount === 1 ? '📷 Фото' : `📷 ${successCount} фото`;
+        await database.ref('chats/' + currentChatId).update({
+            lastMessage: lastMsg,
+            lastMessageTime: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
+    
+    showNotification(failCount === 0 ? `✅ Все ${successCount} фото отправлены!` : `✅ Отправлено: ${successCount}, ошибок: ${failCount}`, failCount === 0 ? 'success' : 'info');
+    
+    pendingImages = [];
+    currentImageIndex = 0;
+    closeImagePreview();
+}
     if (successCount > 0) {
         var lastMsg = successCount === 1 ? '📷 Фото' : `📷 ${successCount} фото`;
         await database.ref('chats/' + currentChatId).update({
