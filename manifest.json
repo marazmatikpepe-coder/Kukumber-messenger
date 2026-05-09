@@ -1,0 +1,24 @@
+{
+  "name": "K Messenger",
+  "short_name": "KMsg",
+  "description": "Свежее общение каждый день 🔑",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#228B22",
+  "background_color": "#228B22",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://i.ibb.co/jPd3zD4K/039-C01-D0-CD06-45-F1-8151-5-B9634-D4-CBFA.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://i.ibb.co/jPd3zD4K/039-C01-D0-CD06-45-F1-8151-5-B9634-D4-CBFA.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
