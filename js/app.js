@@ -248,4 +248,3 @@ function logout() {
                showNotification('Вы вышли', 'info');
     }).catch(function() { showNotification('Ошибка выхода', 'error'); });
     }
-}  // <-- ЭТОЙ СКОБКИ НЕ ХВАТАЕТ
