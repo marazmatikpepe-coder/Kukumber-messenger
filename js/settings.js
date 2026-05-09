@@ -332,7 +332,9 @@ function saveProfile() {
         saveData(null);
     }
 }
-function showNotificationSettings() { var t = translations[currentLanguage]; showNotification(t.notifications + ': ' + t.in_development, 'info'); }
+function showNotificationSettings() {
+    document.getElementById('notifications-menu').classList.remove('hidden');
+}
 function showPrivacySettings() { var t = translations[currentLanguage]; showNotification(t.privacy + ': ' + t.in_development, 'info'); }
 function showThemeSettings() { var t = translations[currentLanguage]; showNotification(t.theme + ': ' + t.in_development, 'info'); }
 function showStorageSettings() { var t = translations[currentLanguage]; showNotification(t.storage + ': ' + t.in_development, 'info'); }
@@ -467,3 +469,129 @@ function saveProfile() {
         saveData(null);
     }
 }
+// ========== УВЕДОМЛЕНИЯ ==========
+var notificationSettings = {
+    private: { enabled: true, showText: true, sound: 'classic', soundUrl: 'https://s17.aconvert.com/convert/p3r68-cdx67/wxmml-vgmt8.mp3' },
+    groups: { enabled: true, showText: true, sound: 'classic', soundUrl: 'https://s17.aconvert.com/convert/p3r68-cdx67/wxmml-vgmt8.mp3' },
+    channels: { enabled: true, showText: true, sound: 'classic', soundUrl: 'https://s17.aconvert.com/convert/p3r68-cdx67/wxmml-vgmt8.mp3' }
+};
+
+var soundsList = {
+    'click': { name: 'Щелчок', url: 'https://s17.aconvert.com/convert/p3r68-cdx67/wxmml-vgmt8.mp3' },
+    'classic': { name: 'Классика', url: 'https://s17.aconvert.com/convert/p3r68-cdx67/wxmml-vgmt8.mp3' },
+    'bell': { name: 'Колокол', url: 'https://s31.aconvert.com/convert/p3r68-cdx67/tzal6-g8cc5.mp3' },
+    'xylophone': { name: 'Ксилофон', url: 'https://s31.aconvert.com/convert/p3r68-cdx67/abjcm-e8f3f.mp3' }
+};
+
+function closeNotificationsMenu() {
+    var menu = document.getElementById('notifications-menu');
+    if (menu) menu.classList.add('hidden');
+    var mainMenu = document.getElementById('notifications-main-menu');
+    var categorySettings = document.getElementById('category-settings');
+    if (mainMenu) mainMenu.style.display = 'block';
+    if (categorySettings) categorySettings.style.display = 'none';
+}
+
+function openCategorySettings(category) {
+    var categoryNames = { private: 'Личные чаты', groups: 'Группы', channels: 'Каналы' };
+    var settings = notificationSettings[category];
+    
+    var content = document.getElementById('category-settings-content');
+    if (!content) return;
+    
+    content.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <div class="notification-setting-item">
+                <div>
+                    <div class="notification-setting-label">Уведомления</div>
+                    <div class="notification-setting-desc">Показывать уведомления для ${categoryNames[category]}</div>
+                </div>
+                <div class="notification-switch ${settings.enabled ? 'active' : ''}" onclick="toggleNotificationEnabled('${category}')"></div>
+            </div>
+            
+            ${settings.enabled ? `
+                <div style="margin-top: 15px;">
+                    <div class="notification-setting-item">
+                        <div>
+                            <div class="notification-setting-label">Показывать текст</div>
+                            <div class="notification-setting-desc">Содержание сообщения в уведомлении</div>
+                        </div>
+                        <div class="notification-switch ${settings.showText ? 'active' : ''}" onclick="toggleShowText('${category}')"></div>
+                    </div>
+                    
+                    <div class="notification-setting-item">
+                        <div>
+                            <div class="notification-setting-label">Звук</div>
+                            <div class="notification-setting-desc">Выберите звук уведомления</div>
+                        </div>
+                    </div>
+                    <div class="sound-picker">
+                        ${Object.entries(soundsList).map(([key, sound]) => `
+                            <div class="sound-option ${settings.sound === key ? 'active' : ''}" onclick="selectSound('${category}', '${key}')">${sound.name}</div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+        
+        <div class="reset-notifications" onclick="resetCategorySettings('${category}')">
+            Сбросить настройки для ${categoryNames[category]}
+        </div>
+    `;
+    
+    var mainMenu = document.getElementById('notifications-main-menu');
+    var categorySettingsDiv = document.getElementById('category-settings');
+    if (mainMenu) mainMenu.style.display = 'none';
+    if (categorySettingsDiv) categorySettingsDiv.style.display = 'block';
+}
+
+function toggleNotificationEnabled(category) {
+    notificationSettings[category].enabled = !notificationSettings[category].enabled;
+    saveNotificationSettings();
+    openCategorySettings(category);
+}
+
+function toggleShowText(category) {
+    notificationSettings[category].showText = !notificationSettings[category].showText;
+    saveNotificationSettings();
+    openCategorySettings(category);
+}
+
+function selectSound(category, soundKey) {
+    notificationSettings[category].sound = soundKey;
+    notificationSettings[category].soundUrl = soundsList[soundKey].url;
+    saveNotificationSettings();
+    
+    var audio = new Audio(soundsList[soundKey].url);
+    audio.volume = 0.3;
+    audio.play().catch(e => console.log('Автоплей заблокирован'));
+    
+    openCategorySettings(category);
+}
+
+function resetCategorySettings(category) {
+    notificationSettings[category] = { 
+        enabled: true, 
+        showText: true, 
+        sound: 'classic', 
+        soundUrl: 'https://s17.aconvert.com/convert/p3r68-cdx67/wxmml-vgmt8.mp3' 
+    };
+    saveNotificationSettings();
+    openCategorySettings(category);
+    if (typeof showNotification === 'function') showNotification('Настройки сброшены', 'success');
+}
+
+function saveNotificationSettings() {
+    localStorage.setItem('k_notification_settings', JSON.stringify(notificationSettings));
+}
+
+function loadNotificationSettings() {
+    var saved = localStorage.getItem('k_notification_settings');
+    if (saved) {
+        try {
+            notificationSettings = JSON.parse(saved);
+        } catch(e) {}
+    }
+}
+
+loadNotificationSettings();
