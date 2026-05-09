@@ -1,4 +1,4 @@
-// KUKUMBER MESSENGER - APP.JS
+ // KUKUMBER MESSENGER - APP.JS (исправленный: поиск, настройки, профиль)
 var firebaseConfig = {
     apiKey: "AIzaSyBYNJPhbs8YaNAhdjSUIdj1Ok433N19GJM",
     authDomain: "kukumber-messenger.firebaseapp.com",
@@ -51,7 +51,6 @@ function loadUserData() {
             updateUserDisplay();
             checkSuperAdmin();
             showMainScreen();
-            
             // Обновляем аватарку в Slices
             var slicesAvatar = document.getElementById('slices-user-avatar');
             if (slicesAvatar) {
@@ -64,22 +63,6 @@ function loadUserData() {
                     slicesAvatar.textContent = '🥒';
                 }
             }
-            
-            // Обновляем статус онлайн
-            database.ref('users/' + currentUser.uid + '/status').update({
-                online: true,
-                lastSeen: firebase.database.ServerValue.TIMESTAMP
-            });
-        }
-    });
-    
-    // При закрытии страницы обновляем статус
-    window.addEventListener('beforeunload', function() {
-        if (currentUser) {
-            database.ref('users/' + currentUser.uid + '/status').update({
-                online: false,
-                lastSeen: firebase.database.ServerValue.TIMESTAMP
-            });
         }
     });
 }
@@ -94,15 +77,9 @@ function checkSuperAdmin() {
 function updateUserDisplay() {
     if (!currentUserData) return;
     var username = currentUserData.username || 'Пользователь';
-    var userTag = currentUserData.userTag || '';
     var avatar = currentUserData.avatar || '';
-    
     document.getElementById('current-username').textContent = username;
     document.getElementById('settings-username').textContent = username;
-    
-    var settingsUserTag = document.getElementById('settings-usertag');
-    if (settingsUserTag) settingsUserTag.textContent = userTag;
-    
     ['user-avatar', 'settings-avatar'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) {
@@ -246,33 +223,27 @@ function closeAllModals() {
     if (picker) picker.classList.add('hidden');
 }
 
+// Функции для настроек (чтобы не падали ошибки)
+function showNotificationSettings() { showNotification('Уведомления: в разработке', 'info'); }
+function showPrivacySettings() { showNotification('Конфиденциальность: в разработке', 'info'); }
+function showThemeSettings() { showNotification('Тема: в разработке', 'info'); }
+function showLanguageSettings() { 
+    if (typeof window.showLanguageSettings === 'function') {
+        window.showLanguageSettings();
+    } else {
+        showNotification('Язык: в разработке', 'info');
+    }
+}
+function showStorageSettings() { showNotification('Данные и память: в разработке', 'info'); }
+function showAbout() { alert('Kukumber Messenger v1.0\nСвежее общение каждый день 🥒'); }
+function showHelp() { showNotification('Помощь: в разработке', 'info'); }
 function logout() {
     if (!confirm('Вы уверены, что хотите выйти?')) return;
     if (messagesListener) messagesListener.off();
-    
-    if (currentUser) {
-        database.ref('users/' + currentUser.uid + '/status').update({
-            online: false,
-            lastSeen: firebase.database.ServerValue.TIMESTAMP
-        });
-    }
-    
     auth.signOut().then(function() {
         currentUser = null;
         currentUserData = null;
         currentChatId = null;
         currentChatUser = null;
         showNotification('Вы вышли', 'info');
-        showAuthScreen();
-    }).catch(function() { 
-        showNotification('Ошибка выхода', 'error'); 
-    });
-}
-
-// Функции для настроек
-function showNotificationSettings() { showNotification('Уведомления: в разработке', 'info'); }
-function showPrivacySettings() { showNotification('Конфиденциальность: в разработке', 'info'); }
-function showThemeSettings() { showNotification('Тема: в разработке', 'info'); }
-function showStorageSettings() { showNotification('Данные и память: в разработке', 'info'); }
-function showAbout() { alert('Kukumber Messenger v1.0\nСвежее общение каждый день 🥒'); }
-function showHelp() { showNotification('Помощь: в разработке', 'info'); }
+    }).catch(function() { showNotification('Ошибка выхода', 'error'); });
