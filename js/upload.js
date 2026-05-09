@@ -116,7 +116,7 @@ function updateAvatarEverywhere(userId, avatarUrl, userName) {
 }
 
 // ========== РЕДАКТИРОВАНИЕ АВАТАРА (СВОЙ ПРОФИЛЬ) ==========
-function editProfileAvatar() {
+async function editProfileAvatar() {
     var userId = window.viewingProfileUserId || currentUser?.uid;
     if (!userId) return;
     
@@ -140,20 +140,16 @@ function editProfileAvatar() {
         try {
             var avatarUrl = await uploadToImgBB(file);
             
-            // Сохраняем в БД
             await database.ref('users/' + userId + '/avatar').set(avatarUrl);
             
             showNotification('Аватар обновлён!', 'success');
             
-            // Получаем имя пользователя для поиска
             var userName = '';
             var userSnap = await database.ref('users/' + userId + '/username').once('value');
             userName = userSnap.val();
             
-            // Обновляем везде
             updateAvatarEverywhere(userId, avatarUrl, userName);
             
-            // Обновляем данные в памяти
             if (userId === currentUser?.uid && currentUserData) {
                 currentUserData.avatar = avatarUrl;
             }
@@ -161,12 +157,9 @@ function editProfileAvatar() {
                 window.viewingProfileUserData.avatar = avatarUrl;
             }
             
-            // Перезагружаем профиль (обновить открытое окно)
-            if (window.viewingProfileUserId === userId) {
-                setTimeout(function() {
-                    openUserProfile(userId);
-                }, 300);
-            }
+            setTimeout(function() {
+                openUserProfile(userId);
+            }, 300);
             
         } catch (err) {
             console.error(err);
@@ -243,7 +236,6 @@ async function setProfileBanner(colorOrUrl) {
         showNotification('Баннер обновлён', 'success');
         closeColorPickerModal();
         
-        // Обновляем баннер в открытом профиле
         var bannerDiv = document.getElementById('profile-banner');
         if (bannerDiv) {
             if (colorOrUrl) {
@@ -262,7 +254,6 @@ async function setProfileBanner(colorOrUrl) {
             }
         }
         
-        // Обновляем данные в памяти
         if (window.viewingProfileUserData) {
             window.viewingProfileUserData.banner = colorOrUrl || null;
         }
@@ -311,7 +302,7 @@ function previewEditAvatar(event) {
     }
 }
 
-// ========== ОСТАЛЬНЫЕ ФУНКЦИИ (ГРУППЫ, КАНАЛЫ, ФОТО) ==========
+// ========== ГРУППЫ И КАНАЛЫ ==========
 window.groupAvatarFile = null;
 window.channelAvatarFile = null;
 
@@ -395,7 +386,10 @@ function handleFileSelect(event) {
 
 async function sendAllGifs() {
     if (pendingGifs.length === 0) return;
-    if (!currentChatId) { showNotification('Выберите чат', 'error'); return; }
+    if (!currentChatId) { 
+        showNotification('Выберите чат', 'error'); 
+        return; 
+    }
     
     showNotification(`📤 Отправка ${pendingGifs.length} GIF...`, 'info');
     var successCount = 0;
@@ -505,8 +499,14 @@ function cancelAllImages() {
 }
 
 async function confirmImageSend() {
-    if (pendingImages.length === 0) { showNotification('Нет фото для отправки', 'error'); return; }
-    if (!currentChatId) { showNotification('Выберите чат', 'error'); return; }
+    if (pendingImages.length === 0) { 
+        showNotification('Нет фото для отправки', 'error'); 
+        return; 
+    }
+    if (!currentChatId) { 
+        showNotification('Выберите чат', 'error'); 
+        return; 
+    }
     
     var captionInput = document.getElementById('image-caption');
     var currentCaption = captionInput ? captionInput.value.trim() : '';
@@ -549,21 +549,8 @@ async function confirmImageSend() {
     currentImageIndex = 0;
     closeImagePreview();
 }
-    if (successCount > 0) {
-        var lastMsg = successCount === 1 ? '📷 Фото' : `📷 ${successCount} фото`;
-        await database.ref('chats/' + currentChatId).update({
-            lastMessage: lastMsg,
-            lastMessageTime: firebase.database.ServerValue.TIMESTAMP
-        });
-    }
-    
-    showNotification(failCount === 0 ? `✅ Все ${successCount} фото отправлены!` : `✅ Отправлено: ${successCount}, ошибок: ${failCount}`, failCount === 0 ? 'success' : 'info');
-    
-    pendingImages = [];
-    currentImageIndex = 0;
-    closeImagePreview();
-}
 
+// ========== ОТПРАВКА ФАЙЛОВ ==========
 async function sendAnyFile(file) {
     if (!currentChatId) { 
         showNotification('Ошибка: чат не выбран', 'error'); 
@@ -592,7 +579,8 @@ async function sendAnyFile(file) {
         showNotification('❌ Ошибка загрузки', 'error');
     }
 }
-// Голосовые сообщения
+
+// ========== ГОЛОСОВЫЕ СООБЩЕНИЯ ==========
 var mediaRecorder = null;
 var audioChunks = [];
 var isRecording = false;
@@ -602,7 +590,9 @@ function startRecording() {
         .then(stream => {
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
-            mediaRecorder.ondataavailable = function(e) { if (e.data.size > 0) audioChunks.push(e.data); };
+            mediaRecorder.ondataavailable = function(e) { 
+                if (e.data.size > 0) audioChunks.push(e.data); 
+            };
             mediaRecorder.onstop = function() {
                 var blob = new Blob(audioChunks, { type: 'audio/webm' });
                 var file = new File([blob], 'voice.webm', { type: 'audio/webm' });
@@ -612,10 +602,17 @@ function startRecording() {
             mediaRecorder.start();
             isRecording = true;
             var btn = document.getElementById('voice-record-btn');
-            if (btn) { btn.classList.add('recording'); btn.innerHTML = '🔴'; }
-            setTimeout(function() { if (isRecording) stopRecording(); }, 60000);
+            if (btn) { 
+                btn.classList.add('recording'); 
+                btn.innerHTML = '🔴'; 
+            }
+            setTimeout(function() { 
+                if (isRecording) stopRecording(); 
+            }, 60000);
         })
-        .catch(function() { showNotification('❌ Нет доступа к микрофону', 'error'); });
+        .catch(function() { 
+            showNotification('❌ Нет доступа к микрофону', 'error'); 
+        });
 }
 
 function stopRecording() {
@@ -623,11 +620,14 @@ function stopRecording() {
         mediaRecorder.stop();
         isRecording = false;
         var btn = document.getElementById('voice-record-btn');
-        if (btn) { btn.classList.remove('recording'); btn.innerHTML = '🎤'; }
+        if (btn) { 
+            btn.classList.remove('recording'); 
+            btn.innerHTML = '🎤'; 
+        }
     }
 }
 
-// Для глобального доступа
+// ========== ГЛОБАЛЬНЫЕ ФУНКЦИИ ДЛЯ ДОСТУПА ==========
 window.handleFileSelect = handleFileSelect;
 window.uploadToImgBB = uploadToImgBB;
 window.navigateImage = navigateImage;
