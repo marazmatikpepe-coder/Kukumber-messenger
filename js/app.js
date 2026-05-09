@@ -1,4 +1,4 @@
- // KUKUMBER MESSENGER - APP.JS (исправленный: поиск, настройки, профиль)
+// KUKUMBER MESSENGER - APP.JS (исправленный: поиск, настройки, профиль)
 var firebaseConfig = {
     apiKey: "AIzaSyBYNJPhbs8YaNAhdjSUIdj1Ok433N19GJM",
     authDomain: "kukumber-messenger.firebaseapp.com",
@@ -248,4 +248,3 @@ function logout() {
         showNotification('Вы вышли', 'info');
     }).catch(function() { showNotification('Ошибка выхода', 'error'); });
 }
-// КОНЕЦ ФАЙЛА - больше ничего не должно быть
