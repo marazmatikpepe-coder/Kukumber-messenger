@@ -481,5 +481,42 @@
         });
     }
 </script>
+    <!-- МЕНЮ УВЕДОМЛЕНИЙ -->
+<div id="notifications-menu" class="modal hidden">
+    <div class="modal-content" style="max-width: 500px; border-radius: 20px; overflow: hidden;">
+        <div class="modal-header" style="position: relative; padding: 12px 20px;">
+            <button onclick="closeNotificationsMenu()" class="back-btn-notifications" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 24px; cursor: pointer;">←</button>
+            <h3 style="text-align: center; margin: 0;">Уведомления и звук</h3>
+        </div>
+        <div style="padding: 15px;">
+            <!-- Меню категорий -->
+            <div id="notifications-main-menu">
+                <div class="notification-category" onclick="openCategorySettings('private')">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--background); border-radius: 16px; margin-bottom: 10px; cursor: pointer;">
+                        <span>📱 Личные чаты</span>
+                        <span>›</span>
+                    </div>
+                </div>
+                <div class="notification-category" onclick="openCategorySettings('groups')">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--background); border-radius: 16px; margin-bottom: 10px; cursor: pointer;">
+                        <span>👥 Группы</span>
+                        <span>›</span>
+                    </div>
+                </div>
+                <div class="notification-category" onclick="openCategorySettings('channels')">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--background); border-radius: 16px; margin-bottom: 10px; cursor: pointer;">
+                        <span>📢 Каналы</span>
+                        <span>›</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Меню настроек категории (скрыто по умолчанию) -->
+            <div id="category-settings" style="display: none;">
+                <div id="category-settings-content"></div>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
