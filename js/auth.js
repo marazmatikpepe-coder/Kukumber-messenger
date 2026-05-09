@@ -1,4 +1,4 @@
-// KUKUMBER AUTH.JS - Регистрация, вход, сброс пароля, уникальные юзернеймы
+// KUKUMBER AUTH.JS - Регистрация, вход, сброс пароля, поиск по юзернеймам
 
 function showRegister() { 
     document.getElementById('login-form').classList.add('hidden'); 
@@ -29,7 +29,6 @@ async function register() {
     const password = document.getElementById('reg-password').value;
     const confirmPassword = document.getElementById('reg-password-confirm').value;
     
-    // Валидация
     if (!username) { showNotification('Введите отображаемое имя!', 'error'); return; }
     if (username.length < 2) { showNotification('Имя должно быть минимум 2 символа!', 'error'); return; }
     
@@ -52,7 +51,6 @@ async function register() {
     btn.textContent = 'Создание...';
     
     try {
-        // Проверяем уникальность юзернейма
         const tagSnapshot = await database.ref('userTags/' + userTag).once('value');
         if (tagSnapshot.exists()) {
             showNotification('Юзернейм ' + userTag + ' уже занят!', 'error');
@@ -61,7 +59,6 @@ async function register() {
             return;
         }
         
-        // Проверяем email
         const emailKey = email.replace(/[.#$]/g, ',');
         const emailSnapshot = await database.ref('emails/' + emailKey).once('value');
         if (emailSnapshot.exists()) {
@@ -71,11 +68,9 @@ async function register() {
             return;
         }
         
-        // Создаём пользователя
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
         
-        // Сохраняем данные
         await database.ref('users/' + user.uid).set({
             username: username,
             userTag: userTag,
@@ -94,7 +89,6 @@ async function register() {
         
         showNotification('Регистрация успешна!', 'success');
         
-        // Очищаем форму
         document.getElementById('reg-username').value = '';
         document.getElementById('reg-usertag').value = '';
         document.getElementById('reg-email').value = '';
@@ -150,7 +144,6 @@ async function login() {
     btn.textContent = 'Войти';
 }
 
-// ========== СБРОС ПАРОЛЯ ==========
 async function sendResetEmail() {
     const email = document.getElementById('reset-email').value.trim();
     
@@ -182,7 +175,7 @@ async function sendResetEmail() {
     btn.textContent = 'Отправить';
 }
 
-// ========== ПОИСК ПОЛЬЗОВАТЕЛЕЙ ПО ЮЗЕРНЕЙМУ ==========
+// ========== ПОИСК ПОЛЬЗОВАТЕЛЕЙ ПО ЮЗЕРНЕЙМУ (РАБОТАЕТ) ==========
 async function searchUsersByTag(query) {
     if (!query || query.length < 2) return [];
     
@@ -191,9 +184,13 @@ async function searchUsersByTag(query) {
         searchTag = '@' + searchTag;
     }
     
+    console.log('Поиск по тегу:', searchTag);
+    
     var snapshot = await database.ref('userTags').orderByKey().startAt(searchTag).endAt(searchTag + '\uf8ff').limitToFirst(20).once('value');
     var tags = snapshot.val();
     var results = [];
+    
+    if (!tags) return [];
     
     for (var tag in tags) {
         var userId = tags[tag];
@@ -205,23 +202,40 @@ async function searchUsersByTag(query) {
                 uid: userId,
                 username: user.username,
                 userTag: user.userTag,
-                avatar: user.avatar
+                avatar: user.avatar || ''
             });
         }
     }
     
+    console.log('Найдено пользователей:', results.length);
     return results;
 }
 
 function showGlobalSearch() {
-    document.getElementById('global-search-modal').classList.remove('hidden');
-    document.getElementById('global-search-input').value = '';
-    document.getElementById('global-users-list').innerHTML = '<div style="padding:20px; text-align:center; color: var(--text-muted);">Введите @username для поиска</div>';
+    var modal = document.getElementById('global-search-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    var input = document.getElementById('global-search-input');
+    if (input) {
+        input.value = '';
+        input.placeholder = '@username';
+    }
+    var container = document.getElementById('global-users-list');
+    if (container) {
+        container.innerHTML = '<div style="padding:20px; text-align:center; color: var(--text-muted);">Введите @username для поиска</div>';
+    }
+}
+
+function closeGlobalSearch() { 
+    var modal = document.getElementById('global-search-modal');
+    if (modal) modal.classList.add('hidden'); 
 }
 
 async function searchGlobalUsers() {
     var query = document.getElementById('global-search-input').value.trim();
     var container = document.getElementById('global-users-list');
+    
+    if (!container) return;
     
     if (query.length < 2) {
         container.innerHTML = '<div style="padding:20px; text-align:center; color: var(--text-muted);">Введите минимум 2 символа</div>';
@@ -264,73 +278,124 @@ function addToContacts(uid, name) {
     database.ref('contacts/' + currentUser.uid + '/' + uid).set(true);
     database.ref('contactsReverse/' + uid + '/' + currentUser.uid).set(true);
     showNotification(name + ' добавлен в контакты', 'success');
-    loadContacts(true);
+    closeGlobalSearch();
+    if (typeof loadContacts === 'function') loadContacts(true);
 }
 
-function closeGlobalSearch() {
-    document.getElementById('global-search-modal').classList.add('hidden');
-}
+// ========== КОНТАКТЫ (РАБОТАЮТ) ==========
+var contactsCache = {};
+var contactsCacheTime = 0;
+var CONTACTS_CACHE_TTL = 30000;
 
-// Загружаем контакты для нового чата
 function loadContacts(forceRefresh) {
+    var now = Date.now();
+    if (!forceRefresh && Object.keys(contactsCache).length > 0 && (now - contactsCacheTime) < CONTACTS_CACHE_TTL) {
+        renderContactsList(contactsCache);
+        return;
+    }
+    
     var list = document.getElementById('users-list');
+    if (!list) return;
     list.innerHTML = '<div style="padding:20px; text-align:center;">🔄 Загрузка контактов...</div>';
     
     database.ref('contacts/' + currentUser.uid).once('value').then(function(snapshot) {
         var contacts = snapshot.val();
-        
-        if (!contacts) {
-            list.innerHTML = '<div style="padding:20px; text-align:center;">Нет контактов. Добавьте через поиск 🔍</div>';
-            return;
-        }
-        
-        var userIds = Object.keys(contacts);
-        if (userIds.length === 0) {
-            list.innerHTML = '<div style="padding:20px; text-align:center;">Нет контактов. Добавьте через поиск 🔍</div>';
-            return;
-        }
-        
-        list.innerHTML = '';
-        var pending = userIds.length;
-        
-        userIds.forEach(function(uid) {
-            database.ref('users/' + uid).once('value').then(function(userSnap) {
-                var user = userSnap.val();
-                if (user) {
-                    var div = document.createElement('div');
-                    div.className = 'user-item';
-                    div.style.cursor = 'pointer';
-                    var avatarStyle = user.avatar ? 'background-image:url('+user.avatar+');background-size:cover;' : '';
-                    var avatarContent = user.avatar ? '' : '👤';
-                    div.innerHTML = `
-                        <div class="avatar" style="${avatarStyle}">${avatarContent}</div>
-                        <div class="user-item-info">
-                            <h4>${escapeHtml(user.username)}</h4>
-                            <p style="font-size:11px; color:var(--text-muted);">${escapeHtml(user.userTag)}</p>
-                        </div>
-                    `;
-                    div.onclick = (function(uid, user) {
-                        return function() { 
-                            startPrivateChat(uid, user);
-                            closeNewChatDialog();
-                        };
-                    })(uid, user);
-                    list.appendChild(div);
-                }
-                pending--;
-                if (pending === 0 && list.children.length === 0) {
-                    list.innerHTML = '<div style="padding:20px; text-align:center;">Нет доступных контактов</div>';
-                }
-            });
+        contactsCache = contacts || {};
+        contactsCacheTime = Date.now();
+        renderContactsList(contactsCache);
+    }).catch(function() {
+        list.innerHTML = '<div style="padding:20px; text-align:center;">Ошибка загрузки контактов</div>';
+    });
+}
+
+function renderContactsList(contacts) {
+    var list = document.getElementById('users-list');
+    if (!list) return;
+    
+    if (!contacts || Object.keys(contacts).length === 0) {
+        list.innerHTML = '<div style="padding:20px; text-align:center;">Нет контактов. Добавьте через поиск 🔍</div>';
+        return;
+    }
+    
+    var userIds = Object.keys(contacts);
+    list.innerHTML = '';
+    var pending = userIds.length;
+    
+    userIds.forEach(function(uid) {
+        database.ref('users/' + uid).once('value').then(function(userSnap) {
+            var user = userSnap.val();
+            if (user) {
+                var div = document.createElement('div');
+                div.className = 'user-item';
+                div.style.cursor = 'pointer';
+                var avatarStyle = user.avatar ? 'background-image:url('+user.avatar+');background-size:cover;' : '';
+                var avatarContent = user.avatar ? '' : '👤';
+                div.innerHTML = `
+                    <div class="avatar" style="${avatarStyle}">${avatarContent}</div>
+                    <div class="user-item-info">
+                        <h4>${escapeHtml(user.username)}</h4>
+                        <p style="font-size:11px; color:var(--text-muted);">${escapeHtml(user.userTag)}</p>
+                    </div>
+                `;
+                div.onclick = (function(uid, user) {
+                    return function() { 
+                        startPrivateChat(uid, user);
+                        var modal = document.getElementById('new-chat-modal');
+                        if (modal) modal.classList.add('hidden');
+                    };
+                })(uid, user);
+                list.appendChild(div);
+            }
+            pending--;
+            if (pending === 0 && list.children.length === 0) {
+                list.innerHTML = '<div style="padding:20px; text-align:center;">Нет доступных контактов</div>';
+            }
         });
     });
 }
 
 function showNewChatDialog() {
-    document.getElementById('new-chat-modal').classList.remove('hidden');
+    var modal = document.getElementById('new-chat-modal');
+    if (modal) modal.classList.remove('hidden');
     loadContacts();
 }
 
 function closeNewChatDialog() {
-    document.getElementById('new-chat-modal').classList.add('hidden');
+    var modal = document.getElementById('new-chat-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function startPrivateChat(otherUserId, otherUser) {
+    var chatId = generateChatId(currentUser.uid, otherUserId);
+    database.ref('chats/' + chatId).once('value').then(function(snapshot) {
+        if (!snapshot.exists()) {
+            return database.ref('chats/' + chatId).set({
+                type: 'private',
+                participants: [currentUser.uid, otherUserId],
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                lastMessage: '',
+                lastMessageTime: firebase.database.ServerValue.TIMESTAMP
+            }).then(function() {
+                return Promise.all([
+                    database.ref('userChats/' + currentUser.uid + '/' + chatId).set(true),
+                    database.ref('userChats/' + otherUserId + '/' + chatId).set(true)
+                ]);
+            });
+        }
+    }).then(function() {
+        closeNewChatDialog();
+        var chatData = { 
+            type: 'private', 
+            otherUserId: otherUserId, 
+            otherUser: otherUser, 
+            participants: [currentUser.uid, otherUserId] 
+        };
+        if (typeof openChat === 'function') {
+            openChat(chatId, chatData);
+        }
+        showNotification('Чат создан!', 'success');
+    }).catch(function(err) { 
+        console.error(err); 
+        showNotification('Ошибка', 'error'); 
+    });
 }
