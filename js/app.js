@@ -63,10 +63,16 @@ function loadUserData() {
                     slicesAvatar.textContent = '🥒';
                 }
             }
+            
+            // ===== ДОБАВЬ ЭТИ СТРОКИ ДЛЯ PUSH-УВЕДОМЛЕНИЙ =====
+            if (typeof requestNotificationPermission === 'function') {
+                requestNotificationPermission();
+                setupForegroundMessages();
+            }
+            // ================================================
         }
     });
 }
-
 function checkSuperAdmin() {
     database.ref('users/' + currentUser.uid + '/isSuperAdmin').once('value').then(function(snap) {
         isSuperAdmin = snap.val() === true;
