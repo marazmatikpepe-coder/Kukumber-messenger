@@ -1307,3 +1307,67 @@ input, textarea {
     -webkit-user-select: text;
     user-select: text;
 }
+/* Центрирование загрузочного экрана */
+.loading-screen .logo-container {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+
+.loading-screen .cucumber-logo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.loading-screen .cucumber-logo img {
+    display: block;
+    margin: 0 auto;
+}
+
+/* Центрирование экрана "Выберите чат" */
+.no-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: var(--text-light);
+}
+
+.no-chat .cucumber-large {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.no-chat .cucumber-large img {
+    display: block;
+    margin: 0 auto;
+}
+
+.no-chat h2 {
+    margin-top: 20px;
+    font-size: 18px;
+}
+
+/* Центрирование на экране авторизации */
+.auth-logo {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.auth-logo .cucumber-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.auth-logo .cucumber-icon img {
+    display: block;
+    margin: 0 auto;
+}
