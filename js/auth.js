@@ -96,7 +96,7 @@ async function login() {
     
     try {
         await auth.signInWithEmailAndPassword(email, password);
-        showNotification('Добро пожаловать в Kukumber!', 'success');
+        showNotification('Добро пожаловать в K messenger!', 'success');
         document.getElementById('login-email').value = '';
         document.getElementById('login-password').value = '';
     } catch (error) {
