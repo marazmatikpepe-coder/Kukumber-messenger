@@ -1269,3 +1269,29 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
     padding: 2px 6px;
     border-radius: 10px;
 }
+.cucumber-logo,
+.cucumber-icon,
+.cucumber-large {
+    position: relative;
+    text-indent: -9999px;
+}
+
+.cucumber-logo::before,
+.cucumber-icon::before,
+.cucumber-large::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('https://i.ibb.co/MyfV2nqs/image.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    text-indent: 0;
+}
+
+.cucumber-logo::before { width: 80px; height: 80px; }
+.cucumber-icon::before { width: 60px; height: 60px; }
+.cucumber-large::before { width: 100px; height: 100px; }
