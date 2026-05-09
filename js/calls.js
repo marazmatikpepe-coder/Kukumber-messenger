@@ -223,3 +223,86 @@ function stopRingtone() {
     if (ringtoneInterval) clearInterval(ringtoneInterval);
     ringtoneInterval = null;
 }
+// ========== НОВЫЕ ФУНКЦИИ ДЛЯ UI ==========
+let isMuted = false;
+let isSpeakerOn = false;
+let isMinimized = false;
+
+function minimizeCall() {
+    isMinimized = true;
+    document.getElementById('call-fullscreen').classList.add('hidden');
+    document.getElementById('call-minimized').classList.remove('hidden');
+}
+
+function restoreCall() {
+    isMinimized = false;
+    document.getElementById('call-fullscreen').classList.remove('hidden');
+    document.getElementById('call-minimized').classList.add('hidden');
+}
+
+function toggleCallMute() {
+    if (!localStream) return;
+    const audioTracks = localStream.getAudioTracks();
+    if (audioTracks.length) {
+        isMuted = !isMuted;
+        audioTracks.forEach(track => track.enabled = !isMuted);
+        const micBtn = document.getElementById('call-mic-btn');
+        if (isMuted) {
+            micBtn.classList.add('muted');
+        } else {
+            micBtn.classList.remove('muted');
+            // Анимация свечения при включении
+            const glow = document.getElementById('call-glow');
+            if (glow) {
+                glow.style.animation = 'none';
+                setTimeout(() => glow.style.animation = 'glowPulse 1.5s ease-out infinite', 10);
+            }
+        }
+    }
+}
+
+function toggleSpeaker() {
+    // Переключение на громкую связь
+    const audioElements = document.querySelectorAll('audio, video');
+    audioElements.forEach(el => {
+        if (el.srcObject) {
+            // В реальности нужно использовать audio output device
+            console.log('Переключение динамика');
+        }
+    });
+}
+
+// Переопределяем showCallModal для нового UI
+function showCallModal(isVideo) {
+    document.getElementById('call-modal').classList.remove('hidden');
+    document.getElementById('call-fullscreen').classList.remove('hidden');
+    document.getElementById('call-minimized').classList.add('hidden');
+    
+    if (!isVideo) {
+        document.getElementById('call-videos').classList.add('hidden');
+        document.getElementById('call-avatar-container').classList.remove('hidden');
+    } else {
+        document.getElementById('call-videos').classList.remove('hidden');
+        document.getElementById('call-avatar-container').classList.add('hidden');
+    }
+}
+
+// Обновляем таймер
+function startCallTimer() {
+    callSecondsCount = 0;
+    if (callTimerInterval) clearInterval(callTimerInterval);
+    callTimerInterval = setInterval(() => {
+        callSecondsCount++;
+        const mins = Math.floor(callSecondsCount/60).toString().padStart(2,'0');
+        const secs = (callSecondsCount%60).toString().padStart(2,'0');
+        const timeStr = `${mins}:${secs}`;
+        document.getElementById('call-timer').textContent = timeStr;
+        document.getElementById('minimized-timer').textContent = timeStr;
+    }, 1000);
+}
+
+// Обновляем имя в свёрнутом окне
+function updateCallName(name) {
+    document.getElementById('call-username').textContent = name;
+    document.getElementById('minimized-name').textContent = name;
+}
