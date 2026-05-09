@@ -545,7 +545,7 @@ function loadMessages(chatId) {
     
     if (messagesListener) messagesListener.off();
     
-    messagesListener = database.ref('messages/'+chatId).orderByChild('timestamp').limitToLast(100);
+    messagesListener = database.ref('messages/'+chatId).orderByChild('timestamp').limitToLast(20);
     messagesListener.on('child_added', function(snapshot) {
         var message = snapshot.val();
         var messageId = snapshot.key;
