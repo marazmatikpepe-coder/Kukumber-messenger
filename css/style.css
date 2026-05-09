@@ -1295,3 +1295,15 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .cucumber-logo::before { width: 80px; height: 80px; }
 .cucumber-icon::before { width: 60px; height: 60px; }
 .cucumber-large::before { width: 100px; height: 100px; }
+/* Отключаем выделение текста при долгом тапе на мобилках */
+* {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Разрешаем выделение в полях ввода */
+input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
+}
