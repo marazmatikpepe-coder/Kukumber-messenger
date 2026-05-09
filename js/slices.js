@@ -1,28 +1,21 @@
-// KUKUMBER SLICES - ПОЛНАЯ ОПТИМИЗИРОВАННАЯ ВЕРСИЯ
-// Фичи: кэширование, ленивая загрузка, бесконечная прокрутка, быстрый поиск
+// KUKUMBER SLICES - ПОЛНАЯ ОПТИМИЗИРОВАННАЯ ВЕРСИЯ (БЕЗ МЕРЦАНИЯ)
+// Фичи: кэширование, обновление без перерисовки, плавная работа
 
 // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
 var currentSlicesTab = 'feed';
 var pendingSliceFiles = [];
 var searchTimeout = null;
-var slicesListener = null;
+var slicesListenerRef = null;
 var openCommentsSliceId = null;
 var pendingLikeRequests = {};
 var pendingRepostRequests = {};
 
 // Кэши
-var slicesCache = [];
-var slicesRendered = new Set();
-var isLoadingMore = false;
+var slicesCache = {};
+var slicesOrder = [];
 var userProfileCache = {};
 var searchResultsCache = {};
-var loadedMessageIds = new Set();
-
-// Константы
 var PROFILE_CACHE_TTL = 60000;
-var SEARCH_CACHE_TTL = 30000;
-var SLICES_BATCH_SIZE = 5;
-var SLICES_LIMIT = 20;
 
 // ========== ФУНКЦИЯ ЗАГРУЗКИ НА ImgBB ==========
 if (typeof uploadToImgBB !== 'function') {
@@ -56,7 +49,7 @@ function playSliceCreateSound() {
     }
 }
 
-// ========== ЗАГРУЗКА ЛЕНТЫ (оптимизированная) ==========
+// ========== ЗАГРУЗКА ЛЕНТЫ (БЕЗ МЕРЦАНИЯ) ==========
 function loadSlices() {
     var feed = document.getElementById('slices-feed');
     if (!feed) return;
@@ -64,137 +57,145 @@ function loadSlices() {
     var searchInput = document.getElementById('slices-search-input');
     if (searchInput) searchInput.value = '';
     
-    if (slicesListener) slicesListener.off();
+    // Отключаем старый слушатель
+    if (slicesListenerRef) {
+        slicesListenerRef.off();
+    }
     
-    feed.innerHTML = '<div class="empty-slices"><span>🍕</span><p>Загрузка...</p></div>';
+    // Показываем заглушку только если нет постов
+    if (feed.children.length === 0) {
+        feed.innerHTML = '<div class="empty-slices"><span>🍕</span><p>Загрузка...</p></div>';
+    }
     
-    slicesListener = database.ref('slices').orderByChild('createdAt').limitToLast(SLICES_LIMIT);
-    slicesListener.on('value', function(snapshot) {
+    slicesListenerRef = database.ref('slices').orderByChild('createdAt').limitToLast(50);
+    slicesListenerRef.on('value', function(snapshot) {
         var slices = snapshot.val();
-        feed.innerHTML = '';
         
         if (!slices) {
-            feed.innerHTML = '<div class="empty-slices"><span>🍕</span><p>Пока нет постов</p><p>Будьте первым!</p></div>';
+            if (feed.innerHTML !== '<div class="empty-slices"><span>🍕</span><p>Пока нет постов</p><p>Будьте первым!</p></div>') {
+                feed.innerHTML = '<div class="empty-slices"><span>🍕</span><p>Пока нет постов</p><p>Будьте первым!</p></div>';
+            }
             return;
         }
         
-        var slicesArray = [];
+        // Собираем новые данные
+        var newSlicesMap = {};
+        var newSlicesArray = [];
         for (var id in slices) {
-            slicesArray.push({ id: id, data: slices[id] });
+            newSlicesMap[id] = slices[id];
+            newSlicesArray.push({ id: id, data: slices[id] });
         }
         
-        slicesArray.sort(function(a, b) {
+        newSlicesArray.sort(function(a, b) {
             if (a.data.pinned && !b.data.pinned) return -1;
             if (!a.data.pinned && b.data.pinned) return 1;
             return (b.data.createdAt || 0) - (a.data.createdAt || 0);
         });
         
-        slicesCache = slicesArray;
-        slicesRendered.clear();
+        var newOrder = newSlicesArray.map(function(s) { return s.id; });
         
-        // Рендерим партиями
-        renderSlicesBatch(0, SLICES_BATCH_SIZE);
-        setupInfiniteScroll();
+        // Проверяем, изменился ли список
+        var oldIds = Object.keys(slicesCache);
+        var needFullRebuild = false;
+        
+        if (oldIds.length !== newOrder.length) {
+            needFullRebuild = true;
+        } else {
+            for (var i = 0; i < newOrder.length; i++) {
+                if (oldIds[i] !== newOrder[i]) {
+                    needFullRebuild = true;
+                    break;
+                }
+            }
+        }
+        
+        if (needFullRebuild) {
+            // Полная перестройка
+            slicesCache = newSlicesMap;
+            slicesOrder = newOrder;
+            renderSlicesFull(newSlicesArray);
+        } else {
+            // Только обновление данных
+            var needUpdate = false;
+            for (var id in newSlicesMap) {
+                if (slicesCache[id]) {
+                    if (slicesCache[id].likesCount !== newSlicesMap[id].likesCount ||
+                        slicesCache[id].commentsCount !== newSlicesMap[id].commentsCount ||
+                        slicesCache[id].repostsCount !== newSlicesMap[id].repostsCount ||
+                        slicesCache[id].viewsCount !== newSlicesMap[id].viewsCount) {
+                        needUpdate = true;
+                        slicesCache[id] = newSlicesMap[id];
+                    }
+                } else {
+                    needUpdate = true;
+                    slicesCache[id] = newSlicesMap[id];
+                }
+            }
+            
+            if (needUpdate) {
+                updateSlicesData(newSlicesMap);
+            }
+        }
     });
 }
 
-function renderSlicesBatch(startIndex, batchSize) {
+function renderSlicesFull(slicesArray) {
     var feed = document.getElementById('slices-feed');
     if (!feed) return;
     
-    var endIndex = Math.min(startIndex + batchSize, slicesCache.length);
-    if (startIndex >= endIndex) return;
-    
-    var sliceBatch = slicesCache.slice(startIndex, endIndex);
-    var pending = sliceBatch.length;
-    
-    sliceBatch.forEach(function(slice) {
-        if (slicesRendered.has(slice.id)) {
-            pending--;
-            return;
-        }
-        
+    feed.innerHTML = '';
+    slicesArray.forEach(function(slice) {
         var likeRef = database.ref('sliceLikes/' + slice.id + '/' + currentUser.uid);
         likeRef.once('value').then(function(snap) {
             slice.data.userLiked = snap.exists();
             var card = createSliceCard(slice.id, slice.data);
             feed.appendChild(card);
-            slicesRendered.add(slice.id);
-            pending--;
-            
-            if (pending === 0 && endIndex < slicesCache.length) {
-                setTimeout(function() {
-                    renderSlicesBatch(endIndex, batchSize);
-                }, 150);
-            }
-        }).catch(function() {
-            pending--;
         });
     });
+    
+    if (feed.children.length === 0 && slicesArray.length === 0) {
+        feed.innerHTML = '<div class="empty-slices"><span>🍕</span><p>Пока нет постов</p><p>Будьте первым!</p></div>';
+    }
 }
 
-function setupInfiniteScroll() {
+function updateSlicesData(newSlicesMap) {
     var feed = document.getElementById('slices-feed');
     if (!feed) return;
     
-    var observer = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-            if (entry.isIntersecting && !isLoadingMore && slicesCache.length > 0) {
-                var lastCard = feed.querySelector('.slice-card:last-child');
-                if (lastCard && lastCard === entry.target) {
-                    loadMoreSlices();
-                }
-            }
-        });
-    }, { threshold: 0.1, rootMargin: '100px' });
-    
-    function observeLast() {
-        var lastCard = feed.querySelector('.slice-card:last-child');
-        if (lastCard) observer.observe(lastCard);
-    }
-    
-    var originalAppendChild = feed.appendChild;
-    feed.appendChild = function(node) {
-        originalAppendChild.call(feed, node);
-        observeLast();
-    };
-    feed.appendChild = originalAppendChild;
-    observeLast();
+    var cards = feed.querySelectorAll('.slice-card');
+    cards.forEach(function(card) {
+        var sliceId = card.getAttribute('data-slice-id');
+        var newData = newSlicesMap[sliceId];
+        if (newData) {
+            updateSliceCardData(card, sliceId, newData);
+        }
+    });
 }
 
-function loadMoreSlices() {
-    if (isLoadingMore) return;
-    isLoadingMore = true;
-    
-    if (slicesCache.length === 0) {
-        isLoadingMore = false;
-        return;
+function updateSliceCardData(card, sliceId, sliceData) {
+    // Обновляем лайки
+    var likeCountSpan = card.querySelector('.like-count');
+    if (likeCountSpan) {
+        likeCountSpan.textContent = sliceData.likesCount || 0;
     }
     
-    var oldestSlice = slicesCache[slicesCache.length - 1];
-    var oldestTimestamp = oldestSlice.data.createdAt;
+    // Обновляем комментарии
+    var commentCountSpan = card.querySelector('.comment-count');
+    if (commentCountSpan) {
+        commentCountSpan.textContent = sliceData.commentsCount || 0;
+    }
     
-    database.ref('slices').orderByChild('createdAt').endAt(oldestTimestamp - 1).limitToLast(SLICES_LIMIT).once('value').then(function(snapshot) {
-        var newSlices = snapshot.val();
-        if (newSlices) {
-            var newArray = [];
-            for (var id in newSlices) {
-                if (!slicesCache.some(function(s) { return s.id === id; })) {
-                    newArray.push({ id: id, data: newSlices[id] });
-                }
-            }
-            if (newArray.length > 0) {
-                newArray.sort(function(a, b) {
-                    return (b.data.createdAt || 0) - (a.data.createdAt || 0);
-                });
-                slicesCache = slicesCache.concat(newArray);
-                renderSlicesBatch(slicesCache.length - newArray.length, newArray.length);
-            }
-        }
-        isLoadingMore = false;
-    }).catch(function() {
-        isLoadingMore = false;
-    });
+    // Обновляем репосты
+    var repostCountSpan = card.querySelector('.repost-count');
+    if (repostCountSpan) {
+        repostCountSpan.textContent = sliceData.repostsCount || 0;
+    }
+    
+    // Обновляем просмотры
+    var viewsSpan = card.querySelector('.slice-views-count');
+    if (viewsSpan) {
+        viewsSpan.textContent = '👁️ ' + (sliceData.viewsCount || 0);
+    }
 }
 
 // ========== ПОЛУЧЕНИЕ ПРОФИЛЯ С КЭШЕМ ==========
@@ -216,7 +217,7 @@ function getUserProfileData(userId) {
     });
 }
 
-// ========== СОЗДАНИЕ КАРТОЧКИ ПОСТА (оптимизированное) ==========
+// ========== СОЗДАНИЕ КАРТОЧКИ ПОСТА ==========
 function createSliceCard(sliceId, sliceData) {
     var div = document.createElement('div');
     div.className = 'slice-card';
@@ -375,45 +376,50 @@ function createSliceCard(sliceId, sliceData) {
     return div;
 }
 
-// ========== ЛАЙКИ ==========
+// ========== ЛАЙКИ (ОБНОВЛЕНИЕ БЕЗ ПЕРЕЗАГРУЗКИ) ==========
 function likeSlice(sliceId) {
     if (pendingLikeRequests[sliceId]) return;
     pendingLikeRequests[sliceId] = true;
     
     var likeRef = database.ref('sliceLikes/' + sliceId + '/' + currentUser.uid);
-    var sliceRef = database.ref('slices/' + sliceId);
     var card = document.querySelector('.slice-card[data-slice-id="' + sliceId + '"]');
     
     likeRef.once('value').then(function(snap) {
         var isLiked = snap.exists();
+        var likeCountSpan = card ? card.querySelector('.like-count') : null;
+        var currentCount = likeCountSpan ? parseInt(likeCountSpan.textContent) || 0 : 0;
+        var newCount;
         
         if (isLiked) {
             likeRef.remove();
-            sliceRef.transaction(function(currentData) {
-                if (currentData) currentData.likesCount = Math.max((currentData.likesCount || 1) - 1, 0);
-                return currentData;
-            });
+            newCount = Math.max(currentCount - 1, 0);
+            database.ref('slices/' + sliceId + '/likesCount').set(newCount);
+            
             if (card) {
+                likeCountSpan.textContent = newCount;
                 var likeBtn = card.querySelector('.like-btn');
-                var likeCountSpan = card.querySelector('.like-count');
-                var currentCount = parseInt(likeCountSpan.textContent) || 0;
-                likeCountSpan.textContent = Math.max(currentCount - 1, 0);
-                likeBtn.innerHTML = '<img src="https://i.ibb.co/4wPS6NB6/7-B6-E9-A78-01-E0-4481-9135-005-C4-F238-FD8.png" style="width:24px; height:24px;"> <span class="like-count">' + Math.max(currentCount - 1, 0) + '</span>';
+                likeBtn.innerHTML = '<img src="https://i.ibb.co/4wPS6NB6/7-B6-E9-A78-01-E0-4481-9135-005-C4-F238-FD8.png" style="width:24px; height:24px;"> <span class="like-count">' + newCount + '</span>';
+                likeBtn.classList.remove('liked');
             }
         } else {
             likeRef.set(true);
-            sliceRef.transaction(function(currentData) {
-                if (currentData) currentData.likesCount = (currentData.likesCount || 0) + 1;
-                return currentData;
-            });
+            newCount = currentCount + 1;
+            database.ref('slices/' + sliceId + '/likesCount').set(newCount);
+            
             if (card) {
+                likeCountSpan.textContent = newCount;
                 var likeBtn = card.querySelector('.like-btn');
-                var likeCountSpan = card.querySelector('.like-count');
-                var currentCount = parseInt(likeCountSpan.textContent) || 0;
-                likeCountSpan.textContent = currentCount + 1;
-                likeBtn.innerHTML = '<img src="https://i.ibb.co/0HFsXGK/1-CD2632-B-7-DD7-46-D4-8920-FBBE5-B29-D34-D.png" style="width:24px; height:24px;"> <span class="like-count">' + (currentCount + 1) + '</span>';
+                likeBtn.innerHTML = '<img src="https://i.ibb.co/0HFsXGK/1-CD2632-B-7-DD7-46-D4-8920-FBBE5-B29-D34-D.png" style="width:24px; height:24px;"> <span class="like-count">' + newCount + '</span>';
+                likeBtn.classList.add('liked');
             }
         }
+        
+        // Обновляем кэш
+        if (slicesCache[sliceId]) {
+            slicesCache[sliceId].likesCount = newCount;
+            slicesCache[sliceId].userLiked = !isLiked;
+        }
+        
         setTimeout(function() { delete pendingLikeRequests[sliceId]; }, 500);
     }).catch(function() { delete pendingLikeRequests[sliceId]; });
 }
@@ -424,11 +430,22 @@ function repostSlice(sliceId) {
     pendingRepostRequests[sliceId] = true;
     
     var repostRef = database.ref('userReposts/' + currentUser.uid + '/' + sliceId);
+    var card = document.querySelector('.slice-card[data-slice-id="' + sliceId + '"]');
+    var repostCountSpan = card ? card.querySelector('.repost-count') : null;
+    var currentCount = repostCountSpan ? parseInt(repostCountSpan.textContent) || 0 : 0;
     
     repostRef.once('value').then(function(snap) {
         if (snap.exists()) {
             repostRef.remove();
-            database.ref('slices/' + sliceId + '/repostsCount').transaction(function(c) { return Math.max((c || 1) - 1, 0); });
+            var newCount = Math.max(currentCount - 1, 0);
+            database.ref('slices/' + sliceId + '/repostsCount').set(newCount);
+            
+            if (card && repostCountSpan) {
+                repostCountSpan.textContent = newCount;
+            }
+            showNotification('Репост удалён', 'info');
+            
+            // Удаляем репост из ленты
             var userRepostQuery = database.ref('slices').orderByChild('originalId').equalTo(sliceId);
             userRepostQuery.once('value').then(function(repostSnap) {
                 repostSnap.forEach(function(child) {
@@ -437,8 +454,6 @@ function repostSlice(sliceId) {
                     }
                 });
             });
-            showNotification('Репост удалён', 'info');
-            loadSlices();
         } else {
             database.ref('slices/' + sliceId).once('value').then(function(snapshot) {
                 var originalSlice = snapshot.val();
@@ -462,13 +477,24 @@ function repostSlice(sliceId) {
                 
                 database.ref('slices/').push(repostData).then(function() {
                     repostRef.set(true);
-                    database.ref('slices/' + sliceId + '/repostsCount').transaction(function(c) { return (c || 0) + 1; });
+                    var newCount = currentCount + 1;
+                    database.ref('slices/' + sliceId + '/repostsCount').set(newCount);
+                    
+                    if (card && repostCountSpan) {
+                        repostCountSpan.textContent = newCount;
+                    }
                     showNotification('Репостнуто!', 'success');
                     playSliceCreateSound();
-                    loadSlices();
                 });
             });
         }
+        
+        // Обновляем кэш
+        if (slicesCache[sliceId]) {
+            var newCount = snap.exists() ? Math.max((slicesCache[sliceId].repostsCount || 1) - 1, 0) : (slicesCache[sliceId].repostsCount || 0) + 1;
+            slicesCache[sliceId].repostsCount = newCount;
+        }
+        
         setTimeout(function() { delete pendingRepostRequests[sliceId]; }, 1000);
     }).catch(function() { delete pendingRepostRequests[sliceId]; });
 }
@@ -580,6 +606,22 @@ function addComment(sliceId, parentId) {
     newCommentRef.set(commentData).then(function() {
         if (textInput) textInput.value = '';
         database.ref('slices/' + sliceId + '/commentsCount').transaction(function(c) { return (c || 0) + 1; });
+        
+        // Обновляем счётчик комментариев в карточке
+        var card = document.querySelector('.slice-card[data-slice-id="' + sliceId + '"]');
+        if (card) {
+            var commentCountSpan = card.querySelector('.comment-count');
+            if (commentCountSpan) {
+                var newCount = (parseInt(commentCountSpan.textContent) || 0) + 1;
+                commentCountSpan.textContent = newCount;
+            }
+        }
+        
+        // Обновляем кэш
+        if (slicesCache[sliceId]) {
+            slicesCache[sliceId].commentsCount = (slicesCache[sliceId].commentsCount || 0) + 1;
+        }
+        
         loadComments(sliceId);
         showNotification('Комментарий добавлен', 'success');
     });
@@ -1020,7 +1062,6 @@ function setProfileBanner(colorOrUrl) {
             window.viewingProfileUserData.banner = colorOrUrl || null;
         }
         
-        // Обновляем кэш
         if (userProfileCache[userId]) {
             userProfileCache[userId].data.banner = colorOrUrl || null;
         }
@@ -1099,6 +1140,20 @@ function editProfileAvatar() {
                 userProfileCache[userId].data.avatar = avatarUrl;
             }
             
+            // Обновляем аватар в карточках слайсов
+            var cards = document.querySelectorAll('.slice-card');
+            cards.forEach(function(card) {
+                var authorDiv = card.querySelector('.slice-author');
+                if (authorDiv && authorDiv.getAttribute('onclick') && authorDiv.getAttribute('onclick').includes(userId)) {
+                    var avatarEl = authorDiv.querySelector('.avatar');
+                    if (avatarEl) {
+                        avatarEl.style.backgroundImage = 'url(' + avatarUrl + ')';
+                        avatarEl.style.backgroundSize = 'cover';
+                        avatarEl.textContent = '';
+                    }
+                }
+            });
+            
             // Перезагружаем профиль
             setTimeout(function() {
                 openUserProfile(userId);
@@ -1126,7 +1181,6 @@ function editProfileName() {
             if (window.viewingProfileUserId === currentUser.uid && typeof updateUserDisplay === 'function') {
                 updateUserDisplay();
             }
-            // Обновляем кэш
             if (userProfileCache[userId]) {
                 userProfileCache[userId].data.username = newName.trim();
             }
@@ -1244,7 +1298,7 @@ function formatSliceDate(timestamp) {
     return date.toLocaleDateString('ru-RU', {day:'2-digit', month:'2-digit', year:'2-digit'});
 }
 
-// ========== ПОИСК (оптимизированный) ==========
+// ========== ПОИСК ==========
 function searchByHashtag(tag) {
     var input = document.getElementById('slices-search-input');
     if (input) input.value = '#' + tag;
@@ -1270,59 +1324,46 @@ function performSearch() {
             return; 
         }
         
-        if (searchResultsCache[query]) {
-            renderSearchResults(searchResultsCache[query]);
-            return;
-        }
-        
         feed.innerHTML = '<div class="empty-slices"><span>🔍</span><p>Поиск...</p></div>';
         
         database.ref('slices').orderByChild('createdAt').limitToLast(200).once('value').then(function(snapshot) {
             var slices = snapshot.val();
             var results = [];
             
-            for (var id in slices) {
-                var slice = slices[id];
-                var match = false;
-                if (slice.text && slice.text.toLowerCase().includes(query)) match = true;
-                if (slice.hashtags && slice.hashtags.some(function(tag) { 
-                    return '#' + tag.toLowerCase().includes(query) || tag.toLowerCase().includes(query.replace('#', '')); 
-                })) match = true;
-                if (slice.authorName && slice.authorName.toLowerCase().includes(query.replace('@', ''))) match = true;
-                if (match) results.push({ id: id, data: slice });
+            if (slices) {
+                for (var id in slices) {
+                    var slice = slices[id];
+                    var match = false;
+                    if (slice.text && slice.text.toLowerCase().includes(query)) match = true;
+                    if (slice.hashtags && slice.hashtags.some(function(tag) { 
+                        return '#' + tag.toLowerCase().includes(query) || tag.toLowerCase().includes(query.replace('#', '')); 
+                    })) match = true;
+                    if (slice.authorName && slice.authorName.toLowerCase().includes(query.replace('@', ''))) match = true;
+                    if (match) results.push({ id: id, data: slice });
+                }
             }
             
-            searchResultsCache[query] = results;
-            renderSearchResults(results);
+            feed.innerHTML = '';
+            if (results.length === 0) { 
+                feed.innerHTML = '<div class="empty-slices"><span>🔍</span><p>Ничего не найдено</p></div>'; 
+                return; 
+            }
+            
+            results.sort(function(a, b) { 
+                return (b.data.createdAt || 0) - (a.data.createdAt || 0); 
+            });
+            
+            var pending = results.length;
+            results.forEach(function(result) {
+                var likeRef = database.ref('sliceLikes/' + result.id + '/' + currentUser.uid);
+                likeRef.once('value').then(function(snap) {
+                    result.data.userLiked = snap.exists();
+                    feed.appendChild(createSliceCard(result.id, result.data));
+                    pending--;
+                });
+            });
         });
     }, 300);
-}
-
-function renderSearchResults(results) {
-    var feed = document.getElementById('slices-feed');
-    if (!feed) return;
-    
-    feed.innerHTML = '';
-    if (results.length === 0) { 
-        feed.innerHTML = '<div class="empty-slices"><span>🔍</span><p>Ничего не найдено</p></div>'; 
-        return; 
-    }
-    
-    results.sort(function(a, b) { 
-        return (b.data.createdAt || 0) - (a.data.createdAt || 0); 
-    });
-    
-    var limited = results.slice(0, 50);
-    var pending = limited.length;
-    
-    limited.forEach(function(result) {
-        var likeRef = database.ref('sliceLikes/' + result.id + '/' + currentUser.uid);
-        likeRef.once('value').then(function(snap) {
-            result.data.userLiked = snap.exists();
-            feed.appendChild(createSliceCard(result.id, result.data));
-            pending--;
-        });
-    });
 }
 
 function searchSlices() {
@@ -1435,6 +1476,10 @@ function deleteSlice(sliceId) {
     database.ref('slices/' + sliceId).remove().then(function() {
         database.ref('sliceLikes/' + sliceId).remove();
         database.ref('sliceComments/' + sliceId).remove();
+        
+        // Удаляем из кэша
+        delete slicesCache[sliceId];
+        
         showNotification('Пост удалён', 'success');
         loadSlices();
     }).catch(function() { 
