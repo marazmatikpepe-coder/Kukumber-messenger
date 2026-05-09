@@ -248,3 +248,62 @@ function logout() {
         showNotification('Вы вышли', 'info');
     }).catch(function() { showNotification('Ошибка выхода', 'error'); });
 }
+// ========== PUSH-УВЕДОМЛЕНИЯ ==========
+async function requestNotificationPermission() {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+        console.log('Push-уведомления не поддерживаются');
+        return false;
+    }
+    
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+        console.log('Разрешение на уведомления не получено');
+        return false;
+    }
+    
+    try {
+        const messaging = firebase.messaging();
+        
+        // Регистрируем Service Worker
+        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        console.log('Service Worker зарегистрирован');
+        
+        // Получаем токен
+        const token = await messaging.getToken({
+            serviceWorkerRegistration: registration,
+            vapidKey: 'BJSObaY_-k70LbjMB89bpLyBV9zL4KhzzwbRpyIHjT6pjjOM09S7xDagdlMnTV4XiISYklhrVZNk3HetaTuL5a4'
+        });
+        
+        if (token) {
+            console.log('FCM Token:', token);
+            // Сохраняем токен в базе
+            if (currentUser) {
+                await database.ref('users/' + currentUser.uid + '/fcmToken').set(token);
+            }
+            return true;
+        }
+    } catch (err) {
+        console.error('Ошибка получения токена:', err);
+    }
+    return false;
+}
+
+// Обработка уведомлений когда приложение открыто
+function setupForegroundMessages() {
+    const messaging = firebase.messaging();
+    messaging.onMessage((payload) => {
+        console.log('Уведомление в активном окне:', payload);
+        // Показываем уведомление даже если сайт открыт
+        if (Notification.permission === 'granted') {
+            new Notification(payload.notification?.title || 'K Messenger', {
+                body: payload.notification?.body || 'Новое сообщение',
+                icon: 'https://i.ibb.co/jPd3zD4K/039-C01-D0-CD06-45-F1-8151-5-B9634-D4-CBFA.png'
+            });
+        }
+    });
+}
+
+// Вызови эти функции после входа пользователя
+// Например, в loadUserData() добавь:
+// requestNotificationPermission();
+// setupForegroundMessages();
