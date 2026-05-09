@@ -475,5 +475,13 @@
             setTheme(e.matches ? 'dark' : 'light');
         });
     </script>
+    <!-- Для Samsung Internet -->
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').then(() => {
+            console.log('Service Worker registered');
+        });
+    }
+</script>
 </body>
 </html>
