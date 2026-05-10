@@ -348,32 +348,41 @@
 
     <div id="add-members-modal" class="modal hidden"><div class="modal-content"><div class="modal-header"><h3>Добавить участников</h3><button onclick="closeAddMembersDialog()" class="btn-close">×</button></div><input type="text" id="add-members-search" placeholder="Поиск..." oninput="searchAddMembers()"><div id="add-members-list" class="users-list"></div></div></div>
     
-    <div id="create-slice-modal" class="modal hidden">
-        <div class="modal-content" style="max-width: 600px;">
-            <div class="modal-header">
-                <h3>🍕 Новый слайс</h3>
-                <button onclick="closeCreateSliceModal()" class="btn-close">×</button>
+  <div id="create-slice-modal" class="modal hidden">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3>🍕 Новый слайс</h3>
+            <button onclick="closeCreateSliceModal()" class="btn-close">×</button>
+        </div>
+        
+        <!-- ↓↓↓ ДОБАВЛЕННЫЙ БЛОК ВЫБОРА КАНАЛА ↓↓↓ -->
+        <div class="publish-as-selector" style="padding: 0 20px 10px 20px;">
+            <select id="publish-as-select" class="wizard-select" style="width: 100%; padding: 10px; border-radius: 12px; border: 2px solid var(--border);">
+                <option value="self">🥒 От себя</option>
+            </select>
+        </div>
+        <!-- ↑↑↑ ↑↑↑ -->
+        
+        <div id="slice-upload-area" class="slice-upload-area" onclick="addSliceMedia()">
+            <span>📷</span>
+            <p>Нажмите чтобы добавить фото или GIF</p>
+            <small>Можно несколько файлов</small>
+        </div>
+        <div id="slice-preview-container" class="slice-preview-container hidden">
+            <div class="slice-preview-header">
+                <span>📸 Медиафайлы (<span id="slice-preview-counter">0</span>)</span>
+                <button onclick="addSliceMedia()" class="slice-add-more">+ Добавить ещё</button>
             </div>
-            <div id="slice-upload-area" class="slice-upload-area" onclick="addSliceMedia()">
-                <span>📷</span>
-                <p>Нажмите чтобы добавить фото или GIF</p>
-                <small>Можно несколько файлов</small>
-            </div>
-            <div id="slice-preview-container" class="slice-preview-container hidden">
-                <div class="slice-preview-header">
-                    <span>📸 Медиафайлы (<span id="slice-preview-counter">0</span>)</span>
-                    <button onclick="addSliceMedia()" class="slice-add-more">+ Добавить ещё</button>
-                </div>
-                <div id="slice-preview-area" class="slice-preview-area"></div>
-            </div>
-            <textarea id="slice-text" class="slice-text-input" placeholder="Что у вас нового? #хештеги @упоминания" maxlength="5000"></textarea>
-            <input type="text" id="slice-hashtags-input" class="slice-hashtags-input" placeholder="#хештеги через пробел">
-            <div class="modal-buttons" style="padding: 15px;">
-                <button onclick="closeCreateSliceModal()" class="btn-secondary">Отмена</button>
-                <button onclick="publishSlice()" class="btn-primary">🍕 Опубликовать</button>
-            </div>
+            <div id="slice-preview-area" class="slice-preview-area"></div>
+        </div>
+        <textarea id="slice-text" class="slice-text-input" placeholder="Что у вас нового? #хештеги @упоминания" maxlength="5000"></textarea>
+        <input type="text" id="slice-hashtags-input" class="slice-hashtags-input" placeholder="#хештеги через пробел">
+        <div class="modal-buttons" style="padding: 15px;">
+            <button onclick="closeCreateSliceModal()" class="btn-secondary">Отмена</button>
+            <button onclick="publishSlice()" class="btn-primary">🍕 Опубликовать</button>
         </div>
     </div>
+</div>
     
     <div id="image-preview-modal" class="modal hidden">
         <div class="image-preview-container">
