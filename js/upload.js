@@ -380,10 +380,9 @@ function handleFileSelect(event) {
     
     if (pendingImages.length > 0) {
         currentImageIndex = 0;
-        showImagePreview();  // ← ВЫЗОВ функции, а не её определение
+        showImagePreview();  // ← ТОЛЬКО ЭТА СТРОКА, БЕЗ function showImagePreview() { ... }
     }
     
-    // ОЧИЩАЕМ input
     event.target.value = '';
 }
 async function sendAllGifs() {
