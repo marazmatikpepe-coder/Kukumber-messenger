@@ -2227,3 +2227,258 @@ async function createChannelFinal() {
         showNotification('Ошибка создания канала', 'error');
     }
 }
+// ========== СОЗДАНИЕ ГРУППЫ (МАСТЕР) ==========
+let groupWizardData = {
+    avatarFile: null,
+    name: '',
+    kname: '',
+    description: '',
+    isPublic: true,
+    members: [],
+    admins: []
+};
+
+function openCreateGroupWizard() {
+    closeCreateMenu();
+    resetGroupWizard();
+    document.getElementById('create-group-wizard').classList.remove('hidden');
+    document.getElementById('group-step-1-content').style.display = 'block';
+    document.getElementById('group-step-2-content').style.display = 'none';
+    updateGroupWizardSteps(1);
+    loadGroupContactsForWizard();
+}
+
+function closeGroupWizard() {
+    document.getElementById('create-group-wizard').classList.add('hidden');
+    resetGroupWizard();
+}
+
+function resetGroupWizard() {
+    groupWizardData = {
+        avatarFile: null,
+        name: '',
+        kname: '',
+        description: '',
+        isPublic: true,
+        members: [],
+        admins: []
+    };
+    document.getElementById('group-wizard-name').value = '';
+    document.getElementById('group-wizard-kname').value = '';
+    document.getElementById('group-wizard-desc').value = '';
+    document.querySelector('input[name="group-wizard-type"][value="public"]').checked = true;
+    document.getElementById('group-wizard-avatar').style.backgroundImage = '';
+    document.getElementById('group-wizard-avatar').textContent = '👥';
+    document.getElementById('group-selected-members').innerHTML = '';
+}
+
+function updateGroupWizardSteps(step) {
+    const steps = document.querySelectorAll('#create-group-wizard .wizard-step');
+    steps.forEach((s, i) => {
+        if (i + 1 <= step) s.classList.add('active');
+        else s.classList.remove('active');
+    });
+}
+
+function goToGroupStep1() {
+    document.getElementById('group-step-1-content').style.display = 'block';
+    document.getElementById('group-step-2-content').style.display = 'none';
+    updateGroupWizardSteps(1);
+}
+
+function goToGroupStep2() {
+    const name = document.getElementById('group-wizard-name').value.trim();
+    if (!name) {
+        showNotification('Введите название группы', 'error');
+        return;
+    }
+    groupWizardData.name = name;
+    groupWizardData.kname = document.getElementById('group-wizard-kname').value.trim().toLowerCase();
+    groupWizardData.description = document.getElementById('group-wizard-desc').value.trim();
+    groupWizardData.isPublic = document.querySelector('input[name="group-wizard-type"]:checked').value === 'public';
+    
+    document.getElementById('group-step-1-content').style.display = 'none';
+    document.getElementById('group-step-2-content').style.display = 'block';
+    updateGroupWizardSteps(2);
+    loadGroupContactsForWizard();
+}
+
+function previewGroupWizardAvatar(event) {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+        groupWizardData.avatarFile = file;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const preview = document.getElementById('group-wizard-avatar');
+            preview.style.backgroundImage = `url(${e.target.result})`;
+            preview.style.backgroundSize = 'cover';
+            preview.textContent = '';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function loadGroupContactsForWizard() {
+    const list = document.getElementById('group-wizard-members-list');
+    list.innerHTML = '<div class="loading-spinner">Загрузка контактов...</div>';
+    
+    database.ref('contacts/' + currentUser.uid).once('value').then(snapshot => {
+        const contacts = snapshot.val();
+        if (!contacts) {
+            list.innerHTML = '<div>Нет контактов</div>';
+            return;
+        }
+        list.innerHTML = '';
+        const userIds = Object.keys(contacts);
+        
+        userIds.forEach(uid => {
+            database.ref('users/' + uid).once('value').then(userSnap => {
+                const user = userSnap.val();
+                if (!user) return;
+                const isSelected = groupWizardData.members.includes(uid);
+                const div = document.createElement('div');
+                div.className = 'user-item';
+                div.innerHTML = `
+                    <div class="avatar" style="background-image: url(${user.avatar || ''}); background-size: cover;">${!user.avatar ? '👤' : ''}</div>
+                    <div class="user-item-info">
+                        <h4>${escapeHtml(user.username)}</h4>
+                        <small>${user.userTag ? '@' + user.userTag : ''}</small>
+                    </div>
+                    <button class="add-contact-btn" onclick="toggleGroupWizardMember('${uid}')">${isSelected ? '✓' : '+'}</button>
+                `;
+                list.appendChild(div);
+                
+                if (isSelected) {
+                    addGroupMemberToUI(uid, user.username, user.avatar);
+                }
+            });
+        });
+    });
+}
+
+function toggleGroupWizardMember(uid) {
+    const index = groupWizardData.members.indexOf(uid);
+    if (index > -1) {
+        groupWizardData.members.splice(index, 1);
+        const adminIndex = groupWizardData.admins.indexOf(uid);
+        if (adminIndex > -1) groupWizardData.admins.splice(adminIndex, 1);
+    } else {
+        groupWizardData.members.push(uid);
+    }
+    loadGroupContactsForWizard();
+}
+
+function addGroupMemberToUI(uid, username, avatar) {
+    const container = document.getElementById('group-selected-members');
+    const existing = document.querySelector(`.selected-member-chip[data-uid="${uid}"]`);
+    if (existing) return;
+    
+    const chip = document.createElement('div');
+    chip.className = 'selected-member-chip';
+    chip.setAttribute('data-uid', uid);
+    chip.innerHTML = `
+        <span>${escapeHtml(username)}</span>
+        <button class="make-admin-btn" onclick="makeGroupWizardAdmin('${uid}')">👑</button>
+        <button onclick="removeGroupWizardMember('${uid}')">&times;</button>
+    `;
+    container.appendChild(chip);
+}
+
+function removeGroupWizardMember(uid) {
+    const index = groupWizardData.members.indexOf(uid);
+    if (index > -1) groupWizardData.members.splice(index, 1);
+    const adminIndex = groupWizardData.admins.indexOf(uid);
+    if (adminIndex > -1) groupWizardData.admins.splice(adminIndex, 1);
+    
+    const chip = document.querySelector(`.selected-member-chip[data-uid="${uid}"]`);
+    if (chip) chip.remove();
+    loadGroupContactsForWizard();
+}
+
+function makeGroupWizardAdmin(uid) {
+    if (!groupWizardData.members.includes(uid)) {
+        showNotification('Сначала добавьте участника', 'error');
+        return;
+    }
+    if (!groupWizardData.admins.includes(uid)) {
+        groupWizardData.admins.push(uid);
+        showNotification('Администратор назначен', 'success');
+    } else {
+        const index = groupWizardData.admins.indexOf(uid);
+        groupWizardData.admins.splice(index, 1);
+        showNotification('Права администратора сняты', 'info');
+    }
+}
+
+function searchGroupWizardMembers() {
+    const query = document.getElementById('group-wizard-search').value.toLowerCase();
+    const items = document.querySelectorAll('#group-wizard-members-list .user-item');
+    items.forEach(item => {
+        const name = item.querySelector('h4')?.textContent.toLowerCase() || '';
+        item.style.display = name.includes(query) ? 'flex' : 'none';
+    });
+}
+
+async function createGroupFinal() {
+    showNotification('Создание группы...', 'info');
+    
+    let avatarUrl = '';
+    if (groupWizardData.avatarFile) {
+        try {
+            avatarUrl = await uploadToImgBB(groupWizardData.avatarFile);
+        } catch (err) {
+            showNotification('Ошибка загрузки аватарки', 'error');
+        }
+    }
+    
+    const chatId = 'group_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
+    const groupData = {
+        type: 'group',
+        name: groupWizardData.name,
+        kname: groupWizardData.kname || null,
+        description: groupWizardData.description,
+        avatar: avatarUrl || '',
+        isPublic: groupWizardData.isPublic,
+        members: { [currentUser.uid]: true },
+        admins: { [currentUser.uid]: true },
+        createdBy: currentUser.uid,
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        lastMessage: 'Группа создана',
+        lastMessageTime: firebase.database.ServerValue.TIMESTAMP,
+        pinnedMessage: null
+    };
+    
+    // Добавляем участников и админов
+    groupWizardData.members.forEach(uid => {
+        groupData.members[uid] = true;
+    });
+    groupWizardData.admins.forEach(uid => {
+        groupData.admins[uid] = true;
+    });
+    
+    try {
+        await database.ref('chats/' + chatId).set(groupData);
+        await database.ref('userChats/' + currentUser.uid + '/' + chatId).set(true);
+        
+        for (const uid of groupWizardData.members) {
+            await database.ref('userChats/' + uid + '/' + chatId).set(true);
+        }
+        
+        if (groupWizardData.kname) {
+            await database.ref('groupKnames/' + groupWizardData.kname).set(chatId);
+        }
+        
+        showNotification('Группа "' + groupWizardData.name + '" создана!', 'success');
+        closeGroupWizard();
+        loadChats();
+        setTimeout(() => {
+            database.ref('chats/' + chatId).once('value').then(snap => {
+                openChat(chatId, snap.val());
+            });
+        }, 500);
+    } catch (err) {
+        console.error(err);
+        showNotification('Ошибка создания группы', 'error');
+    }
+}
