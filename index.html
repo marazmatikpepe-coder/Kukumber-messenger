@@ -110,8 +110,7 @@
         <div id="chats-tab" class="tab-content">
             <div class="app-container">
                 <!-- Боковая панель -->
-                <aside class="sidebar" id="sidebar">
-                    <aside class="sidebar" id="sidebar">
+               <aside class="sidebar" id="sidebar">
     <div class="sidebar-close-btn" onclick="closeSidebar()">✕</div>
     <div class="sidebar-header">
         <div class="user-info" onclick="switchToTab('settings')">
@@ -122,30 +121,19 @@
             </div>
         </div>
     </div>
-    <!-- остальное -->
+    <div class="search-bar">
+        <input type="text" id="search-chats" placeholder="🔍 Поиск по чатам..." oninput="searchChats()">
+    </div>
+    <div class="create-buttons">
+        <button onclick="showNewChatDialog()" class="btn-create"><span>💬</span><span>Чат</span></button>
+        <button onclick="showCreateGroupDialog()" class="btn-create"><span>👥</span><span>Группа</span></button>
+        <button onclick="showCreateChannelDialog()" class="btn-create"><span>📢</span><span>Канал</span></button>
+        <button onclick="showGlobalSearch()" class="btn-create"><span>🔍</span><span>Найти</span></button>
+    </div>
+    <div class="chats-list" id="chats-list">
+        <div class="empty-chats"><p>Нет чатов</p></div>
+    </div>
 </aside>
-                    <div class="sidebar-header">
-                        <div class="user-info" onclick="switchToTab('settings')">
-                            <div class="avatar" id="user-avatar">🥒</div>
-                            <div class="user-details">
-                                <h3 id="current-username">Пользователь</h3>
-                                <span class="status online">В сети</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="search-bar">
-                        <input type="text" id="search-chats" placeholder="🔍 Поиск по чатам..." oninput="searchChats()">
-                    </div>
-                    <div class="create-buttons">
-                        <button onclick="showNewChatDialog()" class="btn-create"><span>💬</span><span>Чат</span></button>
-                        <button onclick="showCreateGroupDialog()" class="btn-create"><span>👥</span><span>Группа</span></button>
-                        <button onclick="showCreateChannelDialog()" class="btn-create"><span>📢</span><span>Канал</span></button>
-                        <button onclick="showGlobalSearch()" class="btn-create"><span>🔍</span><span>Найти</span></button>
-                    </div>
-                    <div class="chats-list" id="chats-list">
-                        <div class="empty-chats"><p>Нет чатов</p></div>
-                    </div>
-                </aside>
 
                 <!-- Область чата -->
                 <main class="chat-area" id="chat-area">
