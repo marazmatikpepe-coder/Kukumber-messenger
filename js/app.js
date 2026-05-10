@@ -313,3 +313,55 @@ function setupForegroundMessages() {
 // Например, в loadUserData() добавь:
 // requestNotificationPermission();
 // setupForegroundMessages();
+// ========== СВАЙПЫ МЕЖДУ ВКЛАДКАМИ ==========
+let touchStartX = 0;
+let touchEndX = 0;
+let touchStartY = 0;
+let touchEndY = 0;
+let isSwiping = false;
+
+const tabs = ['chats', 'reels', 'settings'];
+let currentTabIndex = 0;
+
+function getCurrentTabIndex() {
+    const activeTab = document.querySelector('.tab-content:not(.hidden)').id;
+    return tabs.indexOf(activeTab.replace('-tab', ''));
+}
+
+function switchToTabBySwipe(direction) {
+    let currentIdx = getCurrentTabIndex();
+    let newIdx = currentIdx + direction;
+    
+    if (newIdx >= 0 && newIdx < tabs.length) {
+        switchToTab(tabs[newIdx]);
+    }
+}
+
+document.getElementById('main-screen').addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+    isSwiping = true;
+}, { passive: true });
+
+document.getElementById('main-screen').addEventListener('touchend', function(e) {
+    if (!isSwiping) return;
+    
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+    
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    
+    // Горизонтальный свайп (игнорируем вертикальные)
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+        if (deltaX > 0) {
+            // Свайп вправо → предыдущая вкладка
+            switchToTabBySwipe(-1);
+        } else {
+            // Свайп влево → следующая вкладка
+            switchToTabBySwipe(1);
+        }
+    }
+    
+    isSwiping = false;
+}, { passive: true });
