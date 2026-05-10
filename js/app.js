@@ -432,3 +432,20 @@ function closeSidebar() {
     sidebar.classList.remove('open');
     if (menuBtn) menuBtn.style.opacity = '1';
 }
+// ========== СВАЙП ВЛЕВО ДЛЯ ЗАКРЫТИЯ ПАНЕЛИ ==========
+const sidebarElement = document.getElementById('sidebar');
+let sidebarSwipeStartX = 0;
+
+sidebarElement.addEventListener('touchstart', function(e) {
+    sidebarSwipeStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+
+sidebarElement.addEventListener('touchend', function(e) {
+    const sidebarSwipeEndX = e.changedTouches[0].screenX;
+    const deltaX = sidebarSwipeEndX - sidebarSwipeStartX;
+    
+    // Свайп влево (отрицательный) — закрыть панель
+    if (deltaX < -50) {
+        closeSidebar();
+    }
+}, { passive: true });
