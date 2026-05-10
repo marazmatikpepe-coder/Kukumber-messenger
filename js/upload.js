@@ -680,3 +680,13 @@ window.editProfileBanner = editProfileBanner;
 window.setProfileBanner = setProfileBanner;
 window.uploadProfileBannerImage = uploadProfileBannerImage;
 window.closeColorPickerModal = closeColorPickerModal;
+// Сброс состояния при проблемах
+function resetFileUpload() {
+    pendingImages = [];
+    pendingGifs = [];
+    currentImageIndex = 0;
+    var modal = document.getElementById('image-preview-modal');
+    if (modal) modal.classList.add('hidden');
+    var fileInput = document.getElementById('file-input');
+    if (fileInput) fileInput.value = '';
+}
