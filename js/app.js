@@ -411,3 +411,24 @@ document.getElementById('chat-area').addEventListener('touchend', function(e) {
 function openSidebar() {
     document.getElementById('sidebar').classList.add('open');
 }
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const menuBtn = document.querySelector('.mobile-menu-btn');
+    
+    sidebar.classList.toggle('open');
+    
+    // Скрываем/показываем кнопку меню при открытии панели
+    if (sidebar.classList.contains('open')) {
+        if (menuBtn) menuBtn.style.opacity = '0';
+    } else {
+        if (menuBtn) menuBtn.style.opacity = '1';
+    }
+}
+
+function closeSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const menuBtn = document.querySelector('.mobile-menu-btn');
+    
+    sidebar.classList.remove('open');
+    if (menuBtn) menuBtn.style.opacity = '1';
+}
