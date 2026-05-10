@@ -2122,3 +2122,76 @@ input:checked + .slider:before {
     cursor: pointer;
     font-weight: 600;
 }
+/* Канал/группа - иконка редактирования */
+.profile-banner-edit-btn {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.6);
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.profile-avatar-edit-btn {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    background: var(--forest);
+    border: none;
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+/* Админ-панель */
+.admin-panel {
+    padding: 10px;
+}
+
+.admin-panel .setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+}
+
+.admin-panel .setting-item:hover {
+    background: var(--background);
+}
+
+.admin-panel .setting-item.danger {
+    color: var(--error);
+}
+
+/* Выбор прав администратора */
+.admin-permissions {
+    padding: 15px;
+}
+
+.permission-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.permission-label {
+    font-size: 14px;
+}
+
+.permission-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
