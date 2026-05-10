@@ -346,8 +346,22 @@ var currentImageIndex = 0;
 var pendingGifs = [];
 
 function handleFileSelect(event) {
-    var files = Array.from(event.target.files);
-    if (!files.length) return;
+    var originalFiles = Array.from(event.target.files);
+    if (!originalFiles.length) return;
+    
+    // ФИКС ДЛЯ SAMSUNG: конвертируем файлы из галереи
+    var files = [];
+    for (var i = 0; i < originalFiles.length; i++) {
+        var file = originalFiles[i];
+        // Если файл не имеет типа, но имеет имя — это файл из галереи Samsung
+        if (!file.type && file.name && (file.name.match(/\.(jpg|jpeg|png|gif)$/i))) {
+            console.log('Samsung: конвертируем файл', file.name);
+            var newFile = new File([file], file.name, { type: 'image/jpeg' });
+            files.push(newFile);
+        } else {
+            files.push(file);
+        }
+    }
     
     console.log('Выбрано файлов:', files.length);
     
@@ -380,7 +394,7 @@ function handleFileSelect(event) {
     
     if (pendingImages.length > 0) {
         currentImageIndex = 0;
-        showImagePreview();  // ← ТОЛЬКО ЭТА СТРОКА, БЕЗ function showImagePreview() { ... }
+        showImagePreview();
     }
     
     event.target.value = '';
