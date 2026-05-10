@@ -1934,3 +1934,16 @@ function openCreateMenu() {
     // TODO: открыть меню создания (канал, группа, чат)
     showNotification('Меню создания в разработке', 'info');
 }
+// ========== МЕНЮ СОЗДАНИЯ ==========
+function openCreateMenu() {
+    document.getElementById('create-menu-modal').classList.remove('hidden');
+}
+
+function closeCreateMenu() {
+    document.getElementById('create-menu-modal').classList.add('hidden');
+}
+
+function openNewChatFromMenu() {
+    closeCreateMenu();
+    showNewChatDialog();
+}
