@@ -2846,3 +2846,196 @@ if (typeof formatSliceDate === 'undefined') {
         return date.toLocaleDateString('ru-RU');
     };
 }
+// ========== КРАСИВЫЙ ПРОФИЛЬ КАНАЛА/ГРУППЫ ==========
+function openChannelOrGroupProfile() {
+    if (!currentChatId || !currentChatUser) {
+        showNotification('Чат не выбран', 'error');
+        return;
+    }
+    
+    const chat = currentChatUser;
+    const isChannel = chat.type === 'channel';
+    const isGroup = chat.type === 'group';
+    const membersCount = Object.keys(chat.subscribers || chat.members || {}).length;
+    
+    // Создаем красивое модальное окно
+    let modalHtml = `
+        <div id="beauty-channel-profile" class="modal" style="z-index: 10001;">
+            <div class="profile-modal-content" style="max-width: 500px; border-radius: 24px; overflow: hidden;">
+                <div class="profile-banner" style="background: linear-gradient(135deg, #228B22, #556B2F); height: 120px; position: relative;">
+                    <button class="profile-close-btn" onclick="closeBeautyChannelProfile()" style="position: absolute; top: 10px; right: 15px; background: rgba(0,0,0,0.5); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer;">×</button>
+                </div>
+                <div class="profile-avatar-wrapper" style="display: flex; justify-content: center; margin-top: -40px;">
+                    <div class="profile-avatar" style="width: 80px; height: 80px; border-radius: 50%; background: var(--sage); border: 3px solid white; display: flex; align-items: center; justify-content: center; font-size: 40px; background-size: cover; background-position: center;">
+                        ${chat.avatar ? '' : (isChannel ? '📢' : '👥')}
+                    </div>
+                </div>
+                <div class="profile-info" style="text-align: center; padding: 15px;">
+                    <div class="profile-name-row" style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                        <h2 class="profile-name" style="font-size: 22px; color: var(--text-dark);">${escapeHtml(chat.name || (isChannel ? 'Канал' : 'Группа'))}</h2>
+                    </div>
+                    ${chat.kname ? `<div class="profile-username" style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">@${escapeHtml(chat.kname)}</div>` : ''}
+                    <div class="profile-subscribers" style="font-size: 13px; color: var(--text-muted); margin-top: 5px;">👥 ${membersCount} ${isChannel ? 'подписчиков' : 'участников'}</div>
+                    <div class="profile-status" style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">${isChannel ? (chat.isPublic ? '🌍 Публичный канал' : '🔒 Приватный канал') : (chat.isPublic ? '🌍 Публичная группа' : '🔒 Приватная группа')}</div>
+                    <p class="profile-bio" style="color: var(--text-light); margin-top: 8px; font-size: 14px;">${escapeHtml(chat.description || 'Нет описания')}</p>
+                </div>
+                
+                <div class="profile-tabs" style="display: flex; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+                    <button class="profile-tab-btn active" onclick="switchBeautyChannelTab('info')" style="flex: 1; padding: 12px; background: none; border: none; cursor: pointer; font-size: 14px;">ℹ️ Информация</button>
+                    <button class="profile-tab-btn" onclick="switchBeautyChannelTab('members')" style="flex: 1; padding: 12px; background: none; border: none; cursor: pointer; font-size: 14px;">👥 Участники</button>
+                </div>
+                
+                <div id="beauty-channel-content" class="profile-content" style="padding: 15px; max-height: 400px; overflow-y: auto;">
+                    <div class="profile-loading">Загрузка...</div>
+                </div>
+                
+                <div class="profile-actions" style="padding: 15px; border-top: 1px solid var(--border); display: flex; gap: 10px;">
+                    <button id="beauty-subscribe-btn" class="btn-primary" style="flex: 1;">${isChannel ? (chat.subscribers?.[currentUser.uid] ? 'Отписаться' : 'Подписаться') : (chat.members?.[currentUser.uid] ? 'Покинуть' : 'Вступить')}</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Удаляем старое окно если есть
+    const oldModal = document.getElementById('beauty-channel-profile');
+    if (oldModal) oldModal.remove();
+    
+    // Добавляем новое
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('beauty-channel-profile');
+    modal.classList.remove('hidden');
+    
+    // Устанавливаем аватарку, если есть
+    const avatarDiv = modal.querySelector('.profile-avatar');
+    if (chat.avatar) {
+        avatarDiv.style.backgroundImage = `url(${chat.avatar})`;
+        avatarDiv.style.backgroundSize = 'cover';
+        avatarDiv.textContent = '';
+    }
+    
+    // Настройка кнопки
+    const actionBtn = document.getElementById('beauty-subscribe-btn');
+    if (actionBtn) {
+        if (isChannel) {
+            const isSubscribed = chat.subscribers && chat.subscribers[currentUser.uid];
+            actionBtn.textContent = isSubscribed ? 'Отписаться' : 'Подписаться';
+            actionBtn.onclick = () => {
+                if (isSubscribed) {
+                    database.ref('chats/' + currentChatId + '/subscribers/' + currentUser.uid).remove()
+                        .then(() => database.ref('userChats/' + currentUser.uid + '/' + currentChatId).remove())
+                        .then(() => { showNotification('Вы отписались', 'info'); closeBeautyChannelProfile(); loadChats(); });
+                } else {
+                    database.ref('chats/' + currentChatId + '/subscribers/' + currentUser.uid).set(true)
+                        .then(() => database.ref('userChats/' + currentUser.uid + '/' + currentChatId).set(true))
+                        .then(() => { showNotification('Вы подписались!', 'success'); closeBeautyChannelProfile(); });
+                }
+            };
+        } else {
+            const isMember = chat.members && chat.members[currentUser.uid];
+            actionBtn.textContent = isMember ? 'Покинуть группу' : 'Вступить';
+            actionBtn.onclick = () => {
+                if (isMember) {
+                    database.ref('chats/' + currentChatId + '/members/' + currentUser.uid).remove()
+                        .then(() => database.ref('userChats/' + currentUser.uid + '/' + currentChatId).remove())
+                        .then(() => { showNotification('Вы покинули группу', 'info'); closeBeautyChannelProfile(); closeChat(); loadChats(); });
+                } else {
+                    database.ref('chats/' + currentChatId + '/members/' + currentUser.uid).set(true)
+                        .then(() => database.ref('userChats/' + currentUser.uid + '/' + currentChatId).set(true))
+                        .then(() => { showNotification('Вы вступили в группу!', 'success'); closeBeautyChannelProfile(); });
+                }
+            };
+        }
+    }
+    
+    // Загружаем информацию
+    loadBeautyChannelInfo();
+}
+
+function loadBeautyChannelInfo() {
+    const container = document.getElementById('beauty-channel-content');
+    if (!container) return;
+    
+    const chat = currentChatUser;
+    const isChannel = chat.type === 'channel';
+    
+    let infoHtml = `
+        <div style="padding: 10px;">
+            <div style="margin-bottom: 15px;">
+                <strong>📋 Описание</strong>
+                <p style="margin-top: 5px; color: var(--text-muted);">${escapeHtml(chat.description || 'Нет описания')}</p>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong>🔗 Тип</strong>
+                <p style="margin-top: 5px; color: var(--text-muted);">${isChannel ? (chat.isPublic ? 'Публичный канал' : 'Приватный канал') : (chat.isPublic ? 'Публичная группа' : 'Приватная группа')}</p>
+            </div>
+            ${chat.kname ? `
+            <div style="margin-bottom: 15px;">
+                <strong>🔖 K-name</strong>
+                <p style="margin-top: 5px; color: var(--text-muted);">@${escapeHtml(chat.kname)}</p>
+            </div>
+            ` : ''}
+            <div style="margin-bottom: 15px;">
+                <strong>📅 Создан</strong>
+                <p style="margin-top: 5px; color: var(--text-muted);">${chat.createdAt ? new Date(chat.createdAt).toLocaleDateString() : 'Неизвестно'}</p>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = infoHtml;
+    
+    // Подсвечиваем активную вкладку
+    document.querySelectorAll('#beauty-channel-profile .profile-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector('#beauty-channel-profile .profile-tab-btn:first-child').classList.add('active');
+}
+
+function switchBeautyChannelTab(tab) {
+    const container = document.getElementById('beauty-channel-content');
+    if (!container) return;
+    
+    const chat = currentChatUser;
+    const isChannel = chat.type === 'channel';
+    
+    // Подсветка кнопок
+    document.querySelectorAll('#beauty-channel-profile .profile-tab-btn').forEach((btn, i) => {
+        btn.classList.remove('active');
+        if ((tab === 'info' && i === 0) || (tab === 'members' && i === 1)) {
+            btn.classList.add('active');
+        }
+    });
+    
+    if (tab === 'info') {
+        loadBeautyChannelInfo();
+    } else if (tab === 'members') {
+        container.innerHTML = '<div class="profile-loading">Загрузка участников...</div>';
+        
+        const members = chat.subscribers || chat.members || {};
+        const memberIds = Object.keys(members);
+        
+        if (memberIds.length === 0) {
+            container.innerHTML = '<div class="profile-empty">Нет участников</div>';
+            return;
+        }
+        
+        container.innerHTML = '';
+        memberIds.forEach(uid => {
+            database.ref('users/' + uid).once('value').then(userSnap => {
+                const user = userSnap.val();
+                if (!user) return;
+                const div = document.createElement('div');
+                div.className = 'member-item';
+                div.style.cssText = 'display:flex; align-items:center; gap:12px; padding:10px; border-bottom:1px solid var(--border); cursor:pointer;';
+                div.onclick = () => openUserProfile(uid);
+                div.innerHTML = `
+                    <div class="avatar" style="background-image: url(${user.avatar || ''}); background-size: cover; width:40px; height:40px; border-radius:50%;">${!user.avatar ? '👤' : ''}</div>
+                    <div style="flex:1;"><strong>${escapeHtml(user.username)}</strong></div>
+                `;
+                container.appendChild(div);
+            });
+        });
+    }
+}
+
+function closeBeautyChannelProfile() {
+    const modal = document.getElementById('beauty-channel-profile');
+    if (modal) modal.remove();
+}
