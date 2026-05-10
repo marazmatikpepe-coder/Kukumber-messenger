@@ -1344,53 +1344,34 @@ function showCreateSliceModal() {
     var previewContainer = document.getElementById('slice-preview-container');
     if (previewContainer) previewContainer.classList.add('hidden');
     updateSlicePreviewCounter();
+    
+    // ЗАГРУЖАЕМ КАНАЛЫ ДЛЯ ВЫБОРА
+    loadUserChannelsForPublish();
 }
 
-function closeCreateSliceModal() { var modal = document.getElementById('create-slice-modal'); if (modal) modal.classList.add('hidden'); }
-
-function addSliceMedia() {
-    var input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*,image/gif';
-    input.multiple = true;
-    input.onchange = function(e) {
-        var files = Array.from(e.target.files);
-        files.forEach(function(file) {
-            if (file.size > 15 * 1024 * 1024) { showNotification('Файл слишком большой (макс. 15MB)', 'error'); return; }
-            pendingSliceFiles.push(file);
-        });
-        updateSlicePreview();
-    };
-    input.click();
+function loadUserChannelsForPublish() {
+    var select = document.getElementById('publish-as-select');
+    if (!select) return;
+    
+    select.innerHTML = '<option value="self">🥒 ' + (currentUserData?.username || 'Я') + '</option>';
+    
+    database.ref('userChats/' + currentUser.uid).once('value').then(function(snapshot) {
+        var userChats = snapshot.val();
+        if (!userChats) return;
+        
+        for (var chatId in userChats) {
+            database.ref('chats/' + chatId).once('value').then(function(chatSnap) {
+                var chat = chatSnap.val();
+                if (chat && chat.type === 'channel' && chat.admins && chat.admins[currentUser.uid]) {
+                    var option = document.createElement('option');
+                    option.value = chatId;
+                    option.textContent = '📢 ' + (chat.name || 'Канал');
+                    select.appendChild(option);
+                }
+            });
+        }
+    });
 }
-
-function updateSlicePreview() {
-    if (pendingSliceFiles.length === 0) {
-        var uploadArea = document.getElementById('slice-upload-area');
-        if (uploadArea) uploadArea.style.display = '';
-        var previewContainer = document.getElementById('slice-preview-container');
-        if (previewContainer) previewContainer.classList.add('hidden');
-        return;
-    }
-    var uploadArea = document.getElementById('slice-upload-area');
-    if (uploadArea) uploadArea.style.display = 'none';
-    var previewContainer = document.getElementById('slice-preview-container');
-    if (previewContainer) previewContainer.classList.remove('hidden');
-    var previewArea = document.getElementById('slice-preview-area');
-    if (previewArea) {
-        previewArea.innerHTML = '';
-        pendingSliceFiles.forEach(function(file, idx) {
-            var reader = new FileReader();
-            reader.onload = function(e) {
-                var isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
-                var div = document.createElement('div');
-                div.className = 'slice-preview-item';
-                div.innerHTML = `<img src="${e.target.result}" class="slice-preview-img"><button class="slice-preview-remove" onclick="removeSliceMedia(${idx})">×</button>${isGif ? '<span class="slice-preview-gif-badge">GIF</span>' : ''}`;
-                previewArea.appendChild(div);
-            };
-            reader.readAsDataURL(file);
-        });
-    }
     updateSlicePreviewCounter();
 }
 
