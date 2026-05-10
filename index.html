@@ -577,22 +577,6 @@
             .catch(err => console.error('SW FCM ошибка:', err));
     }
 </script>
-        <!-- Firebase Messaging -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
-    
-    <!-- Service Workers для PWA и уведомлений -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
-                .then(reg => console.log('SW PWA готов:', reg))
-                .catch(err => console.error('SW PWA ошибка:', err));
-            
-            navigator.serviceWorker.register('./firebase-messaging-sw.js')
-                .then(reg => console.log('SW FCM готов:', reg))
-                .catch(err => console.error('SW FCM ошибка:', err));
-        }
-    </script>
-
     <!-- ↓↓↓ ФИКС ДЛЯ SAMSUNG ↓↓↓ -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
