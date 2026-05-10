@@ -2,7 +2,8 @@
   "name": "K Messenger",
   "short_name": "KMsg",
   "description": "Свежее общение каждый день 🔑",
-  "start_url": "/",
+  "start_url": "/Kukumber-messenger/",
+  "scope": "/Kukumber-messenger/",
   "display": "standalone",
   "theme_color": "#228B22",
   "background_color": "#228B22",
@@ -21,14 +22,4 @@
       "purpose": "any maskable"
     }
   ]
-}
-{
-  "name": "K Messenger",
-  "short_name": "KMsg",
-  "start_url": "/kukumber-messenger/",
-  "scope": "/kukumber-messenger/",
-  "display": "standalone",
-  "theme_color": "#228B22",
-  "background_color": "#228B22",
-  "icons": [...]
 }
