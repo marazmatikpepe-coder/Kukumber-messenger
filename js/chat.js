@@ -2756,17 +2756,23 @@ function leaveGroup(chatId) {
         });
 }
 // chat.js - добавьте в конец файла
+// chat.js - замените существующую функцию на эту
 function openChannelOrGroupProfile() {
     if (!currentChatId || !currentChatUser) {
         showNotification('Чат не выбран', 'error');
         return;
     }
     
-    // Просто показываем информационное окно
-    var modal = document.getElementById('chat-info-modal');
-    if (modal) {
-        showChatInfo(); // эта функция уже есть
+    // Открываем красивый профиль канала/группы
+    if (typeof openChannelProfile === 'function') {
+        openChannelProfile(currentChatId);
     } else {
-        showNotification('Информация о чате: ' + (currentChatUser.name || 'Чат'), 'info');
+        // fallback - старое окно
+        var modal = document.getElementById('chat-info-modal');
+        if (modal) {
+            showChatInfo();
+        } else {
+            showNotification('Информация о чате: ' + (currentChatUser.name || 'Чат'), 'info');
+        }
     }
 }
