@@ -1379,6 +1379,48 @@ function updateSlicePreviewCounter() {
     if (counter) counter.textContent = pendingSliceFiles.length; 
 }
 
+// ========== ОБНОВЛЕНИЕ ПРЕДПРОСМОТРА ФАЙЛОВ ==========
+function updateSlicePreview() {
+    var previewContainer = document.getElementById('slice-preview-container');
+    var uploadArea = document.getElementById('slice-upload-area');
+    var previewArea = document.getElementById('slice-preview-area');
+    var counterSpan = document.getElementById('slice-preview-counter');
+    
+    if (!previewArea) return;
+    
+    if (pendingSliceFiles.length === 0) {
+        // Нет файлов — показываем область загрузки
+        if (uploadArea) uploadArea.style.display = '';
+        if (previewContainer) previewContainer.classList.add('hidden');
+        if (counterSpan) counterSpan.textContent = '0';
+        return;
+    }
+    
+    // Есть файлы — показываем предпросмотр
+    if (uploadArea) uploadArea.style.display = 'none';
+    if (previewContainer) previewContainer.classList.remove('hidden');
+    if (counterSpan) counterSpan.textContent = pendingSliceFiles.length;
+    
+    // Очищаем и перерисовываем предпросмотр
+    previewArea.innerHTML = '';
+    
+    pendingSliceFiles.forEach(function(file, idx) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+            var div = document.createElement('div');
+            div.className = 'slice-preview-item';
+            div.setAttribute('data-index', idx);
+            div.innerHTML = `
+                <img src="${e.target.result}" class="slice-preview-img">
+                <button class="slice-preview-remove" onclick="removeSliceMedia(${idx})">×</button>
+                ${isGif ? '<span class="slice-preview-gif-badge">GIF</span>' : ''}
+            `;
+            previewArea.appendChild(div);
+        };
+        reader.readAsDataURL(file);
+    });
+}
 function removeSliceMedia(index) { 
     pendingSliceFiles.splice(index, 1); 
     updateSlicePreview(); 
