@@ -1717,3 +1717,53 @@ document.head.appendChild(chatStyles);
 
 // Инициализация
 initChatSounds();
+function searchGlobalUsers() {
+    const query = document.getElementById('global-search-input').value.toLowerCase();
+    const container = document.getElementById('global-users-list');
+    
+    if (!query) {
+        container.innerHTML = '<div>Введите имя или @юзернейм</div>';
+        return;
+    }
+    
+    database.ref('users').once('value').then(snapshot => {
+        const users = snapshot.val();
+        const results = [];
+        
+        for (let uid in users) {
+            if (uid === currentUser.uid) continue;
+            const user = users[uid];
+            const username = (user.username || '').toLowerCase();
+            const userTag = (user.userTag || '').toLowerCase();
+            
+            if (username.includes(query) || userTag.includes(query.replace('@', ''))) {
+                results.push({ uid, ...user });
+            }
+        }
+        
+        renderGlobalSearchResults(results);
+    });
+}
+
+function renderGlobalSearchResults(users) {
+    const container = document.getElementById('global-users-list');
+    if (!users.length) {
+        container.innerHTML = '<div>Ничего не найдено</div>';
+        return;
+    }
+    
+    container.innerHTML = '';
+    users.forEach(user => {
+        const div = document.createElement('div');
+        div.className = 'user-item';
+        div.innerHTML = `
+            <div class="avatar" style="background-image: url(${user.avatar || ''}); background-size: cover;">${!user.avatar ? '👤' : ''}</div>
+            <div class="user-item-info">
+                <h4>${escapeHtml(user.username)}</h4>
+                <small style="color: var(--text-muted);">${escapeHtml(user.userTag || '@' + user.username.toLowerCase())}</small>
+            </div>
+            <button class="add-contact-btn" onclick="addToContacts('${user.uid}', '${escapeHtml(user.username)}')">➕ Добавить</button>
+        `;
+        container.appendChild(div);
+    });
+}
