@@ -1459,5 +1459,49 @@ async function publishSlice() {
     }
 }
 
+// ========== ЗАКРЫТИЕ МОДАЛЬНОГО ОКНА СОЗДАНИЯ СЛАЙСА ==========
+function closeCreateSliceModal() {
+    var modal = document.getElementById('create-slice-modal');
+    if (modal) modal.classList.add('hidden');
+    pendingSliceFiles = [];
+    var previewArea = document.getElementById('slice-preview-area');
+    if (previewArea) previewArea.innerHTML = '';
+    var textInput = document.getElementById('slice-text');
+    if (textInput) textInput.value = '';
+    var hashtagsInput = document.getElementById('slice-hashtags-input');
+    if (hashtagsInput) hashtagsInput.value = '';
+    var uploadArea = document.getElementById('slice-upload-area');
+    if (uploadArea) uploadArea.style.display = '';
+    var previewContainer = document.getElementById('slice-preview-container');
+    if (previewContainer) previewContainer.classList.add('hidden');
+}
+
+// ========== ДОБАВЛЕНИЕ МЕДИА В СЛАЙС ==========
+function addSliceMedia() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,image/gif';
+    input.multiple = true;
+    input.onchange = function(e) {
+        var files = Array.from(e.target.files);
+        files.forEach(function(file) {
+            if (file.size > 15 * 1024 * 1024) { 
+                showNotification('Файл слишком большой (макс. 15MB)', 'error'); 
+                return; 
+            }
+            pendingSliceFiles.push(file);
+        });
+        updateSlicePreview();
+    };
+    input.click();
+}
+
 // Инициализация звуков
 if (typeof initSliceSound === 'function') initSliceSound();
+
+// Экспорт в глобальную область
+window.closeCreateSliceModal = closeCreateSliceModal;
+window.addSliceMedia = addSliceMedia;
+window.removeSliceMedia = removeSliceMedia;
+window.showCreateSliceModal = showCreateSliceModal;
+window.publishSlice = publishSlice;
