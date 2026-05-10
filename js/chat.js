@@ -2502,39 +2502,58 @@ function openChannelProfile(chatId) {
         const isSubscribed = chat.subscribers && chat.subscribers[currentUser.uid];
         const isMember = chat.members && chat.members[currentUser.uid];
         
-        // Заполняем данные
-        document.getElementById('channel-profile-name').textContent = chat.name || (isChannel ? 'Канал' : 'Группа');
-        document.getElementById('channel-profile-kname').textContent = chat.kname ? '@' + chat.kname : '';
-        document.getElementById('channel-profile-desc').textContent = chat.description || 'Нет описания';
-        document.getElementById('channel-profile-type').textContent = isChannel ? (chat.isPublic ? '🌍 Публичный канал' : '🔒 Приватный канал') : (chat.isPublic ? '🌍 Публичная группа' : '🔒 Приватная группа');
+        // ⚠️ ПРОВЕРКА: существует ли модальное окно в DOM?
+        const modal = document.getElementById('channel-profile-modal');
+        if (!modal) {
+            console.error('Ошибка: channel-profile-modal не найден в DOM');
+            showNotification('Ошибка: окно профиля не найдено', 'error');
+            return;
+        }
+        
+        // Заполняем данные с ПРОВЕРКАМИ
+        const nameEl = document.getElementById('channel-profile-name');
+        const knameEl = document.getElementById('channel-profile-kname');
+        const descEl = document.getElementById('channel-profile-desc');
+        const typeEl = document.getElementById('channel-profile-type');
+        const statsEl = document.getElementById('channel-profile-stats');
+        const avatarDiv = document.getElementById('channel-profile-avatar');
+        const bannerDiv = document.getElementById('channel-profile-banner');
+        
+        if (nameEl) nameEl.textContent = chat.name || (isChannel ? 'Канал' : 'Группа');
+        if (knameEl) knameEl.textContent = chat.kname ? '@' + chat.kname : '';
+        if (descEl) descEl.textContent = chat.description || 'Нет описания';
+        if (typeEl) typeEl.textContent = isChannel ? (chat.isPublic ? '🌍 Публичный канал' : '🔒 Приватный канал') : (chat.isPublic ? '🌍 Публичная группа' : '🔒 Приватная группа');
         
         const membersCount = Object.keys(chat.subscribers || chat.members || {}).length;
-        document.getElementById('channel-profile-stats').textContent = isChannel ? `👥 ${membersCount} подписчиков` : `👥 ${membersCount} участников`;
+        if (statsEl) statsEl.textContent = isChannel ? `👥 ${membersCount} подписчиков` : `👥 ${membersCount} участников`;
         
         // Аватар
-        const avatarDiv = document.getElementById('channel-profile-avatar');
-        if (chat.avatar) {
-            avatarDiv.style.backgroundImage = `url(${chat.avatar})`;
-            avatarDiv.style.backgroundSize = 'cover';
-            avatarDiv.textContent = '';
-        } else {
-            avatarDiv.style.backgroundImage = '';
-            avatarDiv.textContent = isChannel ? '📢' : '👥';
+        if (avatarDiv) {
+            if (chat.avatar) {
+                avatarDiv.style.backgroundImage = `url(${chat.avatar})`;
+                avatarDiv.style.backgroundSize = 'cover';
+                avatarDiv.textContent = '';
+            } else {
+                avatarDiv.style.backgroundImage = '';
+                avatarDiv.textContent = isChannel ? '📢' : '👥';
+            }
         }
         
         // Баннер
-        const bannerDiv = document.getElementById('channel-profile-banner');
-        if (chat.banner) {
-            if (chat.banner.startsWith('#')) {
-                bannerDiv.style.background = chat.banner;
-                bannerDiv.style.backgroundImage = 'none';
+        if (bannerDiv) {
+            if (chat.banner) {
+                if (chat.banner.startsWith('#')) {
+                    bannerDiv.style.background = chat.banner;
+                    bannerDiv.style.backgroundImage = 'none';
+                } else {
+                    bannerDiv.style.backgroundImage = `url(${chat.banner})`;
+                    bannerDiv.style.backgroundSize = 'cover';
+                    bannerDiv.style.backgroundPosition = 'center';
+                }
             } else {
-                bannerDiv.style.backgroundImage = `url(${chat.banner})`;
-                bannerDiv.style.backgroundSize = 'cover';
-                bannerDiv.style.backgroundPosition = 'center';
+                bannerDiv.style.background = 'linear-gradient(135deg, #228B22, #556B2F)';
+                bannerDiv.style.backgroundImage = 'none';
             }
-        } else {
-            bannerDiv.style.background = 'linear-gradient(135deg, #228B22, #556B2F)';
         }
         
         // Кнопки действий
@@ -2542,57 +2561,59 @@ function openChannelProfile(chatId) {
         const unsubscribeBtn = document.getElementById('channel-unsubscribe-btn');
         const leaveBtn = document.getElementById('channel-leave-btn');
         
-        subscribeBtn.style.display = 'none';
-        unsubscribeBtn.style.display = 'none';
-        leaveBtn.style.display = 'none';
+        if (subscribeBtn) subscribeBtn.style.display = 'none';
+        if (unsubscribeBtn) unsubscribeBtn.style.display = 'none';
+        if (leaveBtn) leaveBtn.style.display = 'none';
         
         if (isChannel) {
-            if (isSubscribed && !isAdmin) {
+            if (isSubscribed && !isAdmin && unsubscribeBtn) {
                 unsubscribeBtn.style.display = 'flex';
                 unsubscribeBtn.textContent = 'Отписаться';
                 unsubscribeBtn.onclick = () => unsubscribeFromChannel(chatId);
-            } else if (!isSubscribed && !isAdmin) {
+            } else if (!isSubscribed && !isAdmin && subscribeBtn) {
                 subscribeBtn.style.display = 'flex';
                 subscribeBtn.textContent = 'Подписаться';
                 subscribeBtn.onclick = () => subscribeToChannel(chatId);
             }
         } else {
-            if (isMember && !isAdmin) {
+            if (isMember && !isAdmin && leaveBtn) {
                 leaveBtn.style.display = 'flex';
                 leaveBtn.textContent = 'Покинуть группу';
                 leaveBtn.onclick = () => leaveGroup(chatId);
-            } else if (!isMember && !isAdmin) {
+            } else if (!isMember && !isAdmin && subscribeBtn) {
                 subscribeBtn.style.display = 'flex';
                 subscribeBtn.textContent = 'Вступить';
                 subscribeBtn.onclick = () => joinGroup(chatId);
             }
         }
         
-        // Вкладка админа (только для админов и владельца)
+        // Вкладка админа
         const adminTab = document.getElementById('channel-admin-tab');
         const bannerEditBtn = document.getElementById('channel-banner-edit');
         const avatarEditBtn = document.getElementById('channel-avatar-edit');
         
         if (isAdmin || isOwner) {
-            adminTab.style.display = 'flex';
-            bannerEditBtn.style.display = 'flex';
-            avatarEditBtn.style.display = 'flex';
-            bannerEditBtn.onclick = () => editChannelBanner(chatId);
-            avatarEditBtn.onclick = () => editChannelAvatar(chatId);
+            if (adminTab) adminTab.style.display = 'flex';
+            if (bannerEditBtn) bannerEditBtn.style.display = 'flex';
+            if (avatarEditBtn) avatarEditBtn.style.display = 'flex';
+            if (bannerEditBtn) bannerEditBtn.onclick = () => editChannelBanner(chatId);
+            if (avatarEditBtn) avatarEditBtn.onclick = () => editChannelAvatar(chatId);
         } else {
-            adminTab.style.display = 'none';
-            bannerEditBtn.style.display = 'none';
-            avatarEditBtn.style.display = 'none';
+            if (adminTab) adminTab.style.display = 'none';
+            if (bannerEditBtn) bannerEditBtn.style.display = 'none';
+            if (avatarEditBtn) avatarEditBtn.style.display = 'none';
         }
         
         // Открываем модальное окно
-        document.getElementById('channel-profile-modal').classList.remove('hidden');
+        modal.classList.remove('hidden');
         
         // Загружаем вкладку "Посты"
         switchChannelTab('posts');
+    }).catch(err => {
+        console.error('Ошибка загрузки профиля канала:', err);
+        showNotification('Ошибка загрузки профиля', 'error');
     });
 }
-
 function closeChannelProfile() {
     document.getElementById('channel-profile-modal').classList.add('hidden');
 }
