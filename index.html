@@ -110,7 +110,7 @@
         <div id="chats-tab" class="tab-content">
             <div class="app-container">
                 <!-- Боковая панель -->
-               <aside class="sidebar" id="sidebar">
+              <aside class="sidebar" id="sidebar">
     <div class="sidebar-close-btn" onclick="closeSidebar()">✕</div>
     <div class="sidebar-header">
         <div class="user-info" onclick="switchToTab('settings')">
@@ -121,15 +121,26 @@
             </div>
         </div>
     </div>
-    <div class="search-bar">
-        <input type="text" id="search-chats" placeholder="🔍 Поиск по чатам..." oninput="searchChats()">
+    
+    <!-- НОВЫЙ ПОИСК -->
+    <div class="search-container">
+        <div class="search-bar-new">
+            <input type="text" id="global-search-input" placeholder="🔍 Поиск по чатам, каналам, юзернеймам..." oninput="searchGlobalNew()">
+        </div>
+        <button class="floating-plus-btn" onclick="openCreateMenu()">
+            <img src="https://i.ibb.co/x0xmkpx/7-D0-F1412-849-D-4-CF7-BE3-F-53-BECD3-C2726.png" alt="+" style="width: 55px; height: 55px;">
+        </button>
     </div>
-    <div class="create-buttons">
-        <button onclick="showNewChatDialog()" class="btn-create"><span>💬</span><span>Чат</span></button>
-        <button onclick="showCreateGroupDialog()" class="btn-create"><span>👥</span><span>Группа</span></button>
-        <button onclick="showCreateChannelDialog()" class="btn-create"><span>📢</span><span>Канал</span></button>
-        <button onclick="showGlobalSearch()" class="btn-create"><span>🔍</span><span>Найти</span></button>
+    
+    <!-- РЕЗУЛЬТАТЫ ПОИСКА -->
+    <div id="global-search-results" class="global-search-results" style="display: none;">
+        <div class="search-results-header">
+            <span>Результаты поиска</span>
+            <button onclick="closeSearchResults()">✕</button>
+        </div>
+        <div id="search-results-list" class="search-results-list"></div>
     </div>
+    
     <div class="chats-list" id="chats-list">
         <div class="empty-chats"><p>Нет чатов</p></div>
     </div>
