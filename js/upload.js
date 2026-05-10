@@ -380,43 +380,10 @@ function handleFileSelect(event) {
     
     if (pendingImages.length > 0) {
         currentImageIndex = 0;
-       function showImagePreview() {
-    if (pendingImages.length === 0) return;
-    
-    var modal = document.getElementById('image-preview-modal');
-    if (!modal) {
-        console.error('Модальное окно image-preview-modal не найдено!');
-        showNotification('Ошибка: окно предпросмотра не найдено', 'error');
-        return;
+        showImagePreview();  // ← ВЫЗОВ функции, а не её определение
     }
     
-    var currentImage = pendingImages[currentImageIndex];
-    if (!currentImage || !currentImage.file) {
-        console.error('Нет файла для предпросмотра');
-        return;
-    }
-    
-    var reader = new FileReader();
-    reader.onload = function(e) {
-        var previewImg = document.getElementById('preview-image');
-        if (previewImg) previewImg.src = e.target.result;
-        var captionInput = document.getElementById('image-caption');
-        if (captionInput) captionInput.value = currentImage.caption || '';
-        var counter = document.getElementById('image-counter');
-        if (counter) counter.textContent = `${currentImageIndex + 1} / ${pendingImages.length}`;
-        updateNavButtons();
-    };
-    reader.onerror = function() {
-        console.error('Ошибка чтения файла');
-        showNotification('Ошибка чтения файла', 'error');
-    };
-    reader.readAsDataURL(currentImage.file);
-    
-    modal.classList.remove('hidden');
-    console.log('Модальное окно открыто', pendingImages.length, 'фото');
-}
-    
-    // ОЧИЩАЕМ input, чтобы можно было выбрать те же файлы снова
+    // ОЧИЩАЕМ input
     event.target.value = '';
 }
 async function sendAllGifs() {
