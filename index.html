@@ -526,14 +526,7 @@
             setTheme(e.matches ? 'dark' : 'light');
         });
     </script>
-    <!-- Для Samsung Internet -->
-<script>
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').then(() => {
-            console.log('Service Worker registered');
-        });
-    }
-</script>
+   
     <!-- МЕНЮ УВЕДОМЛЕНИЙ -->
 <div id="notifications-menu" class="modal hidden">
     <div class="modal-content" style="max-width: 500px; border-radius: 20px; overflow: hidden;">
