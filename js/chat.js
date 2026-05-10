@@ -1947,3 +1947,283 @@ function openNewChatFromMenu() {
     closeCreateMenu();
     showNewChatDialog();
 }
+// ========== СОЗДАНИЕ КАНАЛА (МАСТЕР) ==========
+let channelWizardData = {
+    avatarFile: null,
+    name: '',
+    kname: '',
+    description: '',
+    isPublic: true,
+    members: [],
+    admins: [],
+    commentsEnabled: true,
+    category: 'food'
+};
+
+function openCreateChannelWizard() {
+    closeCreateMenu();
+    resetChannelWizard();
+    document.getElementById('create-channel-wizard').classList.remove('hidden');
+    document.getElementById('channel-step-1').style.display = 'block';
+    document.getElementById('channel-step-2').style.display = 'none';
+    document.getElementById('channel-step-3').style.display = 'none';
+    updateWizardSteps(1);
+    loadChannelContactsForWizard();
+}
+
+function closeChannelWizard() {
+    document.getElementById('create-channel-wizard').classList.add('hidden');
+    resetChannelWizard();
+}
+
+function resetChannelWizard() {
+    channelWizardData = {
+        avatarFile: null,
+        name: '',
+        kname: '',
+        description: '',
+        isPublic: true,
+        members: [],
+        admins: [],
+        commentsEnabled: true,
+        category: 'food'
+    };
+    document.getElementById('channel-wizard-name').value = '';
+    document.getElementById('channel-wizard-kname').value = '';
+    document.getElementById('channel-wizard-desc').value = '';
+    document.querySelector('input[name="channel-wizard-type"][value="public"]').checked = true;
+    document.getElementById('channel-comments-enabled').checked = true;
+    document.getElementById('channel-category').value = 'food';
+    document.getElementById('channel-wizard-avatar').style.backgroundImage = '';
+    document.getElementById('channel-wizard-avatar').textContent = '📢';
+    document.getElementById('channel-selected-members').innerHTML = '';
+}
+
+function updateWizardSteps(step) {
+    const steps = document.querySelectorAll('.wizard-step');
+    steps.forEach((s, i) => {
+        if (i + 1 <= step) s.classList.add('active');
+        else s.classList.remove('active');
+    });
+}
+
+function goToChannelStep1() {
+    document.getElementById('channel-step-1').style.display = 'block';
+    document.getElementById('channel-step-2').style.display = 'none';
+    document.getElementById('channel-step-3').style.display = 'none';
+    updateWizardSteps(1);
+}
+
+function goToChannelStep2() {
+    const name = document.getElementById('channel-wizard-name').value.trim();
+    if (!name) {
+        showNotification('Введите название канала', 'error');
+        return;
+    }
+    channelWizardData.name = name;
+    channelWizardData.kname = document.getElementById('channel-wizard-kname').value.trim().toLowerCase();
+    channelWizardData.description = document.getElementById('channel-wizard-desc').value.trim();
+    channelWizardData.isPublic = document.querySelector('input[name="channel-wizard-type"]:checked').value === 'public';
+    
+    document.getElementById('channel-step-1').style.display = 'none';
+    document.getElementById('channel-step-2').style.display = 'block';
+    document.getElementById('channel-step-3').style.display = 'none';
+    updateWizardSteps(2);
+    loadChannelContactsForWizard();
+}
+
+function goToChannelStep3() {
+    document.getElementById('channel-step-1').style.display = 'none';
+    document.getElementById('channel-step-2').style.display = 'none';
+    document.getElementById('channel-step-3').style.display = 'block';
+    updateWizardSteps(3);
+}
+
+function previewChannelWizardAvatar(event) {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+        channelWizardData.avatarFile = file;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const preview = document.getElementById('channel-wizard-avatar');
+            preview.style.backgroundImage = `url(${e.target.result})`;
+            preview.style.backgroundSize = 'cover';
+            preview.textContent = '';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function loadChannelContactsForWizard() {
+    const list = document.getElementById('channel-wizard-members-list');
+    list.innerHTML = '<div class="loading-spinner">Загрузка контактов...</div>';
+    
+    database.ref('contacts/' + currentUser.uid).once('value').then(snapshot => {
+        const contacts = snapshot.val();
+        if (!contacts) {
+            list.innerHTML = '<div>Нет контактов</div>';
+            return;
+        }
+        list.innerHTML = '';
+        const userIds = Object.keys(contacts);
+        
+        userIds.forEach(uid => {
+            database.ref('users/' + uid).once('value').then(userSnap => {
+                const user = userSnap.val();
+                if (!user) return;
+                const isSelected = channelWizardData.members.includes(uid);
+                const isAdmin = channelWizardData.admins.includes(uid);
+                const div = document.createElement('div');
+                div.className = 'user-item';
+                div.innerHTML = `
+                    <div class="avatar" style="background-image: url(${user.avatar || ''}); background-size: cover;">${!user.avatar ? '👤' : ''}</div>
+                    <div class="user-item-info">
+                        <h4>${escapeHtml(user.username)}</h4>
+                        <small>${user.userTag ? '@' + user.userTag : ''}</small>
+                    </div>
+                    <button class="add-contact-btn" onclick="toggleChannelMember('${uid}')">${isSelected ? '✓' : '+'}</button>
+                `;
+                list.appendChild(div);
+                
+                if (isSelected) {
+                    addChannelMemberToUI(uid, user.username, user.avatar);
+                }
+            });
+        });
+    });
+}
+
+function toggleChannelMember(uid) {
+    const index = channelWizardData.members.indexOf(uid);
+    if (index > -1) {
+        channelWizardData.members.splice(index, 1);
+        // Если был админом, убрать из админов
+        const adminIndex = channelWizardData.admins.indexOf(uid);
+        if (adminIndex > -1) channelWizardData.admins.splice(adminIndex, 1);
+    } else {
+        channelWizardData.members.push(uid);
+    }
+    loadChannelContactsForWizard();
+}
+
+function addChannelMemberToUI(uid, username, avatar) {
+    const container = document.getElementById('channel-selected-members');
+    const existing = document.querySelector(`.selected-member-chip[data-uid="${uid}"]`);
+    if (existing) return;
+    
+    const chip = document.createElement('div');
+    chip.className = 'selected-member-chip';
+    chip.setAttribute('data-uid', uid);
+    chip.innerHTML = `
+        <span>${escapeHtml(username)}</span>
+        <button class="make-admin-btn" onclick="makeChannelAdmin('${uid}')">👑</button>
+        <button onclick="removeChannelMember('${uid}')">&times;</button>
+    `;
+    container.appendChild(chip);
+}
+
+function removeChannelMember(uid) {
+    const index = channelWizardData.members.indexOf(uid);
+    if (index > -1) channelWizardData.members.splice(index, 1);
+    const adminIndex = channelWizardData.admins.indexOf(uid);
+    if (adminIndex > -1) channelWizardData.admins.splice(adminIndex, 1);
+    
+    const chip = document.querySelector(`.selected-member-chip[data-uid="${uid}"]`);
+    if (chip) chip.remove();
+    loadChannelContactsForWizard();
+}
+
+function makeChannelAdmin(uid) {
+    if (!channelWizardData.members.includes(uid)) {
+        showNotification('Сначала добавьте участника', 'error');
+        return;
+    }
+    if (!channelWizardData.admins.includes(uid)) {
+        channelWizardData.admins.push(uid);
+        showNotification('Администратор назначен', 'success');
+    } else {
+        const index = channelWizardData.admins.indexOf(uid);
+        channelWizardData.admins.splice(index, 1);
+        showNotification('Права администратора сняты', 'info');
+    }
+}
+
+function searchChannelMembers() {
+    const query = document.getElementById('channel-wizard-search').value.toLowerCase();
+    const items = document.querySelectorAll('#channel-wizard-members-list .user-item');
+    items.forEach(item => {
+        const name = item.querySelector('h4')?.textContent.toLowerCase() || '';
+        item.style.display = name.includes(query) ? 'flex' : 'none';
+    });
+}
+
+async function createChannelFinal() {
+    channelWizardData.commentsEnabled = document.getElementById('channel-comments-enabled').checked;
+    channelWizardData.category = document.getElementById('channel-category').value;
+    
+    showNotification('Создание канала...', 'info');
+    
+    let avatarUrl = '';
+    if (channelWizardData.avatarFile) {
+        try {
+            avatarUrl = await uploadToImgBB(channelWizardData.avatarFile);
+        } catch (err) {
+            showNotification('Ошибка загрузки аватарки', 'error');
+        }
+    }
+    
+    const chatId = 'channel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
+    const channelData = {
+        type: 'channel',
+        name: channelWizardData.name,
+        kname: channelWizardData.kname || null,
+        description: channelWizardData.description,
+        avatar: avatarUrl || '',
+        isPublic: channelWizardData.isPublic,
+        commentsEnabled: channelWizardData.commentsEnabled,
+        category: channelWizardData.category,
+        subscribers: { [currentUser.uid]: true },
+        admins: { [currentUser.uid]: true },
+        members: { [currentUser.uid]: true },
+        createdBy: currentUser.uid,
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        lastMessage: 'Канал создан',
+        lastMessageTime: firebase.database.ServerValue.TIMESTAMP,
+        pinnedMessage: null
+    };
+    
+    // Добавляем участников и админов
+    channelWizardData.members.forEach(uid => {
+        channelData.subscribers[uid] = true;
+        channelData.members[uid] = true;
+    });
+    channelWizardData.admins.forEach(uid => {
+        channelData.admins[uid] = true;
+    });
+    
+    try {
+        await database.ref('chats/' + chatId).set(channelData);
+        await database.ref('userChats/' + currentUser.uid + '/' + chatId).set(true);
+        
+        for (const uid of channelWizardData.members) {
+            await database.ref('userChats/' + uid + '/' + chatId).set(true);
+        }
+        
+        if (channelWizardData.kname) {
+            await database.ref('channelKnames/' + channelWizardData.kname).set(chatId);
+        }
+        
+        showNotification('Канал "' + channelWizardData.name + '" создан!', 'success');
+        closeChannelWizard();
+        loadChats();
+        setTimeout(() => {
+            database.ref('chats/' + chatId).once('value').then(snap => {
+                openChat(chatId, snap.val());
+            });
+        }, 500);
+    } catch (err) {
+        console.error(err);
+        showNotification('Ошибка создания канала', 'error');
+    }
+}
