@@ -598,34 +598,8 @@
             .catch(err => console.error('SW FCM ошибка:', err));
     }
 </script>
-    <!-- ↓↓↓ ФИКС ДЛЯ SAMSUNG ↓↓↓ -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var attachBtn = document.getElementById('attach-file-btn');
-            var fileInput = document.getElementById('file-input');
-            
-            if (attachBtn && fileInput) {
-                var newBtn = attachBtn.cloneNode(true);
-                attachBtn.parentNode.replaceChild(newBtn, attachBtn);
-                
-                newBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    fileInput.value = '';
-                    fileInput.click();
-                });
-                
-                fileInput.addEventListener('change', function(e) {
-                    if (e.target.files && e.target.files.length > 0 && typeof window.handleFileSelect === 'function') {
-                        window.handleFileSelect(e);
-                    }
-                });
-            }
-        });
-    </script>
-    <!-- ↑↑↑ ФИКС ДЛЯ SAMSUNG ↑↑↑ -->
+       <!-- ↑↑↑ ФИКС ДЛЯ SAMSUNG ↑↑↑ -->
 
-</body>
-</html>
     <!-- МЕНЮ СОЗДАНИЯ -->
     <div id="create-menu-modal" class="modal hidden">
         <div class="modal-content" style="max-width: 400px; border-radius: 28px; overflow: hidden;">
@@ -675,7 +649,6 @@
                 </div>
             </div>
             
-            <!-- ШАГ 1: Основная информация -->
             <div id="channel-step-1" class="wizard-step-content">
                 <div class="avatar-upload">
                     <div class="avatar-preview" id="channel-wizard-avatar">📢</div>
@@ -701,59 +674,35 @@
                 <button class="wizard-next-btn" onclick="goToChannelStep2()">Далее →</button>
             </div>
             
-            <!-- ШАГ 2: Участники и администраторы -->
             <div id="channel-step-2" class="wizard-step-content" style="display: none;">
                 <h4>Добавить участников</h4>
                 <input type="text" id="channel-wizard-search" placeholder="Поиск по контактам..." class="wizard-input" oninput="searchChannelMembers()">
                 <div id="channel-wizard-members-list" class="users-list" style="max-height: 250px;"></div>
                 <div id="channel-selected-members" class="selected-members"></div>
-                
                 <h4 style="margin-top: 20px;">Администраторы</h4>
                 <div id="channel-admins-list" class="users-list" style="max-height: 150px;"></div>
                 <small style="display: block; margin: 10px 0; color: var(--text-muted);">Выберите участников для назначения администраторами</small>
-                
                 <div class="wizard-buttons">
                     <button class="wizard-back-btn-step" onclick="goToChannelStep1()">← Назад</button>
                     <button class="wizard-next-btn" onclick="goToChannelStep3()">Далее →</button>
                 </div>
             </div>
             
-            <!-- ШАГ 3: Настройки -->
             <div id="channel-step-3" class="wizard-step-content" style="display: none;">
                 <div class="setting-item">
-                    <div>
-                        <div class="setting-label">Комментарии</div>
-                        <div class="setting-desc">Разрешить комментарии к постам канала</div>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="channel-comments-enabled" checked>
-                        <span class="slider round"></span>
-                    </label>
+                    <div><div class="setting-label">Комментарии</div><div class="setting-desc">Разрешить комментарии к постам канала</div></div>
+                    <label class="switch"><input type="checkbox" id="channel-comments-enabled" checked><span class="slider round"></span></label>
                 </div>
-                
                 <div class="setting-item">
-                    <div>
-                        <div class="setting-label">Тематика канала</div>
-                        <div class="setting-desc">Выберите категорию</div>
-                    </div>
+                    <div><div class="setting-label">Тематика канала</div><div class="setting-desc">Выберите категорию</div></div>
                     <select id="channel-category" class="wizard-select">
-                        <option value="food">🍔 Еда</option>
-                        <option value="sport">🏀 Спорт</option>
-                        <option value="health">🥬 Польза</option>
-                        <option value="games">🎮 Игры</option>
-                        <option value="movies">🎥 Кино</option>
-                        <option value="social">📱 Соцсети</option>
-                        <option value="news">📢 Новости</option>
-                        <option value="ai">🔎 Нейросети</option>
-                        <option value="anime">✨ Аниме</option>
-                        <option value="books">📖 Книги</option>
-                        <option value="music">🎵 Музыка</option>
-                        <option value="cars">🚗 Машины</option>
-                        <option value="animals">🐭 Животные</option>
-                        <option value="custom">✏️ Своя</option>
+                        <option value="food">🍔 Еда</option><option value="sport">🏀 Спорт</option><option value="health">🥬 Польза</option>
+                        <option value="games">🎮 Игры</option><option value="movies">🎥 Кино</option><option value="social">📱 Соцсети</option>
+                        <option value="news">📢 Новости</option><option value="ai">🔎 Нейросети</option><option value="anime">✨ Аниме</option>
+                        <option value="books">📖 Книги</option><option value="music">🎵 Музыка</option><option value="cars">🚗 Машины</option>
+                        <option value="animals">🐭 Животные</option><option value="custom">✏️ Своя</option>
                     </select>
                 </div>
-                
                 <div class="wizard-buttons">
                     <button class="wizard-back-btn-step" onclick="goToChannelStep2()">← Назад</button>
                     <button class="wizard-create-btn" onclick="createChannelFinal()">Создать канал</button>
@@ -774,7 +723,6 @@
                 </div>
             </div>
             
-            <!-- ШАГ 1: Основная информация -->
             <div id="group-step-1-content" class="wizard-step-content">
                 <div class="avatar-upload">
                     <div class="avatar-preview" id="group-wizard-avatar">👥</div>
@@ -788,29 +736,20 @@
                 <small style="display: block; margin-top: -10px; margin-bottom: 15px; color: var(--text-muted);">Уникальная ссылка на группу (только латиница)</small>
                 <textarea id="group-wizard-desc" placeholder="Описание группы" rows="3" class="wizard-input"></textarea>
                 <div class="channel-type-select">
-                    <label class="channel-type-option">
-                        <input type="radio" name="group-wizard-type" value="public" checked> 🌍 Публичная
-                        <small>Можно найти в поиске, вступить может любой</small>
-                    </label>
-                    <label class="channel-type-option">
-                        <input type="radio" name="group-wizard-type" value="private"> 🔒 Приватная
-                        <small>Только по приглашению</small>
-                    </label>
+                    <label class="channel-type-option"><input type="radio" name="group-wizard-type" value="public" checked> 🌍 Публичная<small>Можно найти в поиске, вступить может любой</small></label>
+                    <label class="channel-type-option"><input type="radio" name="group-wizard-type" value="private"> 🔒 Приватная<small>Только по приглашению</small></label>
                 </div>
                 <button class="wizard-next-btn" onclick="goToGroupStep2()">Далее →</button>
             </div>
             
-            <!-- ШАГ 2: Участники и администраторы -->
             <div id="group-step-2-content" class="wizard-step-content" style="display: none;">
                 <h4>Добавить участников</h4>
                 <input type="text" id="group-wizard-search" placeholder="Поиск по контактам..." class="wizard-input" oninput="searchGroupWizardMembers()">
                 <div id="group-wizard-members-list" class="users-list" style="max-height: 250px;"></div>
                 <div id="group-selected-members" class="selected-members"></div>
-                
                 <h4 style="margin-top: 20px;">Администраторы</h4>
                 <div id="group-admins-list" class="users-list" style="max-height: 150px;"></div>
                 <small style="display: block; margin: 10px 0; color: var(--text-muted);">Выберите участников для назначения администраторами</small>
-                
                 <div class="wizard-buttons">
                     <button class="wizard-back-btn-step" onclick="goToGroupStep1()">← Назад</button>
                     <button class="wizard-create-btn" onclick="createGroupFinal()">Создать группу</button>
@@ -818,20 +757,6 @@
             </div>
         </div>
     </div>
-
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
-    
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
-                .then(reg => console.log('SW PWA готов:', reg))
-                .catch(err => console.error('SW PWA ошибка:', err));
-            
-            navigator.serviceWorker.register('./firebase-messaging-sw.js')
-                .then(reg => console.log('SW FCM готов:', reg))
-                .catch(err => console.error('SW FCM ошибка:', err));
-        }
-    </script>
 
 </body>
 </html>
