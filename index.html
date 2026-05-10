@@ -617,5 +617,40 @@
 
 </body>
 </html>
+<!-- МЕНЮ СОЗДАНИЯ -->
+<div id="create-menu-modal" class="modal hidden">
+    <div class="modal-content" style="max-width: 400px; border-radius: 28px; overflow: hidden;">
+        <div class="modal-header" style="padding: 16px 20px;">
+            <h3 style="margin: 0;">Создать</h3>
+            <button onclick="closeCreateMenu()" class="btn-close">×</button>
+        </div>
+        <div style="padding: 8px 0 20px 0;">
+            <div class="create-menu-item" onclick="openCreateChannelWizard()">
+                <div class="create-menu-icon">📢</div>
+                <div class="create-menu-info">
+                    <div class="create-menu-title">Канал</div>
+                    <div class="create-menu-desc">Для публикаций и вещания</div>
+                </div>
+                <span class="create-menu-arrow">›</span>
+            </div>
+            <div class="create-menu-item" onclick="openCreateGroupWizard()">
+                <div class="create-menu-icon">👥</div>
+                <div class="create-menu-info">
+                    <div class="create-menu-title">Группа</div>
+                    <div class="create-menu-desc">Для общения с друзьями</div>
+                </div>
+                <span class="create-menu-arrow">›</span>
+            </div>
+            <div class="create-menu-item" onclick="openNewChatFromMenu()">
+                <div class="create-menu-icon">💬</div>
+                <div class="create-menu-info">
+                    <div class="create-menu-title">Новый чат</div>
+                    <div class="create-menu-desc">Начать диалог с пользователем</div>
+                </div>
+                <span class="create-menu-arrow">›</span>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
