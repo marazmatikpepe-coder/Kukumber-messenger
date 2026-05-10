@@ -1743,3 +1743,28 @@ input, textarea {
 .modal-content {
     -webkit-overflow-scrolling: touch;
 }
+/* Кнопка меню (три полоски) - всегда видна на ПК и телефоне */
+.mobile-menu-btn {
+    display: flex !important;
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 100;
+    width: 44px;
+    height: 44px;
+    background: var(--forest);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 24px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+}
+
+/* На мобильных и так показывалось, но дублируем */
+@media (max-width: 768px) {
+    .mobile-menu-btn {
+        display: flex !important;
+    }
+}
