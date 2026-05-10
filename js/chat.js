@@ -2602,12 +2602,13 @@ function switchChannelTab(tab) {
     const content = document.getElementById('channel-profile-content');
     if (!content) return;
     
-    // Активная вкладка
     const btns = document.querySelectorAll('#channel-profile-modal .profile-tab-btn');
     btns.forEach(btn => btn.classList.remove('active'));
-    if (tab === 'posts') btns[0].classList.add('active');
-    else if (tab === 'members') btns[1].classList.add('active');
-    else if (tab === 'admin') btns[2].classList.add('active');
+    
+    // Отмечаем активную вкладку
+    if (tab === 'posts' && btns[0]) btns[0].classList.add('active');
+    else if (tab === 'members' && btns[1]) btns[1].classList.add('active');
+    else if (tab === 'admin' && btns[2]) btns[2].classList.add('active');
     
     content.innerHTML = '<div class="profile-loading">Загрузка...</div>';
     
@@ -2619,7 +2620,6 @@ function switchChannelTab(tab) {
         loadChannelAdminPanel(content);
     }
 }
-
 function loadChannelPosts(container) {
     database.ref('slices').orderByChild('channelId').equalTo(currentChannelProfileId).once('value', snapshot => {
         const slices = snapshot.val();
@@ -2640,9 +2640,6 @@ function loadChannelMembers(container) {
     database.ref('chats/' + currentChannelProfileId).once('value', snapshot => {
         const chat = snapshot.val();
         const members = chat.subscribers || chat.members || {};
-        const admins = chat.admins || {};
-        const isAdmin = admins[currentUser.uid];
-        const isOwner = chat.createdBy === currentUser.uid;
         
         const memberIds = Object.keys(members);
         if (memberIds.length === 0) {
@@ -2655,24 +2652,12 @@ function loadChannelMembers(container) {
             database.ref('users/' + uid).once('value', userSnap => {
                 const user = userSnap.val();
                 if (!user) return;
-                const isMemberAdmin = admins[uid];
                 const div = document.createElement('div');
                 div.className = 'member-item';
-                div.style.display = 'flex';
-                div.style.alignItems = 'center';
-                div.style.gap = '12px';
-                div.style.padding = '10px';
-                div.style.borderBottom = '1px solid var(--border)';
+                div.style.cssText = 'display:flex; align-items:center; gap:12px; padding:10px; border-bottom:1px solid var(--border);';
                 div.innerHTML = `
-                    <div class="avatar" style="background-image: url(${user.avatar || ''}); background-size: cover;">${!user.avatar ? '👤' : ''}</div>
-                    <div style="flex:1;" onclick="openUserProfile('${uid}')">
-                        <div style="font-weight:600;">${escapeHtml(user.username)}</div>
-                        <div style="font-size:12px; color:var(--text-muted);">${user.userTag ? '@' + user.userTag : ''}</div>
-                    </div>
-                    ${isMemberAdmin ? '<span class="member-role">админ</span>' : ''}
-                    ${(isAdmin || isOwner) && uid !== currentUser.uid ? `
-                        <button onclick="toggleChannelAdmin('${uid}')" class="btn-small" style="background:var(--forest); color:white;">${isMemberAdmin ? 'Снять права' : 'Назначить админом'}</button>
-                    ` : ''}
+                    <div class="avatar" style="background-image: url(${user.avatar || ''}); background-size: cover; width:40px; height:40px;">${!user.avatar ? '👤' : ''}</div>
+                    <div style="flex:1;"><strong>${escapeHtml(user.username)}</strong></div>
                 `;
                 container.appendChild(div);
             });
