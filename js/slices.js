@@ -1548,3 +1548,5 @@ window.addSliceMedia = addSliceMedia;
 window.removeSliceMedia = removeSliceMedia;
 window.showCreateSliceModal = showCreateSliceModal;
 window.publishSlice = publishSlice;
+// slices.js - в самый конец файла
+window.openChannelProfile = openChannelProfile;
