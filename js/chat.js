@@ -497,15 +497,14 @@ function openChat(chatId, chatData) {
             };
         }
     } else {
-        var chatHeader = document.querySelector('.chat-user-info');
-        if (chatHeader) {
-            chatHeader.style.cursor = 'pointer';
-            chatHeader.onclick = function() {
-                openChannelProfile(chatId);
-            };
-        }
+    var chatHeader = document.querySelector('.chat-user-info');
+    if (chatHeader) {
+        chatHeader.style.cursor = 'pointer';
+        chatHeader.onclick = function() {
+            openChannelOrGroupProfile();
+        };
     }
-    
+}
     document.querySelectorAll('.chat-item').forEach(function(i) { 
         i.classList.remove('active'); 
     });
