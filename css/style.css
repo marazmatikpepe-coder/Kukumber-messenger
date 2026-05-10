@@ -1789,3 +1789,113 @@ input, textarea {
 .sidebar-close-btn:hover {
     background: rgba(0,0,0,0.4);
 }
+/* Новая боковая панель */
+.search-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: var(--background);
+    border-bottom: 1px solid var(--border);
+}
+
+.search-bar-new {
+    flex: 1;
+}
+
+.search-bar-new input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 30px;
+    font-size: 14px;
+    background: white;
+}
+
+.floating-plus-btn {
+    width: 55px;
+    height: 55px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.floating-plus-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.global-search-results {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: white;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+}
+
+.search-results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid var(--border);
+}
+
+.search-results-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.search-result-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+}
+
+.search-result-item:hover {
+    background: var(--background);
+}
+
+.search-result-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--sage);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    background-size: cover;
+}
+
+.search-result-info {
+    flex: 1;
+}
+
+.search-result-name {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.search-result-username {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.search-result-badge {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: var(--background);
+}
