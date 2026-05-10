@@ -365,3 +365,49 @@ document.getElementById('main-screen').addEventListener('touchend', function(e) 
     
     isSwiping = false;
 }, { passive: true });
+// ========== СВАЙП ДЛЯ ЗАКРЫТИЯ МОДАЛЬНЫХ ОКОН ==========
+document.querySelectorAll('.modal').forEach(modal => {
+    let modalStartY = 0;
+    let modalCurrentY = 0;
+    
+    modal.addEventListener('touchstart', function(e) {
+        modalStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+    
+    modal.addEventListener('touchend', function(e) {
+        modalCurrentY = e.changedTouches[0].screenY;
+        const deltaY = modalCurrentY - modalStartY;
+        
+        // Свайп вниз на 100px → закрыть
+        if (deltaY > 100) {
+            modal.classList.add('hidden');
+            closeAllModals();
+        }
+    }, { passive: true });
+});
+// ========== СВАЙП ДЛЯ БОКОВОЙ ПАНЕЛИ ==========
+let sidebarStartX = 0;
+let sidebarEndX = 0;
+
+document.getElementById('chat-area').addEventListener('touchstart', function(e) {
+    sidebarStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+
+document.getElementById('chat-area').addEventListener('touchend', function(e) {
+    sidebarEndX = e.changedTouches[0].screenX;
+    const deltaX = sidebarEndX - sidebarStartX;
+    
+    // Свайп от левого края (первые 30px) вправо → открыть панель
+    if (sidebarStartX < 30 && deltaX > 50) {
+        openSidebar();
+    }
+    
+    // Свайп влево при открытой панели → закрыть
+    if (deltaX < -50) {
+        closeSidebar();
+    }
+}, { passive: true });
+
+function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+}
