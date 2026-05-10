@@ -2776,3 +2776,52 @@ function openChannelOrGroupProfile() {
         }
     }
 }
+// chat.js - добавьте в самый конец файла (после openChannelOrGroupProfile)
+
+// Заглушка для createSliceCard, если функция не загружена из slices.js
+if (typeof createSliceCard === 'undefined') {
+    window.createSliceCard = function(sliceId, sliceData) {
+        const div = document.createElement('div');
+        div.className = 'slice-card profile-slice-card';
+        div.setAttribute('data-slice-id', sliceId);
+        
+        const avatarStyle = sliceData.authorAvatar ? 'background-image:url('+sliceData.authorAvatar+');background-size:cover;' : '';
+        const avatarContent = sliceData.authorAvatar ? '' : '👤';
+        
+        let mediaHtml = '';
+        if (sliceData.mediaUrl) {
+            mediaHtml = '<div class="slice-media"><img src="'+sliceData.mediaUrl+'" class="slice-image" style="max-width:100%; max-height:300px; object-fit:contain;"></div>';
+        }
+        
+        const textHtml = sliceData.text ? '<div class="slice-text">'+escapeHtml(sliceData.text)+'</div>' : '';
+        
+        div.innerHTML = `
+            <div class="slice-header">
+                <div class="slice-author">
+                    <div class="avatar" style="${avatarStyle}">${avatarContent}</div>
+                    <div class="slice-author-info">
+                        <span class="slice-author-name">${escapeHtml(sliceData.authorName)}</span>
+                        <span class="slice-date">${formatSliceDate ? formatSliceDate(sliceData.createdAt) : ''}</span>
+                    </div>
+                </div>
+            </div>
+            ${mediaHtml}
+            ${textHtml}
+        `;
+        return div;
+    };
+}
+
+// Форматирование даты для слайсов (если нет в slices.js)
+if (typeof formatSliceDate === 'undefined') {
+    window.formatSliceDate = function(timestamp) {
+        if (!timestamp) return '';
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = Math.floor((now - date) / 1000);
+        if (diff < 60) return 'только что';
+        if (diff < 3600) return Math.floor(diff/60) + ' мин назад';
+        if (diff < 86400) return 'сегодня';
+        return date.toLocaleDateString('ru-RU');
+    };
+}
