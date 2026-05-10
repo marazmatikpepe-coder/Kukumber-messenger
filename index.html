@@ -757,6 +757,45 @@
             </div>
         </div>
     </div>
-
+<!-- ПРОФИЛЬ КАНАЛА/ГРУППЫ -->
+<div id="channel-profile-modal" class="modal hidden">
+    <div class="profile-modal-content" style="max-width: 500px;">
+        <div class="profile-banner" id="channel-profile-banner" style="background: linear-gradient(135deg, #228B22, #556B2F);">
+            <button class="profile-banner-edit-btn" id="channel-banner-edit" style="display: none;">✏️</button>
+            <button class="profile-close-btn" onclick="closeChannelProfile()">×</button>
+        </div>
+        <div class="profile-avatar-wrapper">
+            <div class="profile-avatar" id="channel-profile-avatar">
+                <button class="profile-avatar-edit-btn" id="channel-avatar-edit" style="display: none;">✏️</button>
+            </div>
+        </div>
+        <div class="profile-info">
+            <div class="profile-name-row">
+                <h2 class="profile-name" id="channel-profile-name"></h2>
+                <span class="verified-badge" id="channel-verified-badge" style="display: none;">✓</span>
+            </div>
+            <div class="profile-username" id="channel-profile-kname"></div>
+            <div class="profile-subscribers" id="channel-profile-stats"></div>
+            <div class="profile-status" id="channel-profile-type"></div>
+            <p class="profile-bio" id="channel-profile-desc"></p>
+        </div>
+        
+        <div class="profile-tabs">
+            <button class="profile-tab-btn active" onclick="switchChannelTab('posts')">📷 Посты</button>
+            <button class="profile-tab-btn" onclick="switchChannelTab('members')">👥 Участники</button>
+            <button class="profile-tab-btn" id="channel-admin-tab" onclick="switchChannelTab('admin')" style="display: none;">⚙️ Управление</button>
+        </div>
+        
+        <div id="channel-profile-content" class="profile-content">
+            <div class="profile-loading">Загрузка...</div>
+        </div>
+        
+        <div class="profile-actions" style="padding: 15px; border-top: 1px solid var(--border);">
+            <button id="channel-subscribe-btn" class="btn-primary" style="display: none;">Подписаться</button>
+            <button id="channel-unsubscribe-btn" class="btn-danger" style="display: none;">Отписаться</button>
+            <button id="channel-leave-btn" class="btn-danger" style="display: none;">Покинуть</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
