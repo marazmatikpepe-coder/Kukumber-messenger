@@ -581,22 +581,26 @@ function openUserProfile(userId) {
                             ${canEdit ? '<button class="profile-avatar-edit-btn" onclick="editProfileAvatar()">✏️</button>' : ''}
                         </div>
                     </div>
-                    <div class="profile-info">
-                        <div class="profile-name-row">
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <h2 class="profile-name" id="profile-name" ${canEdit ? 'ondblclick="editProfileName()" style="cursor:pointer;"' : ''}>${escapeHtml(userName)}</h2>
-                                ${userVerified ? '<img src="https://i.ibb.co/YTRCNHkq/4e9cba55-b083-46d3-8a30-bff7b1be94c7-1.png" style="width:18px; height:18px; cursor:pointer;" onclick="showVerifiedInfo()">' : ''}
-                                ${isAdmin ? '<button onclick="toggleUserVerification(\''+userId+'\')" style="background:none; border:none; cursor:pointer; font-size:14px;">🔘 ' + (userVerified ? 'Снять галочку' : 'Выдать галочку') + '</button>' : ''}
-                            </div>
-                            ${isOwnProfile ? '' : `
-                                <button class="profile-subscribe-btn" id="profile-subscribe-btn" onclick="toggleSubscription()">Подписаться</button>
-                                <button class="profile-notify-btn" id="profile-notify-btn" onclick="toggleNotifications()">🔔</button>
-                            `}
-                        </div>
-                        <div class="profile-subscribers">👥 ${subscribersCount} подписчиков</div>
-                        <div class="profile-status">${statusText}</div>
-                        <p class="profile-bio" id="profile-bio" ${canEdit ? 'ondblclick="editProfileBio()" style="cursor:pointer;"' : ''}>${escapeHtml(userBio)}</p>
-                    </div>
+                   <div class="profile-info">
+    <div class="profile-name-row">
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <h2 class="profile-name" id="profile-name" ${canEdit ? 'ondblclick="editProfileName()" style="cursor:pointer;"' : ''}>${escapeHtml(userName)}</h2>
+            ${userVerified ? '<img src="https://i.ibb.co/YTRCNHkq/4e9cba55-b083-46d3-8a30-bff7b1be94c7-1.png" style="width:18px; height:18px; cursor:pointer;" onclick="showVerifiedInfo()">' : ''}
+            ${isAdmin ? '<button onclick="toggleUserVerification(\''+userId+'\')" style="background:none; border:none; cursor:pointer; font-size:14px;">🔘 ' + (userVerified ? 'Снять галочку' : 'Выдать галочку') + '</button>' : ''}
+        </div>
+        ${isOwnProfile ? '' : `
+            <button class="profile-subscribe-btn" id="profile-subscribe-btn" onclick="toggleSubscription()">Подписаться</button>
+            <button class="profile-notify-btn" id="profile-notify-btn" onclick="toggleNotifications()">🔔</button>
+        `}
+    </div>
+    <!-- ↓↓↓ ДОБАВЛЕНА СТРОКА С ЮЗЕРНЕЙМОМ ↓↓↓ -->
+    <div class="profile-username">${userData.userTag ? '@' + userData.userTag : '@' + userName.toLowerCase().replace(/\s/g, '')}</div>
+    <!-- ↑↑↑ ↑↑↑ -->
+    <div class="profile-subscribers">👥 ${subscribersCount} подписчиков</div>
+    <div class="profile-status">${statusText}</div>
+    <p class="profile-bio" id="profile-bio" ${canEdit ? 'ondblclick="editProfileBio()" style="cursor:pointer;"' : ''}>${escapeHtml(userBio)}</p>
+</div>
+                       
                     <div class="profile-tabs">
                         <button class="profile-tab-btn active" onclick="switchProfileTab('posts', '${userId}')">📷 Посты</button>
                         <button class="profile-tab-btn" onclick="switchProfileTab('reposts', '${userId}')">🔄 Репосты</button>
