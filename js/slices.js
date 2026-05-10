@@ -1372,19 +1372,32 @@ function loadUserChannelsForPublish() {
         }
     });
 }
-    updateSlicePreviewCounter();
+
+function updateSlicePreviewCounter() { 
+    var counter = document.getElementById('slice-preview-counter'); 
+    if (counter) counter.textContent = pendingSliceFiles.length; 
 }
 
-function updateSlicePreviewCounter() { var counter = document.getElementById('slice-preview-counter'); if (counter) counter.textContent = pendingSliceFiles.length; }
+function removeSliceMedia(index) { 
+    pendingSliceFiles.splice(index, 1); 
+    updateSlicePreview(); 
+}
 
-function removeSliceMedia(index) { pendingSliceFiles.splice(index, 1); updateSlicePreview(); }
-
-function extractHashtags(text) { var hashtags = text.match(/#[а-яА-Яa-zA-Z0-9_]+/g); if (!hashtags) return []; return hashtags.map(function(tag) { return tag.substring(1); }); }
+function extractHashtags(text) { 
+    var hashtags = text.match(/#[а-яА-Яa-zA-Z0-9_]+/g); 
+    if (!hashtags) return []; 
+    return hashtags.map(function(tag) { return tag.substring(1); }); 
+}
 
 async function publishSlice() {
     var text = document.getElementById('slice-text').value.trim();
     var hashtagsInput = document.getElementById('slice-hashtags-input').value.trim();
-    if (pendingSliceFiles.length === 0 && !text) { showNotification('Добавьте текст или фото', 'error'); return; }
+    var publishAs = document.getElementById('publish-as-select')?.value || 'self';
+    
+    if (pendingSliceFiles.length === 0 && !text) { 
+        showNotification('Добавьте текст или фото', 'error'); 
+        return; 
+    }
     if (hashtagsInput) {
         var extraTags = hashtagsInput.split(/[ ,]+/).filter(function(t) { return t; });
         if (text) text += ' ' + extraTags.map(function(t) { return '#' + t; }).join(' ');
@@ -1392,6 +1405,7 @@ async function publishSlice() {
     }
     var hashtags = extractHashtags(text);
     showNotification('Публикация...', 'info');
+    
     try {
         var mediaUrls = [];
         for (var i = 0; i < pendingSliceFiles.length; i++) {
@@ -1403,22 +1417,46 @@ async function publishSlice() {
                 return;
             }
         }
+        
         var sliceData = {
-            authorId: currentUser.uid, authorName: currentUserData.username || 'Пользователь',
-            authorAvatar: currentUserData.avatar || '', text: text, hashtags: hashtags,
+            authorId: currentUser.uid,
+            authorName: currentUserData.username || 'Пользователь',
+            authorAvatar: currentUserData.avatar || '',
+            text: text,
+            hashtags: hashtags,
             mediaType: mediaUrls.length > 1 ? 'multiple' : (mediaUrls.length === 1 ? 'single' : 'none'),
-            mediaUrls: mediaUrls.length > 0 ? mediaUrls : null, mediaUrl: mediaUrls.length === 1 ? mediaUrls[0] : null,
-            likesCount: 0, commentsCount: 0, repostsCount: 0, viewsCount: 0, pinned: false,
+            mediaUrls: mediaUrls.length > 0 ? mediaUrls : null,
+            mediaUrl: mediaUrls.length === 1 ? mediaUrls[0] : null,
+            likesCount: 0,
+            commentsCount: 0,
+            repostsCount: 0,
+            viewsCount: 0,
+            pinned: false,
             createdAt: firebase.database.ServerValue.TIMESTAMP
         };
+        
+        // Если выбран канал
+        if (publishAs !== 'self') {
+            var channelSnap = await database.ref('chats/' + publishAs).once('value');
+            var channel = channelSnap.val();
+            if (channel && channel.type === 'channel') {
+                sliceData.authorId = publishAs;
+                sliceData.authorName = channel.name || 'Канал';
+                sliceData.authorAvatar = channel.avatar || '';
+                sliceData.authorType = 'channel';
+                sliceData.channelId = publishAs;
+            }
+        }
+        
         await database.ref('slices/').push(sliceData);
-        
         playSliceCreateSound();
-        
         showNotification('Пост опубликован! 🍕', 'success');
         closeCreateSliceModal();
         loadSlices();
-    } catch (error) { console.error(error); showNotification('Ошибка публикации', 'error'); }
+    } catch (error) { 
+        console.error(error); 
+        showNotification('Ошибка публикации', 'error'); 
+    }
 }
 
 // Инициализация звуков
