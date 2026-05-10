@@ -652,5 +652,104 @@
         </div>
     </div>
 </div>
+<!-- МАСТЕР СОЗДАНИЯ КАНАЛА -->
+<div id="create-channel-wizard" class="modal hidden">
+    <div class="modal-content" style="max-width: 550px; max-height: 90vh; overflow-y: auto;">
+        <div class="wizard-header">
+            <button class="wizard-back-btn" onclick="closeChannelWizard()">←</button>
+            <h3>Создание канала</h3>
+            <div class="wizard-steps">
+                <span class="wizard-step active" data-step="1">1</span>
+                <span class="wizard-step" data-step="2">2</span>
+                <span class="wizard-step" data-step="3">3</span>
+            </div>
+        </div>
+        
+        <!-- ШАГ 1: Основная информация -->
+        <div id="channel-step-1" class="wizard-step-content">
+            <div class="avatar-upload">
+                <div class="avatar-preview" id="channel-wizard-avatar">📢</div>
+                <label>Загрузить аватарку<input type="file" accept="image/*" onchange="previewChannelWizardAvatar(event)" style="display:none;"></label>
+            </div>
+            <input type="text" id="channel-wizard-name" placeholder="Название канала *" class="wizard-input">
+            <div style="position: relative;">
+                <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--forest);">@</span>
+                <input type="text" id="channel-wizard-kname" placeholder="K-name" class="wizard-input" style="padding-left: 35px;">
+            </div>
+            <small style="display: block; margin-top: -10px; margin-bottom: 15px; color: var(--text-muted);">Уникальная ссылка на канал (только латиница)</small>
+            <textarea id="channel-wizard-desc" placeholder="Описание канала" rows="3" class="wizard-input"></textarea>
+            <div class="channel-type-select">
+                <label class="channel-type-option">
+                    <input type="radio" name="channel-wizard-type" value="public" checked> 🌍 Публичный
+                    <small>Посты видны всем, можно найти в поиске</small>
+                </label>
+                <label class="channel-type-option">
+                    <input type="radio" name="channel-wizard-type" value="private"> 🔒 Приватный
+                    <small>Вступить только по ссылке</small>
+                </label>
+            </div>
+            <button class="wizard-next-btn" onclick="goToChannelStep2()">Далее →</button>
+        </div>
+        
+        <!-- ШАГ 2: Участники и администраторы -->
+        <div id="channel-step-2" class="wizard-step-content" style="display: none;">
+            <h4>Добавить участников</h4>
+            <input type="text" id="channel-wizard-search" placeholder="Поиск по контактам..." class="wizard-input" oninput="searchChannelMembers()">
+            <div id="channel-wizard-members-list" class="users-list" style="max-height: 250px;"></div>
+            <div id="channel-selected-members" class="selected-members"></div>
+            
+            <h4 style="margin-top: 20px;">Администраторы</h4>
+            <div id="channel-admins-list" class="users-list" style="max-height: 150px;"></div>
+            <small style="display: block; margin: 10px 0; color: var(--text-muted);">Выберите участников для назначения администраторами</small>
+            
+            <div class="wizard-buttons">
+                <button class="wizard-back-btn-step" onclick="goToChannelStep1()">← Назад</button>
+                <button class="wizard-next-btn" onclick="goToChannelStep3()">Далее →</button>
+            </div>
+        </div>
+        
+        <!-- ШАГ 3: Настройки -->
+        <div id="channel-step-3" class="wizard-step-content" style="display: none;">
+            <div class="setting-item">
+                <div>
+                    <div class="setting-label">Комментарии</div>
+                    <div class="setting-desc">Разрешить комментарии к постам канала</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="channel-comments-enabled" checked>
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            
+            <div class="setting-item">
+                <div>
+                    <div class="setting-label">Тематика канала</div>
+                    <div class="setting-desc">Выберите категорию</div>
+                </div>
+                <select id="channel-category" class="wizard-select">
+                    <option value="food">🍔 Еда</option>
+                    <option value="sport">🏀 Спорт</option>
+                    <option value="health">🥬 Польза</option>
+                    <option value="games">🎮 Игры</option>
+                    <option value="movies">🎥 Кино</option>
+                    <option value="social">📱 Соцсети</option>
+                    <option value="news">📢 Новости</option>
+                    <option value="ai">🔎 Нейросети</option>
+                    <option value="anime">✨ Аниме</option>
+                    <option value="books">📖 Книги</option>
+                    <option value="music">🎵 Музыка</option>
+                    <option value="cars">🚗 Машины</option>
+                    <option value="animals">🐭 Животные</option>
+                    <option value="custom">✏️ Своя</option>
+                </select>
+            </div>
+            
+            <div class="wizard-buttons">
+                <button class="wizard-back-btn-step" onclick="goToChannelStep2()">← Назад</button>
+                <button class="wizard-create-btn" onclick="createChannelFinal()">Создать канал</button>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
