@@ -751,5 +751,61 @@
         </div>
     </div>
 </div>
+<!-- МАСТЕР СОЗДАНИЯ ГРУППЫ -->
+<div id="create-group-wizard" class="modal hidden">
+    <div class="modal-content" style="max-width: 550px; max-height: 90vh; overflow-y: auto;">
+        <div class="wizard-header">
+            <button class="wizard-back-btn" onclick="closeGroupWizard()">←</button>
+            <h3>Создание группы</h3>
+            <div class="wizard-steps">
+                <span class="wizard-step active" data-step="1">1</span>
+                <span class="wizard-step" data-step="2">2</span>
+            </div>
+        </div>
+        
+        <!-- ШАГ 1: Основная информация -->
+        <div id="group-step-1-content" class="wizard-step-content">
+            <div class="avatar-upload">
+                <div class="avatar-preview" id="group-wizard-avatar">👥</div>
+                <label>Загрузить аватарку<input type="file" accept="image/*" onchange="previewGroupWizardAvatar(event)" style="display:none;"></label>
+            </div>
+            <input type="text" id="group-wizard-name" placeholder="Название группы *" class="wizard-input">
+            <div style="position: relative;">
+                <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--forest);">@</span>
+                <input type="text" id="group-wizard-kname" placeholder="K-name (для поиска)" class="wizard-input" style="padding-left: 35px;">
+            </div>
+            <small style="display: block; margin-top: -10px; margin-bottom: 15px; color: var(--text-muted);">Уникальная ссылка на группу (только латиница)</small>
+            <textarea id="group-wizard-desc" placeholder="Описание группы" rows="3" class="wizard-input"></textarea>
+            <div class="channel-type-select">
+                <label class="channel-type-option">
+                    <input type="radio" name="group-wizard-type" value="public" checked> 🌍 Публичная
+                    <small>Можно найти в поиске, вступить может любой</small>
+                </label>
+                <label class="channel-type-option">
+                    <input type="radio" name="group-wizard-type" value="private"> 🔒 Приватная
+                    <small>Только по приглашению</small>
+                </label>
+            </div>
+            <button class="wizard-next-btn" onclick="goToGroupStep2()">Далее →</button>
+        </div>
+        
+        <!-- ШАГ 2: Участники и администраторы -->
+        <div id="group-step-2-content" class="wizard-step-content" style="display: none;">
+            <h4>Добавить участников</h4>
+            <input type="text" id="group-wizard-search" placeholder="Поиск по контактам..." class="wizard-input" oninput="searchGroupWizardMembers()">
+            <div id="group-wizard-members-list" class="users-list" style="max-height: 250px;"></div>
+            <div id="group-selected-members" class="selected-members"></div>
+            
+            <h4 style="margin-top: 20px;">Администраторы</h4>
+            <div id="group-admins-list" class="users-list" style="max-height: 150px;"></div>
+            <small style="display: block; margin: 10px 0; color: var(--text-muted);">Выберите участников для назначения администраторами</small>
+            
+            <div class="wizard-buttons">
+                <button class="wizard-back-btn-step" onclick="goToGroupStep1()">← Назад</button>
+                <button class="wizard-create-btn" onclick="createGroupFinal()">Создать группу</button>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
