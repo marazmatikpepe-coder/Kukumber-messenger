@@ -2482,3 +2482,210 @@ async function createGroupFinal() {
         showNotification('Ошибка создания группы', 'error');
     }
 }
+// ========== ПРОФИЛЬ КАНАЛА/ГРУППЫ ==========
+function openChannelOrGroupProfile(chatId) {
+    database.ref('chats/' + chatId).once('value').then(snapshot => {
+        const chat = snapshot.val();
+        if (!chat) return;
+        
+        const isChannel = chat.type === 'channel';
+        const isGroup = chat.type === 'group';
+        const isAdmin = chat.admins && chat.admins[currentUser.uid];
+        const isOwner = chat.createdBy === currentUser.uid;
+        const isSubscribed = chat.subscribers && chat.subscribers[currentUser.uid];
+        const isMember = chat.members && chat.members[currentUser.uid];
+        
+        let modal = document.getElementById('channel-group-profile-modal');
+        if (modal) modal.remove();
+        
+        modal = document.createElement('div');
+        modal.id = 'channel-group-profile-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="profile-modal-content" style="max-width: 500px;">
+                <div class="profile-banner" style="background: linear-gradient(135deg, #228B22, #556B2F);">
+                    ${isAdmin ? '<button class="profile-banner-edit-btn" onclick="editChannelGroupBanner(\'' + chatId + '\')">✏️</button>' : ''}
+                    <button class="profile-close-btn" onclick="closeChannelGroupProfile()">×</button>
+                </div>
+                <div class="profile-avatar-wrapper">
+                    <div class="profile-avatar" style="background-image: url(${chat.avatar || ''}); background-size: cover;">
+                        ${!chat.avatar ? (isChannel ? '📢' : '👥') : ''}
+                    </div>
+                </div>
+                <div class="profile-info">
+                    <div class="profile-name-row">
+                        <h2 class="profile-name">${escapeHtml(chat.name)}</h2>
+                        ${chat.verified ? '<img src="https://i.ibb.co/YTRCNHkq/4e9cba55-b083-46d3-8a30-bff7b1be94c7-1.png" style="width:18px; height:18px;">' : ''}
+                    </div>
+                    <div class="profile-username">${chat.kname ? '@' + chat.kname : ''}</div>
+                    <div class="profile-subscribers">👥 ${Object.keys(chat.subscribers || chat.members || {}).length} ${isChannel ? 'подписчиков' : 'участников'}</div>
+                    <div class="profile-status">${isChannel ? (chat.isPublic ? '🌍 Публичный' : '🔒 Приватный') : (chat.isPublic ? '🌍 Публичная' : '🔒 Приватная')}</div>
+                    <p class="profile-bio">${escapeHtml(chat.description || 'Нет описания')}</p>
+                </div>
+                
+                <div class="profile-tabs">
+                    <button class="profile-tab-btn active" onclick="switchChannelGroupTab('posts', '${chatId}')">📷 Посты</button>
+                    <button class="profile-tab-btn" onclick="switchChannelGroupTab('members', '${chatId}')">${isChannel ? '👥 Подписчики' : '👥 Участники'}</button>
+                    ${isAdmin ? '<button class="profile-tab-btn" onclick="switchChannelGroupTab('admin', '${chatId}')">⚙️ Управление</button>' : ''}
+                </div>
+                <div id="channel-group-profile-content" class="profile-content">
+                    <div class="profile-loading">Загрузка...</div>
+                </div>
+                
+                <div class="profile-actions" style="padding: 15px; border-top: 1px solid var(--border);">
+                    ${!isSubscribed && !isMember && !isAdmin ? `
+                        <button class="btn-primary" onclick="subscribeToChannelGroup('${chatId}', '${isChannel ? 'channel' : 'group'}')">${isChannel ? 'Подписаться' : 'Вступить'}</button>
+                    ` : ''}
+                    ${(isSubscribed || isMember) && !isAdmin ? `
+                        <button class="btn-danger" onclick="unsubscribeFromChannelGroup('${chatId}', '${isChannel ? 'channel' : 'group'}')">${isChannel ? 'Отписаться' : 'Покинуть'}</button>
+                    ` : ''}
+                    ${isAdmin && !isOwner ? `
+                        <button class="btn-secondary" onclick="leaveAsAdmin('${chatId}', '${isChannel ? 'channel' : 'group'}')">Покинуть (передать права)</button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        modal.classList.remove('hidden');
+        switchChannelGroupTab('posts', chatId);
+    });
+}
+
+function switchChannelGroupTab(tab, chatId) {
+    const content = document.getElementById('channel-group-profile-content');
+    if (!content) return;
+    
+    const btns = document.querySelectorAll('#channel-group-profile-modal .profile-tab-btn');
+    btns.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    if (tab === 'posts') {
+        loadChannelGroupPosts(content, chatId);
+    } else if (tab === 'members') {
+        loadChannelGroupMembers(content, chatId);
+    } else if (tab === 'admin') {
+        loadChannelGroupAdminPanel(content, chatId);
+    }
+}
+
+function loadChannelGroupPosts(container, chatId) {
+    container.innerHTML = '<div class="profile-loading">Загрузка...</div>';
+    database.ref('slices').orderByChild('channelId').equalTo(chatId).once('value', snapshot => {
+        const slices = snapshot.val();
+        container.innerHTML = '';
+        if (!slices) {
+            container.innerHTML = '<div class="profile-empty">Нет постов</div>';
+            return;
+        }
+        // Сортируем и показываем посты
+        const posts = Object.entries(slices).map(([id, data]) => ({id, data}));
+        posts.sort((a,b) => (b.data.createdAt||0) - (a.data.createdAt||0));
+        posts.forEach(post => {
+            const card = createSliceCard(post.id, post.data);
+            container.appendChild(card);
+        });
+    });
+}
+
+function loadChannelGroupMembers(container, chatId) {
+    database.ref('chats/' + chatId).once('value', snapshot => {
+        const chat = snapshot.val();
+        const members = chat.subscribers || chat.members || {};
+        const admins = chat.admins || {};
+        
+        container.innerHTML = '<div class="profile-loading">Загрузка...</div>';
+        const memberIds = Object.keys(members);
+        if (memberIds.length === 0) {
+            container.innerHTML = '<div class="profile-empty">Нет участников</div>';
+            return;
+        }
+        
+        container.innerHTML = '';
+        memberIds.forEach(uid => {
+            database.ref('users/' + uid).once('value', userSnap => {
+                const user = userSnap.val();
+                if (!user) return;
+                const isAdmin = admins[uid];
+                const div = document.createElement('div');
+                div.className = 'member-item';
+                div.innerHTML = `
+                    <div class="avatar" style="background-image: url(${user.avatar || ''}); background-size: cover;">${!user.avatar ? '👤' : ''}</div>
+                    <div class="member-name" style="flex:1;">${escapeHtml(user.username)}</div>
+                    ${isAdmin ? '<span class="member-role">админ</span>' : ''}
+                    ${chat.createdBy === currentUser.uid && uid !== currentUser.uid ? '<button onclick="removeMember(\'' + chatId + '\', \'' + uid + '\')" class="btn-small btn-danger">❌</button>' : ''}
+                `;
+                container.appendChild(div);
+            });
+        });
+    });
+}
+
+function loadChannelGroupAdminPanel(container, chatId) {
+    database.ref('chats/' + chatId).once('value', snapshot => {
+        const chat = snapshot.val();
+        container.innerHTML = `
+            <div class="admin-panel">
+                <div class="setting-item" onclick="editChannelGroupInfo('${chatId}')">
+                    <span>✏️ Редактировать название и описание</span>
+                    <span>›</span>
+                </div>
+                <div class="setting-item" onclick="changeChannelGroupAvatar('${chatId}')">
+                    <span>🖼️ Изменить аватарку</span>
+                    <span>›</span>
+                </div>
+                <div class="setting-item" onclick="changeChannelGroupBanner('${chatId}')">
+                    <span>🎨 Изменить баннер</span>
+                    <span>›</span>
+                </div>
+                <div class="setting-item">
+                    <span>💬 Комментарии</span>
+                    <label class="switch">
+                        <input type="checkbox" id="comments-toggle" ${chat.commentsEnabled !== false ? 'checked' : ''} onchange="toggleCommentsEnabled('${chatId}', this.checked)">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="setting-item" onclick="manageAdmins('${chatId}')">
+                    <span>👑 Управление администраторами</span>
+                    <span>›</span>
+                </div>
+                ${chat.createdBy === currentUser.uid ? `
+                    <div class="setting-item" onclick="generateInviteLink('${chatId}')">
+                        <span>🔗 Ссылка-приглашение</span>
+                        <span>›</span>
+                    </div>
+                    <div class="setting-item danger" onclick="deleteChannelGroup('${chatId}', '${chat.type}')">
+                        <span>🗑️ Удалить ${chat.type === 'channel' ? 'канал' : 'группу'}</span>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    });
+}
+
+function closeChannelGroupProfile() {
+    const modal = document.getElementById('channel-group-profile-modal');
+    if (modal) modal.remove();
+}
+
+function subscribeToChannelGroup(chatId, type) {
+    const update = type === 'channel' ? { [`subscribers/${currentUser.uid}`]: true } : { [`members/${currentUser.uid}`]: true };
+    database.ref('chats/' + chatId).update(update).then(() => {
+        database.ref('userChats/' + currentUser.uid + '/' + chatId).set(true);
+        showNotification(`Вы ${type === 'channel' ? 'подписались' : 'вступили'}!`, 'success');
+        closeChannelGroupProfile();
+        openChannelOrGroupProfile(chatId);
+    });
+}
+
+function unsubscribeFromChannelGroup(chatId, type) {
+    if (!confirm(`Вы уверены?`)) return;
+    const update = type === 'channel' ? { [`subscribers/${currentUser.uid}`]: null } : { [`members/${currentUser.uid}`]: null };
+    database.ref('chats/' + chatId).update(update).then(() => {
+        database.ref('userChats/' + currentUser.uid + '/' + chatId).remove();
+        showNotification(`Вы ${type === 'channel' ? 'отписались' : 'покинули'}`, 'info');
+        closeChannelGroupProfile();
+        if (type === 'group') closeChat();
+        loadChats();
+    });
+}
