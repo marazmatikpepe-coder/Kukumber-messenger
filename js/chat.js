@@ -3039,3 +3039,99 @@ function closeBeautyChannelProfile() {
     const modal = document.getElementById('beauty-channel-profile');
     if (modal) modal.remove();
 }
+// ========== ПРОСТОЙ ПРОФИЛЬ КАНАЛА/ГРУППЫ ==========
+function openChannelOrGroupProfile() {
+    if (!currentChatId || !currentChatUser) {
+        showNotification('Чат не выбран', 'error');
+        return;
+    }
+    
+    const chat = currentChatUser;
+    const isChannel = chat.type === 'channel';
+    const membersCount = Object.keys(chat.subscribers || chat.members || {}).length;
+    const isSubscribed = chat.subscribers ? chat.subscribers[currentUser.uid] : false;
+    const isMember = chat.members ? chat.members[currentUser.uid] : false;
+    
+    // Создаем простое окно
+    const modalHtml = `
+        <div id="simple-channel-profile" class="modal" style="z-index: 10001;">
+            <div style="background: white; width: 90%; max-width: 400px; border-radius: 20px; overflow: hidden; margin: auto;">
+                <div style="background: linear-gradient(135deg, #228B22, #556B2F); height: 100px; position: relative;">
+                    <button onclick="closeSimpleChannelProfile()" style="position: absolute; top: 10px; right: 15px; background: rgba(0,0,0,0.5); color: white; border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 18px; cursor: pointer;">✕</button>
+                </div>
+                <div style="text-align: center; margin-top: -40px;">
+                    <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--sage); margin: 0 auto; border: 3px solid white; display: flex; align-items: center; justify-content: center; font-size: 40px; ${chat.avatar ? `background-image: url(${chat.avatar}); background-size: cover;` : ''}">
+                        ${chat.avatar ? '' : (isChannel ? '📢' : '👥')}
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 15px;">
+                    <h2 style="font-size: 20px; margin: 0;">${escapeHtml(chat.name || (isChannel ? 'Канал' : 'Группа'))}</h2>
+                    ${chat.kname ? `<div style="color: gray; font-size: 13px; margin-top: 5px;">@${escapeHtml(chat.kname)}</div>` : ''}
+                    <div style="color: gray; font-size: 13px; margin-top: 5px;">👥 ${membersCount} ${isChannel ? 'подписчиков' : 'участников'}</div>
+                    <div style="color: gray; font-size: 12px; margin-top: 5px;">${isChannel ? (chat.isPublic ? '🌍 Публичный' : '🔒 Приватный') : (chat.isPublic ? '🌍 Публичная' : '🔒 Приватная')}</div>
+                    <p style="color: #666; font-size: 14px; margin-top: 10px;">${escapeHtml(chat.description || 'Нет описания')}</p>
+                </div>
+                <div style="padding: 15px; border-top: 1px solid #eee;">
+                    <button id="simple-action-btn" style="width: 100%; padding: 12px; border: none; border-radius: 30px; background: #228B22; color: white; font-size: 16px; cursor: pointer;">
+                        ${isChannel ? (isSubscribed ? 'Отписаться' : 'Подписаться') : (isMember ? 'Покинуть' : 'Вступить')}
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Удаляем старое
+    const old = document.getElementById('simple-channel-profile');
+    if (old) old.remove();
+    
+    // Добавляем новое
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('simple-channel-profile');
+    modal.classList.remove('hidden');
+    
+    // Кнопка действия
+    const actionBtn = document.getElementById('simple-action-btn');
+    if (actionBtn) {
+        actionBtn.onclick = () => {
+            if (isChannel) {
+                const ref = database.ref('chats/' + currentChatId + '/subscribers/' + currentUser.uid);
+                if (isSubscribed) {
+                    ref.remove().then(() => {
+                        database.ref('userChats/' + currentUser.uid + '/' + currentChatId).remove();
+                        showNotification('Отписались', 'info');
+                        closeSimpleChannelProfile();
+                        loadChats();
+                    });
+                } else {
+                    ref.set(true).then(() => {
+                        database.ref('userChats/' + currentUser.uid + '/' + currentChatId).set(true);
+                        showNotification('Подписались!', 'success');
+                        closeSimpleChannelProfile();
+                    });
+                }
+            } else {
+                const ref = database.ref('chats/' + currentChatId + '/members/' + currentUser.uid);
+                if (isMember) {
+                    ref.remove().then(() => {
+                        database.ref('userChats/' + currentUser.uid + '/' + currentChatId).remove();
+                        showNotification('Покинули группу', 'info');
+                        closeSimpleChannelProfile();
+                        closeChat();
+                        loadChats();
+                    });
+                } else {
+                    ref.set(true).then(() => {
+                        database.ref('userChats/' + currentUser.uid + '/' + currentChatId).set(true);
+                        showNotification('Вступили в группу!', 'success');
+                        closeSimpleChannelProfile();
+                    });
+                }
+            }
+        };
+    }
+}
+
+function closeSimpleChannelProfile() {
+    const modal = document.getElementById('simple-channel-profile');
+    if (modal) modal.remove();
+}
