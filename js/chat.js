@@ -2526,7 +2526,7 @@ function openChannelOrGroupProfile(chatId) {
                 <div class="profile-tabs">
                     <button class="profile-tab-btn active" onclick="switchChannelGroupTab('posts', '${chatId}')">📷 Посты</button>
                     <button class="profile-tab-btn" onclick="switchChannelGroupTab('members', '${chatId}')">${isChannel ? '👥 Подписчики' : '👥 Участники'}</button>
-                    ${isAdmin ? '<button class="profile-tab-btn" onclick="switchChannelGroupTab('admin', '${chatId}')">⚙️ Управление</button>' : ''}
+                   ${isAdmin ? "<button class='profile-tab-btn' onclick='switchChannelGroupTab(\"admin\", \"${chatId}\")'>⚙️ Управление</button>" : ''}
                 </div>
                 <div id="channel-group-profile-content" class="profile-content">
                     <div class="profile-loading">Загрузка...</div>
