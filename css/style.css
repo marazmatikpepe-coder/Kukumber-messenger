@@ -1697,3 +1697,49 @@ input, textarea {
         font-size: 50px;
     }
 }
+/* ===== АНИМАЦИИ ДЛЯ СВАЙПОВ ===== */
+
+/* Анимация для модальных окон */
+.modal {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.modal:not(.hidden) {
+    animation: modalFadeIn 0.2s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Анимация для боковой панели */
+.sidebar {
+    transition: transform 0.3s ease;
+    transform: translateX(-100%);
+}
+
+.sidebar.open {
+    transform: translateX(0);
+}
+
+/* Улучшенная анимация для вкладок */
+.tab-content {
+    transition: opacity 0.2s ease;
+}
+
+/* Отключаем выделение при свайпах */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Улучшаем скролл внутри модальных окон */
+.modal-content {
+    -webkit-overflow-scrolling: touch;
+}
