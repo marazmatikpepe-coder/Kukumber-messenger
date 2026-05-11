@@ -825,6 +825,18 @@ function createMessageElement(message) {
         content += '<div class="message-caption">' + formatMessageText(message.caption) + '</div>';
     }
 }
+       // В createMessageElement, после обработки типа 'gif', добавьте:
+else if (message.type === 'audio') {
+    content = `
+        <div class="audio-message" style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.05); padding: 6px 12px; border-radius: 20px;">
+            <button onclick="playVoiceMessage('${message.audioUrl}', this)" style="background: none; border: none; font-size: 20px; cursor: pointer;">▶️</button>
+            <span>🎤 Голосовое (${message.duration || 0} сек)</span>
+        </div>
+    `;
+    if (message.caption && message.caption.trim()) {
+        content += '<div class="message-caption">' + formatMessageText(message.caption) + '</div>';
+    }
+}
     else if (message.type === 'audio') {
         content = '<div class="audio-message"><button onclick="playAudio(\''+message.audioUrl+'\')">▶️</button><span>Голосовое сообщение</span></div>';
     }
