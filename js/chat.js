@@ -3920,49 +3920,43 @@ function loadGroupAdminTab() {
     
     container.innerHTML = `
         <div style="margin-bottom: 20px;">
-            <strong>👑 Назначить администраторов</strong>
-            <div id="admin-select-list" style="margin-top: 10px; max-height: 200px; overflow-y: auto;"></div>
+            <strong>📝 Редактирование группы</strong>
+            <div style="margin-top: 10px;">
+                <button onclick="editGroupInfo()" style="width: 100%; padding: 12px; margin-bottom: 8px; background: var(--background); border: none; border-radius: 12px; text-align: left; cursor: pointer;">✏️ Редактировать название и описание</button>
+            </div>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <strong>👑 Управление администраторами</strong>
+            <div id="group-admin-list" style="margin-top: 10px; max-height: 200px; overflow-y: auto;"></div>
         </div>
         <div style="margin-bottom: 20px; padding-top: 10px; border-top: 1px solid var(--border);">
             <strong>⚙️ Права администраторов</strong>
             <div style="margin-top: 10px;">
-                <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-                    <div>
-                        <div>🗑️ Удалять сообщения</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Админы могут удалять любые сообщения</div>
-                    </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                    <div>🗑️ Удалять сообщения</div>
                     <label class="switch">
-                        <input type="checkbox" id="perm-delete-messages" ${adminPermissions.canDeleteMessages ? 'checked' : ''} onchange="saveAdminPermissions()">
+                        <input type="checkbox" id="group-perm-delete" ${adminPermissions.canDeleteMessages ? 'checked' : ''} onchange="saveGroupPermissions()">
                         <span class="slider round"></span>
                     </label>
                 </div>
-                <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-                    <div>
-                        <div>✏️ Изменять настройки</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Админы могут менять название, описание, аватар</div>
-                    </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                    <div>✏️ Изменять настройки группы</div>
                     <label class="switch">
-                        <input type="checkbox" id="perm-edit-settings" ${adminPermissions.canEditSettings ? 'checked' : ''} onchange="saveAdminPermissions()">
+                        <input type="checkbox" id="group-perm-edit" ${adminPermissions.canEditSettings ? 'checked' : ''} onchange="saveGroupPermissions()">
                         <span class="slider round"></span>
                     </label>
                 </div>
-                <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-                    <div>
-                        <div>👥 Управлять участниками</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Админы могут добавлять/удалять участников</div>
-                    </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                    <div>👥 Управлять участниками</div>
                     <label class="switch">
-                        <input type="checkbox" id="perm-manage-members" ${adminPermissions.canManageMembers ? 'checked' : ''} onchange="saveAdminPermissions()">
+                        <input type="checkbox" id="group-perm-members" ${adminPermissions.canManageMembers ? 'checked' : ''} onchange="saveGroupPermissions()">
                         <span class="slider round"></span>
                     </label>
                 </div>
-                <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-                    <div>
-                        <div>📌 Закреплять сообщения</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">Админы могут закреплять сообщения</div>
-                    </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                    <div>📌 Закреплять сообщения</div>
                     <label class="switch">
-                        <input type="checkbox" id="perm-pin-messages" ${adminPermissions.canPinMessages ? 'checked' : ''} onchange="saveAdminPermissions()">
+                        <input type="checkbox" id="group-perm-pin" ${adminPermissions.canPinMessages ? 'checked' : ''} onchange="saveGroupPermissions()">
                         <span class="slider round"></span>
                     </label>
                 </div>
@@ -3976,8 +3970,9 @@ function loadGroupAdminTab() {
     `;
     
     // Загружаем список участников для назначения админов
-    const adminList = document.getElementById('admin-select-list');
+    const adminList = document.getElementById('group-admin-list');
     if (adminList) {
+        adminList.innerHTML = '';
         memberIds.forEach(uid => {
             if (uid === ownerId) return;
             database.ref('users/' + uid).once('value', userSnap => {
@@ -3997,6 +3992,34 @@ function loadGroupAdminTab() {
                 `;
                 adminList.appendChild(div);
             });
+        });
+    }
+}
+
+function saveGroupPermissions() {
+    const permissions = {
+        canDeleteMessages: document.getElementById('group-perm-delete')?.checked || false,
+        canEditSettings: document.getElementById('group-perm-edit')?.checked || false,
+        canManageMembers: document.getElementById('group-perm-members')?.checked || false,
+        canPinMessages: document.getElementById('group-perm-pin')?.checked || false
+    };
+    database.ref('chats/' + currentGroupProfileId + '/adminPermissions').set(permissions);
+    showNotification('Права сохранены', 'success');
+}
+
+function editGroupInfo() {
+    const newName = prompt('Новое название группы:', currentGroupProfileData.name);
+    const newDesc = prompt('Новое описание:', currentGroupProfileData.description || '');
+    const newType = confirm('Сделать группу публичной? (OK - публичная, Отмена - приватная)');
+    
+    if (newName) {
+        database.ref('chats/' + currentGroupProfileId).update({
+            name: newName.trim(),
+            description: newDesc.trim(),
+            isPublic: newType
+        }).then(() => {
+            showNotification('Настройки обновлены!', 'success');
+            openGroupProfile(currentGroupProfileId);
         });
     }
 }
@@ -4175,3 +4198,35 @@ function checkGroupInvite() {
 
 // Запускаем проверку при загрузке
 setTimeout(checkGroupInvite, 1000);
+function loadGroupInfoTab() {
+    const container = document.getElementById('group-tab-content');
+    if (!container) return;
+    
+    const chat = currentGroupProfileData;
+    
+    // Загружаем владельца
+    database.ref('users/' + chat.createdBy).once('value', ownerSnap => {
+        const owner = ownerSnap.val();
+        
+        const infoHtml = `
+            <div style="padding: 5px;">
+                <div style="margin-bottom: 15px;">
+                    <strong>📅 Дата создания</strong><br>
+                    <span style="color: var(--text-muted);">${chat.createdAt ? new Date(chat.createdAt).toLocaleDateString() : 'Неизвестно'}</span>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>👑 Владелец</strong><br>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px; cursor: pointer;" onclick="openUserProfile('${chat.createdBy}')">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--sage); display: flex; align-items: center; justify-content: center; ${owner?.avatar ? `background-image: url(${owner.avatar}); background-size: cover;` : ''}">${!owner?.avatar ? '👤' : ''}</div>
+                        <span>${owner ? escapeHtml(owner.username) : 'Неизвестен'}</span>
+                    </div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>🌍 Тип группы</strong><br>
+                    <span style="color: var(--text-muted);">${chat.isPublic ? 'Публичная' : 'Приватная'}</span>
+                </div>
+            </div>
+        `;
+        container.innerHTML = infoHtml;
+    });
+}
