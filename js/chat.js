@@ -2779,40 +2779,40 @@ function leaveGroup(chatId) {
 }
 // chat.js - добавьте в конец файла
 // chat.js - замените существующую функцию на эту
+// ========== ОСНОВНАЯ ФУНКЦИЯ ОТКРЫТИЯ ПРОФИЛЯ ==========
 function openChannelOrGroupProfile() {
     if (!currentChatId || !currentChatUser) {
         showNotification('Чат не выбран', 'error');
         return;
     }
     
-    // Диагностика - посмотрим в консоль
-    console.log('Тип чата:', currentChatUser.type);
+    console.log('Открываем профиль, тип чата:', currentChatUser.type);
     
-    // ГРУППА
+    // ГРУППА - используем групповой профиль
     if (currentChatUser.type === 'group') {
-        console.log('Открываем профиль группы');
+        console.log('Это ГРУППА, открываем профиль группы');
         if (typeof openGroupProfile === 'function') {
             openGroupProfile(currentChatId);
         } else {
-            showNotification('Функция профиля группы не загружена', 'error');
+            showNotification('Ошибка: функция профиля группы не загружена', 'error');
         }
         return;
     }
     
-    // КАНАЛ
+    // КАНАЛ - используем канальный профиль
     if (currentChatUser.type === 'channel') {
-        console.log('Открываем профиль канала');
+        console.log('Это КАНАЛ, открываем профиль канала');
         if (typeof openChannelProfile === 'function') {
             openChannelProfile(currentChatId);
         } else {
-            showNotification('Функция профиля канала не загружена', 'error');
+            showNotification('Ошибка: функция профиля канала не загружена', 'error');
         }
         return;
     }
     
     // ЛИЧНЫЙ ЧАТ
     if (currentChatUser.type === 'private') {
-        console.log('Открываем профиль пользователя');
+        console.log('Это ЛИЧНЫЙ ЧАТ, открываем профиль пользователя');
         if (currentChatUser.otherUserId && typeof openUserProfile === 'function') {
             openUserProfile(currentChatUser.otherUserId);
         }
@@ -3664,13 +3664,17 @@ let currentGroupProfileId = null;
 let currentGroupProfileData = null;
 
 function openGroupProfile(chatId) {
+    console.log('openGroupProfile вызван для:', chatId);
     currentGroupProfileId = chatId;
     
     database.ref('chats/' + chatId).once('value').then(snapshot => {
         const chat = snapshot.val();
-        if (!chat || chat.type !== 'group') return;
+        if (!chat || chat.type !== 'group') {
+            console.error('Это не группа или чат не найден');
+            return;
+        }
         currentGroupProfileData = chat;
-        showBeautyGroupProfile(chat);
+        showBeautyGroupProfile(chat);  // ← ГРУППОВАЯ функция!
     });
 }
 
