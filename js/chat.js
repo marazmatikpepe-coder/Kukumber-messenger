@@ -2785,8 +2785,12 @@ function openChannelOrGroupProfile() {
         return;
     }
     
-    // ГРУППА - открываем профиль группы
+    // Диагностика - посмотрим в консоль
+    console.log('Тип чата:', currentChatUser.type);
+    
+    // ГРУППА
     if (currentChatUser.type === 'group') {
+        console.log('Открываем профиль группы');
         if (typeof openGroupProfile === 'function') {
             openGroupProfile(currentChatId);
         } else {
@@ -2795,8 +2799,9 @@ function openChannelOrGroupProfile() {
         return;
     }
     
-    // КАНАЛ - открываем профиль канала
+    // КАНАЛ
     if (currentChatUser.type === 'channel') {
+        console.log('Открываем профиль канала');
         if (typeof openChannelProfile === 'function') {
             openChannelProfile(currentChatId);
         } else {
@@ -2805,12 +2810,11 @@ function openChannelOrGroupProfile() {
         return;
     }
     
-    // ЛИЧНЫЙ ЧАТ - открываем профиль пользователя
-    if (currentChatUser.type === 'private' && currentChatUser.otherUserId) {
-        if (typeof openUserProfile === 'function') {
+    // ЛИЧНЫЙ ЧАТ
+    if (currentChatUser.type === 'private') {
+        console.log('Открываем профиль пользователя');
+        if (currentChatUser.otherUserId && typeof openUserProfile === 'function') {
             openUserProfile(currentChatUser.otherUserId);
-        } else {
-            showNotification('Функция профиля не загружена', 'error');
         }
     }
 }
