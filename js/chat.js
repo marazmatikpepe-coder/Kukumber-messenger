@@ -1848,7 +1848,8 @@ async function searchPublicChannelsGlobal(query) {
     
     for (let chatId in chats) {
         const chat = chats[chatId];
-        if (chat.type !== 'channel' || !chat.isPublic) continue;
+        if (chat.type !== 'channel' && chat.type !== 'group') continue;
+        if (!chat.isPublic) continue;
         if (chat.subscribers?.[currentUser.uid]) continue;
         
         const name = (chat.name || '').toLowerCase();
