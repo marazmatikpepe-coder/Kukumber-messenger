@@ -2785,22 +2785,32 @@ function openChannelOrGroupProfile() {
         return;
     }
     
-    // Если это группа - открываем профиль группы
+    // ГРУППА - открываем профиль группы
     if (currentChatUser.type === 'group') {
-        openGroupProfile(currentChatId);
+        if (typeof openGroupProfile === 'function') {
+            openGroupProfile(currentChatId);
+        } else {
+            showNotification('Функция профиля группы не загружена', 'error');
+        }
         return;
     }
     
-    // Если канал - открываем профиль канала
+    // КАНАЛ - открываем профиль канала
     if (currentChatUser.type === 'channel') {
-        openChannelProfile(currentChatId);
+        if (typeof openChannelProfile === 'function') {
+            openChannelProfile(currentChatId);
+        } else {
+            showNotification('Функция профиля канала не загружена', 'error');
+        }
         return;
     }
     
-    // Личные чаты
-    if (currentChatUser.type === 'private') {
+    // ЛИЧНЫЙ ЧАТ - открываем профиль пользователя
+    if (currentChatUser.type === 'private' && currentChatUser.otherUserId) {
         if (typeof openUserProfile === 'function') {
             openUserProfile(currentChatUser.otherUserId);
+        } else {
+            showNotification('Функция профиля не загружена', 'error');
         }
     }
 }
