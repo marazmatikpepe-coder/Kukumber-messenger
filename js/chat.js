@@ -2785,16 +2785,22 @@ function openChannelOrGroupProfile() {
         return;
     }
     
-    // Открываем красивый профиль канала/группы
-    if (typeof openChannelProfile === 'function') {
+    // Если это группа - открываем профиль группы
+    if (currentChatUser.type === 'group') {
+        openGroupProfile(currentChatId);
+        return;
+    }
+    
+    // Если канал - открываем профиль канала
+    if (currentChatUser.type === 'channel') {
         openChannelProfile(currentChatId);
-    } else {
-        // fallback - старое окно
-        var modal = document.getElementById('chat-info-modal');
-        if (modal) {
-            showChatInfo();
-        } else {
-            showNotification('Информация о чате: ' + (currentChatUser.name || 'Чат'), 'info');
+        return;
+    }
+    
+    // Личные чаты
+    if (currentChatUser.type === 'private') {
+        if (typeof openUserProfile === 'function') {
+            openUserProfile(currentChatUser.otherUserId);
         }
     }
 }
@@ -3639,3 +3645,519 @@ function closeBeautyChannelProfile() {
     currentProfileChatId = null;
     currentProfileChatData = null;
 }
+// ========== КРАСИВЫЙ ПРОФИЛЬ ГРУППЫ ==========
+let currentGroupProfileId = null;
+let currentGroupProfileData = null;
+
+function openGroupProfile(chatId) {
+    currentGroupProfileId = chatId;
+    
+    database.ref('chats/' + chatId).once('value').then(snapshot => {
+        const chat = snapshot.val();
+        if (!chat || chat.type !== 'group') return;
+        currentGroupProfileData = chat;
+        showBeautyGroupProfile(chat);
+    });
+}
+
+function showBeautyGroupProfile(chat) {
+    const membersCount = Object.keys(chat.members || {}).length;
+    const isMember = chat.members ? chat.members[currentUser.uid] : false;
+    const isAdmin = chat.admins ? chat.admins[currentUser.uid] : false;
+    const isOwner = chat.createdBy === currentUser.uid;
+    const isSuperAdmin = window.isSuperAdmin === true;
+    const canEdit = isAdmin || isOwner || isSuperAdmin;
+    
+    const bannerStyle = chat.banner ? 
+        (chat.banner.startsWith('#') ? `background: ${chat.banner};` : `background-image: url(${chat.banner}); background-size: cover; background-position: center;`) :
+        'background: linear-gradient(135deg, #228B22, #556B2F);';
+    
+    const modalHtml = `
+        <div id="beauty-group-profile" class="modal" style="z-index: 10001;">
+            <div style="background: white; width: 100%; max-width: 500px; border-radius: 24px; overflow: hidden; margin: auto; position: relative; max-height: 90vh; overflow-y: auto;">
+                <!-- Баннер -->
+                <div style="${bannerStyle} height: 140px; position: relative;">
+                    ${canEdit ? `<button onclick="editGroupBanner()" style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px;">✏️</button>` : ''}
+                    <button onclick="closeBeautyGroupProfile()" style="position: absolute; top: 10px; right: 15px; background: rgba(0,0,0,0.5); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 20px; cursor: pointer;">×</button>
+                </div>
+                
+                <!-- Аватарка -->
+                <div style="display: flex; justify-content: center; margin-top: -50px; position: relative; z-index: 2;">
+                    <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--sage); border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 50px; ${chat.avatar ? `background-image: url(${chat.avatar}); background-size: cover;` : ''}">
+                        ${chat.avatar ? '' : '👥'}
+                        ${canEdit ? `<button onclick="editGroupAvatar()" style="position: absolute; bottom: 5px; right: 5px; background: var(--forest); border: none; color: white; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px;">✏️</button>` : ''}
+                    </div>
+                </div>
+                
+                <!-- Информация -->
+                <div style="text-align: center; padding: 15px 20px;">
+                    <h2 style="font-size: 22px; margin: 0;">${escapeHtml(chat.name || 'Группа')}</h2>
+                    <div style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">👥 ${membersCount} участников</div>
+                    <p style="color: var(--text-dark); font-size: 14px; margin-top: 10px;">${escapeHtml(chat.description || 'Нет описания')}</p>
+                    
+                    <div style="margin-top: 15px; padding: 10px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <button id="group-action-btn" style="padding: 8px 24px; border: none; border-radius: 30px; background: ${isMember ? '#dc3545' : 'var(--forest)'}; color: white; font-size: 14px; cursor: pointer;">
+                                ${isMember ? 'Покинуть группу' : 'Вступить в группу'}
+                            </button>
+                            <button onclick="shareGroupInvite()" style="padding: 8px 24px; border: 1px solid var(--border); border-radius: 30px; background: white; color: var(--text-dark); font-size: 14px; cursor: pointer;">🔗 Поделиться</button>
+                        </div>
+                    </div>
+                    
+                    <div style="font-size: 13px; color: var(--text-muted); margin-top: 10px;">
+                        ${chat.isPublic ? '🌍 Публичная группа' : '🔒 Приватная группа'}
+                    </div>
+                </div>
+                
+                <!-- Вкладки -->
+                <div style="display: flex; border-top: 1px solid var(--border); background: white;">
+                    <button class="group-tab-btn active" data-tab="members" style="flex: 1; padding: 14px; background: none; border: none; cursor: pointer; font-size: 14px;">👥 Участники</button>
+                    <button class="group-tab-btn" data-tab="info" style="flex: 1; padding: 14px; background: none; border: none; cursor: pointer; font-size: 14px;">ℹ️ Инфо</button>
+                    ${canEdit ? `<button class="group-tab-btn" data-tab="admin" style="flex: 1; padding: 14px; background: none; border: none; cursor: pointer; font-size: 14px;">⚙️ Управление</button>` : ''}
+                </div>
+                
+                <!-- Контент -->
+                <div id="group-tab-content" style="padding: 15px; min-height: 300px; max-height: 400px; overflow-y: auto;">
+                    <div class="profile-loading">Загрузка...</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const oldModal = document.getElementById('beauty-group-profile');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('beauty-group-profile');
+    modal.classList.remove('hidden');
+    
+    // Обработчики вкладок
+    document.querySelectorAll('.group-tab-btn').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.group-tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const tab = btn.dataset.tab;
+            if (tab === 'members') loadGroupMembersTab();
+            else if (tab === 'info') loadGroupInfoTab();
+            else if (tab === 'admin') loadGroupAdminTab();
+        };
+    });
+    
+    // Кнопка действия
+    const actionBtn = document.getElementById('group-action-btn');
+    if (actionBtn) {
+        actionBtn.onclick = () => handleGroupAction();
+    }
+    
+    // Загружаем участников по умолчанию
+    loadGroupMembersTab();
+}
+
+function handleGroupAction() {
+    const isMember = currentGroupProfileData.members ? currentGroupProfileData.members[currentUser.uid] : false;
+    
+    if (isMember) {
+        if (!confirm('Покинуть группу?')) return;
+        database.ref('chats/' + currentGroupProfileId + '/members/' + currentUser.uid).remove()
+            .then(() => database.ref('userChats/' + currentUser.uid + '/' + currentGroupProfileId).remove())
+            .then(() => {
+                showNotification('Вы покинули группу', 'info');
+                closeBeautyGroupProfile();
+                closeChat();
+                loadChats();
+            });
+    } else {
+        database.ref('chats/' + currentGroupProfileId + '/members/' + currentUser.uid).set(true)
+            .then(() => database.ref('userChats/' + currentUser.uid + '/' + currentGroupProfileId).set(true))
+            .then(() => {
+                showNotification('Вы вступили в группу!', 'success');
+                // Отправляем системное сообщение
+                const systemMessage = {
+                    type: 'system',
+                    text: `${currentUserData?.username || 'Пользователь'} вступил(а) в группу`,
+                    senderId: 'system',
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                };
+                database.ref('messages/' + currentGroupProfileId).push(systemMessage);
+                closeBeautyGroupProfile();
+                openChat(currentGroupProfileId, currentGroupProfileData);
+            });
+    }
+}
+
+function loadGroupMembersTab() {
+    const container = document.getElementById('group-tab-content');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="profile-loading">Загрузка участников...</div>';
+    
+    const members = currentGroupProfileData.members || {};
+    const memberIds = Object.keys(members);
+    const admins = currentGroupProfileData.admins || {};
+    const ownerId = currentGroupProfileData.createdBy;
+    
+    if (memberIds.length === 0) {
+        container.innerHTML = '<div class="profile-empty">Нет участников</div>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <div style="margin-bottom: 12px;">
+            <button onclick="openGroupInviteModal()" style="width: 100%; padding: 10px; background: var(--forest); color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 14px;">🔗 Поделиться группой</button>
+        </div>
+        <div id="members-list-container"></div>
+    `;
+    
+    const membersContainer = document.getElementById('members-list-container');
+    
+    memberIds.forEach(uid => {
+        database.ref('users/' + uid).once('value', userSnap => {
+            const user = userSnap.val();
+            if (!user) return;
+            
+            let role = 'участник';
+            let roleColor = '#666';
+            if (uid === ownerId) {
+                role = 'владелец';
+                roleColor = '#ff9800';
+            } else if (admins[uid]) {
+                role = 'админ';
+                roleColor = '#228B22';
+            }
+            
+            const div = document.createElement('div');
+            div.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border); cursor: pointer;';
+            div.onclick = () => openUserProfile(uid);
+            div.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--sage); display: flex; align-items: center; justify-content: center; ${user.avatar ? `background-image: url(${user.avatar}); background-size: cover;` : ''}">${!user.avatar ? '👤' : ''}</div>
+                    <div>
+                        <div style="font-weight: 500;">${escapeHtml(user.username)}</div>
+                        <div style="font-size: 11px; color: ${roleColor};">${role}</div>
+                    </div>
+                </div>
+            `;
+            membersContainer.appendChild(div);
+        });
+    });
+}
+
+function loadGroupInfoTab() {
+    const container = document.getElementById('group-tab-content');
+    if (!container) return;
+    
+    const chat = currentGroupProfileData;
+    const isAdmin = chat.admins ? chat.admins[currentUser.uid] : false;
+    const isOwner = chat.createdBy === currentUser.uid;
+    const isSuperAdmin = window.isSuperAdmin === true;
+    const canEdit = isAdmin || isOwner || isSuperAdmin;
+    
+    // Загружаем владельца
+    database.ref('users/' + chat.createdBy).once('value', ownerSnap => {
+        const owner = ownerSnap.val();
+        
+        const infoHtml = `
+            <div style="padding: 5px;">
+                <div style="margin-bottom: 15px;">
+                    <strong>📅 Дата создания</strong><br>
+                    <span style="color: var(--text-muted);">${chat.createdAt ? new Date(chat.createdAt).toLocaleDateString() : 'Неизвестно'}</span>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>👑 Создатель</strong><br>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px; cursor: pointer;" onclick="openUserProfile('${chat.createdBy}')">
+                        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--sage); display: flex; align-items: center; justify-content: center; ${owner?.avatar ? `background-image: url(${owner.avatar}); background-size: cover;` : ''}">${!owner?.avatar ? '👤' : ''}</div>
+                        <span>${owner ? escapeHtml(owner.username) : 'Неизвестен'}</span>
+                    </div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>🌍 Тип группы</strong><br>
+                    <span style="color: var(--text-muted);">${chat.isPublic ? 'Публичная' : 'Приватная'}</span>
+                </div>
+                ${canEdit ? `
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border);">
+                    <button onclick="editGroupSettings()" style="width: 100%; padding: 12px; background: var(--background); border: none; border-radius: 12px; cursor: pointer; text-align: left;">
+                        ⚙️ Изменить настройки группы
+                    </button>
+                </div>
+                ` : ''}
+            </div>
+        `;
+        container.innerHTML = infoHtml;
+    });
+}
+
+function loadGroupAdminTab() {
+    const container = document.getElementById('group-tab-content');
+    if (!container) return;
+    
+    const chat = currentGroupProfileData;
+    const members = chat.members || {};
+    const memberIds = Object.keys(members);
+    const admins = chat.admins || {};
+    const ownerId = chat.createdBy;
+    
+    // Загружаем настройки прав админов
+    const adminPermissions = chat.adminPermissions || {
+        canDeleteMessages: true,
+        canEditSettings: false,
+        canManageMembers: false,
+        canPinMessages: false
+    };
+    
+    container.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <strong>👑 Назначить администраторов</strong>
+            <div id="admin-select-list" style="margin-top: 10px; max-height: 200px; overflow-y: auto;"></div>
+        </div>
+        <div style="margin-bottom: 20px; padding-top: 10px; border-top: 1px solid var(--border);">
+            <strong>⚙️ Права администраторов</strong>
+            <div style="margin-top: 10px;">
+                <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                    <div>
+                        <div>🗑️ Удалять сообщения</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Админы могут удалять любые сообщения</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="perm-delete-messages" ${adminPermissions.canDeleteMessages ? 'checked' : ''} onchange="saveAdminPermissions()">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                    <div>
+                        <div>✏️ Изменять настройки</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Админы могут менять название, описание, аватар</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="perm-edit-settings" ${adminPermissions.canEditSettings ? 'checked' : ''} onchange="saveAdminPermissions()">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                    <div>
+                        <div>👥 Управлять участниками</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Админы могут добавлять/удалять участников</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="perm-manage-members" ${adminPermissions.canManageMembers ? 'checked' : ''} onchange="saveAdminPermissions()">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                    <div>
+                        <div>📌 Закреплять сообщения</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Админы могут закреплять сообщения</div>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="perm-pin-messages" ${adminPermissions.canPinMessages ? 'checked' : ''} onchange="saveAdminPermissions()">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+        ${ownerId === currentUser.uid || window.isSuperAdmin ? `
+        <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid var(--border);">
+            <button onclick="deleteGroup()" style="width: 100%; padding: 12px; background: #dc3545; color: white; border: none; border-radius: 12px; cursor: pointer;">🗑️ Удалить группу</button>
+        </div>
+        ` : ''}
+    `;
+    
+    // Загружаем список участников для назначения админов
+    const adminList = document.getElementById('admin-select-list');
+    if (adminList) {
+        memberIds.forEach(uid => {
+            if (uid === ownerId) return;
+            database.ref('users/' + uid).once('value', userSnap => {
+                const user = userSnap.val();
+                if (!user) return;
+                const isAdmin = admins[uid];
+                const div = document.createElement('div');
+                div.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border);';
+                div.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--sage); display: flex; align-items: center; justify-content: center; ${user.avatar ? `background-image: url(${user.avatar}); background-size: cover;` : ''}">${!user.avatar ? '👤' : ''}</div>
+                        <span>${escapeHtml(user.username)}</span>
+                    </div>
+                    <button onclick="toggleGroupAdmin('${uid}', ${!isAdmin})" style="padding: 6px 12px; background: ${isAdmin ? '#dc3545' : 'var(--forest)'}; color: white; border: none; border-radius: 20px; cursor: pointer;">
+                        ${isAdmin ? 'Снять админа' : 'Назначить админа'}
+                    </button>
+                `;
+                adminList.appendChild(div);
+            });
+        });
+    }
+}
+
+function toggleGroupAdmin(uid, makeAdmin) {
+    if (makeAdmin) {
+        database.ref('chats/' + currentGroupProfileId + '/admins/' + uid).set(true);
+        showNotification('Администратор назначен', 'success');
+    } else {
+        database.ref('chats/' + currentGroupProfileId + '/admins/' + uid).remove();
+        showNotification('Права администратора сняты', 'info');
+    }
+    setTimeout(() => loadGroupAdminTab(), 500);
+}
+
+function saveAdminPermissions() {
+    const permissions = {
+        canDeleteMessages: document.getElementById('perm-delete-messages')?.checked || false,
+        canEditSettings: document.getElementById('perm-edit-settings')?.checked || false,
+        canManageMembers: document.getElementById('perm-manage-members')?.checked || false,
+        canPinMessages: document.getElementById('perm-pin-messages')?.checked || false
+    };
+    database.ref('chats/' + currentGroupProfileId + '/adminPermissions').set(permissions);
+    showNotification('Права сохранены', 'success');
+}
+
+function editGroupSettings() {
+    const newName = prompt('Новое название группы:', currentGroupProfileData.name);
+    const newDesc = prompt('Новое описание:', currentGroupProfileData.description || '');
+    const newType = confirm('Сделать группу публичной? (OK - публичная, Отмена - приватная)');
+    
+    if (newName) {
+        database.ref('chats/' + currentGroupProfileId).update({
+            name: newName.trim(),
+            description: newDesc.trim(),
+            isPublic: newType
+        }).then(() => {
+            showNotification('Настройки обновлены!', 'success');
+            openGroupProfile(currentGroupProfileId);
+        });
+    }
+}
+
+function shareGroupInvite() {
+    const inviteLink = `${window.location.origin}${window.location.pathname}?joinGroup=${currentGroupProfileData.kname || currentGroupProfileId}`;
+    
+    const modalHtml = `
+        <div id="invite-modal" class="modal" style="z-index: 10002;">
+            <div style="background: white; width: 90%; max-width: 350px; border-radius: 20px; overflow: hidden; margin: auto; padding: 20px;">
+                <h3 style="margin: 0 0 15px 0;">Пригласить в группу</h3>
+                <div style="margin-bottom: 15px;">
+                    <button onclick="copyInviteLinkAndClose('${inviteLink}')" style="width: 100%; padding: 12px; background: var(--forest); color: white; border: none; border-radius: 12px; margin-bottom: 10px; cursor: pointer;">🔗 Поделиться ссылкой</button>
+                    <button onclick="forwardGroupInvite()" style="width: 100%; padding: 12px; background: var(--background); border: none; border-radius: 12px; cursor: pointer;">📨 Переслать в чат</button>
+                </div>
+                <button onclick="closeInviteModal()" style="width: 100%; padding: 10px; background: none; border: none; cursor: pointer;">Отмена</button>
+            </div>
+        </div>
+    `;
+    
+    const oldModal = document.getElementById('invite-modal');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('invite-modal').classList.remove('hidden');
+}
+
+function copyInviteLinkAndClose(link) {
+    navigator.clipboard.writeText(link);
+    showNotification('Ссылка скопирована!', 'success');
+    closeInviteModal();
+}
+
+function forwardGroupInvite() {
+    closeInviteModal();
+    // Открываем диалог пересылки
+    openForwardDialog(null, `Приглашение в группу "${currentGroupProfileData.name}": ${window.location.origin}${window.location.pathname}?joinGroup=${currentGroupProfileData.kname || currentGroupProfileId}`, 'text', '');
+}
+
+function closeInviteModal() {
+    const modal = document.getElementById('invite-modal');
+    if (modal) modal.remove();
+}
+
+function editGroupBanner() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,image/gif';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        showNotification('Загрузка...', 'info');
+        try {
+            const url = await uploadToImgBB(file);
+            await database.ref('chats/' + currentGroupProfileId).update({ banner: url });
+            showNotification('Баннер обновлён!', 'success');
+            openGroupProfile(currentGroupProfileId);
+        } catch(err) {
+            showNotification('Ошибка загрузки', 'error');
+        }
+    };
+    input.click();
+}
+
+function editGroupAvatar() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        showNotification('Загрузка...', 'info');
+        try {
+            const url = await uploadToImgBB(file);
+            await database.ref('chats/' + currentGroupProfileId).update({ avatar: url });
+            showNotification('Аватар обновлён!', 'success');
+            openGroupProfile(currentGroupProfileId);
+        } catch(err) {
+            showNotification('Ошибка загрузки', 'error');
+        }
+    };
+    input.click();
+}
+
+function deleteGroup() {
+    if (!confirm('Удалить группу навсегда? Это действие необратимо!')) return;
+    database.ref('chats/' + currentGroupProfileId).remove().then(() => {
+        database.ref('messages/' + currentGroupProfileId).remove();
+        showNotification('Группа удалена', 'info');
+        closeBeautyGroupProfile();
+        closeChat();
+        loadChats();
+    });
+}
+
+function closeBeautyGroupProfile() {
+    const modal = document.getElementById('beauty-group-profile');
+    if (modal) modal.remove();
+    currentGroupProfileId = null;
+    currentGroupProfileData = null;
+}
+
+// Перехватываем приглашения по ссылке
+function checkGroupInvite() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const joinGroupId = urlParams.get('joinGroup');
+    if (joinGroupId) {
+        // Ищем группу по kname или id
+        database.ref('chats').orderByChild('kname').equalTo(joinGroupId).once('value', snapshot => {
+            let groupId = null;
+            snapshot.forEach(child => {
+                if (child.val().type === 'group') groupId = child.key;
+            });
+            if (!groupId) groupId = joinGroupId;
+            
+            database.ref('chats/' + groupId).once('value', async snap => {
+                const group = snap.val();
+                if (group && group.type === 'group' && !group.members?.[currentUser.uid]) {
+                    // Показываем кнопку вступления в чате
+                    showNotification('Вас пригласили в группу!', 'info');
+                    if (currentChatId === groupId) {
+                        // Добавляем кнопку в печатную строку
+                        const inviteBtn = document.createElement('button');
+                        inviteBtn.textContent = '🔗 Вступить в группу';
+                        inviteBtn.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--forest); color: white; border: none; padding: 12px 24px; border-radius: 30px; z-index: 1000; cursor: pointer;';
+                        inviteBtn.onclick = () => handleGroupAction();
+                        document.body.appendChild(inviteBtn);
+                        setTimeout(() => inviteBtn.remove(), 10000);
+                    }
+                }
+            });
+        });
+        // Убираем параметр из URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}
+
+// Запускаем проверку при загрузке
+setTimeout(checkGroupInvite, 1000);
