@@ -2932,3 +2932,145 @@ body.night-mode .profile-close-btn {
 body.night-mode .profile-close-btn:hover {
     background: rgba(0,0,0,0.7) !important;
 }
+/* ===== МОНОХРОМНАЯ ТЕМА (СЕРЫЙ, ЧЕРНЫЙ, ТЕМНО-СЕРЫЙ) ===== */
+:root {
+    --forest: #3a3a3a;
+    --lime: #5a5a5a;
+    --sage: #4a4a4a;
+    --dark-green: #2a2a2a;
+    --cucumber: #505050;
+    --olive: #3d3d3d;
+    --white: #f0f0f0;
+    --background: #1a1a1a;
+    --text-dark: #e0e0e0;
+    --text-light: #b0b0b0;
+    --text-muted: #808080;
+    --border: #333333;
+    --shadow: rgba(0,0,0,0.3);
+    --error: #dc3545;
+    --success: #28a745;
+}
+
+/* Принудительно делаем всё монохромным */
+body {
+    background: #121212;
+}
+
+/* Все фоны */
+.sidebar, .chat-header, .message-input-area, .bottom-nav,
+.settings-section, .settings-item, .settings-profile,
+.modal-content, .profile-modal-content, .modal-header,
+.slice-card, .slice-header, .slice-actions, .comments-block,
+.comment-item, .user-item, .search-result-item,
+.wizard-header, .channel-type-option, .selected-member-chip,
+.notification-category, #category-settings-modal .modal-content,
+#notifications-settings-modal .modal-content {
+    background: #1e1e1e !important;
+    border-color: #333333 !important;
+}
+
+/* Фон контента */
+.slices-container, .settings-container, .profile-content,
+.messages-container, .chat-area, .slices-feed,
+#profile-content, #channel-tab-content, #group-tab-content {
+    background: #121212 !important;
+}
+
+/* Текст */
+body, .chat-item-name, .chat-item-preview, .slice-author-name,
+.slice-text, .comment-author-name, .comment-text,
+.settings-item span, .profile-name, .profile-bio,
+.chat-user-info h3, #chat-status, .message.received .message-text,
+.user-item-info h4, .search-result-name {
+    color: #e0e0e0 !important;
+}
+
+/* Второстепенный текст */
+.chat-item-time, .slice-date, .slice-views, .comment-date,
+.settings-value, .profile-status, .profile-username,
+.search-result-username, .setting-desc, .notification-setting-desc {
+    color: #888888 !important;
+}
+
+/* Кнопки */
+.btn-primary, .send-btn, .btn-create-slice, .wizard-next-btn,
+.wizard-create-btn, .profile-subscribe-btn, .slice-action-btn {
+    background: #3a3a3a !important;
+    color: #ffffff !important;
+    border: none !important;
+}
+
+.btn-primary:hover, .send-btn:hover, .btn-create-slice:hover {
+    background: #4a4a4a !important;
+}
+
+.btn-secondary {
+    background: #2a2a2a !important;
+    border: 1px solid #444444 !important;
+    color: #cccccc !important;
+}
+
+.btn-danger {
+    background: #dc3545 !important;
+}
+
+/* Поля ввода */
+input, textarea, .wizard-input, .wizard-select,
+#message-input, .search-bar-new input, .slices-search-bar input {
+    background: #2a2a2a !important;
+    border: 1px solid #444444 !important;
+    color: #e0e0e0 !important;
+}
+
+input:focus, textarea:focus {
+    border-color: #666666 !important;
+    outline: none;
+}
+
+/* Сообщения */
+.message.sent {
+    background: #3a3a3a !important;
+    color: #ffffff !important;
+}
+
+.message.received {
+    background: #2a2a2a !important;
+    color: #e0e0e0 !important;
+}
+
+/* Аватарки по умолчанию */
+.default-avatar-user, .default-avatar-group, .default-avatar-channel {
+    background-color: #3a3a3a !important;
+    color: #aaaaaa !important;
+}
+
+/* Вкладки */
+.profile-tab-btn, .channel-tab-btn-ui, .group-tab-btn-ui {
+    background: #1e1e1e !important;
+    color: #aaaaaa !important;
+}
+
+.profile-tab-btn.active, .channel-tab-btn-ui.active, .group-tab-btn-ui.active {
+    color: #ffffff !important;
+    border-bottom: 2px solid #ffffff !important;
+}
+
+/* Баннер профиля (по умолчанию) */
+.profile-banner {
+    background: #2a2a2a !important;
+}
+
+/* Полоса прокрутки */
+::-webkit-scrollbar {
+    width: 5px;
+}
+::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+::-webkit-scrollbar-thumb {
+    background: #555555;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #777777;
+}
