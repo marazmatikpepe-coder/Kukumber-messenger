@@ -626,6 +626,31 @@ function createChatItem(chatId, chatData) {
     }
     
     function finishCreate() {
+        var avatarStyle = '';
+        var avatarClass = '';
+        
+        if (avatar && avatar.indexOf('http') === 0) { 
+            avatarStyle = 'background-image:url('+avatar+');background-size:cover;'; 
+            avatarClass = '';
+        } else { 
+            avatarStyle = '';
+            if (chatData.type === 'group') avatarClass = 'default-avatar-group';
+            else if (chatData.type === 'channel') avatarClass = 'default-avatar-channel';
+            else avatarClass = 'default-avatar-user';
+        }
+        
+        var time = chatData.lastMessageTime ? formatTime(chatData.lastMessageTime) : '';
+        var preview = chatData.lastMessage || 'Нет сообщений';
+        if (preview.length > 50) preview = preview.substring(0, 47) + '...';
+        
+        div.innerHTML = '<div class="chat-item-avatar"><div class="avatar ' + avatarClass + '" style="'+avatarStyle+'"></div>'+(isOnline?'<div class="online-indicator"></div>':'')+badge+'</div><div class="chat-item-info"><div class="chat-item-header"><span class="chat-item-name">'+escapeHtml(name)+'</span><span class="chat-item-time">'+time+'</span></div><div class="chat-item-preview">'+escapeHtml(preview)+'</div></div>';
+        div.onclick = function() { openChat(chatId, chatData); };
+        var chatsList = document.getElementById('chats-list');
+        if (chatsList) chatsList.appendChild(div);
+    }
+}
+    
+    function finishCreate() {
         var avatarStyle = '', avatarContent = '';
         if (avatar && avatar.indexOf('http') === 0) { 
             avatarStyle = 'background-image:url('+avatar+');background-size:cover;'; 
@@ -693,15 +718,19 @@ function openChat(chatId, chatData) {
     
     document.getElementById('chat-username').textContent = name;
     document.getElementById('chat-status').textContent = status;
-    var chatAvatar = document.getElementById('chat-avatar');
-    if (avatar && avatar.indexOf('http') === 0) {
-        chatAvatar.style.backgroundImage = 'url(' + avatar + ')';
-        chatAvatar.style.backgroundSize = 'cover';
-        chatAvatar.textContent = '';
-    } else {
-        chatAvatar.style.backgroundImage = '';
-        chatAvatar.textContent = chatData.type === 'group' ? '👥' : (chatData.type === 'channel' ? '📢' : '👤');
-    }
+   var chatAvatar = document.getElementById('chat-avatar');
+if (avatar && avatar.indexOf('http') === 0) {
+    chatAvatar.style.backgroundImage = 'url(' + avatar + ')';
+    chatAvatar.style.backgroundSize = 'cover';
+    chatAvatar.textContent = '';
+    chatAvatar.classList.remove('default-avatar-user', 'default-avatar-group', 'default-avatar-channel');
+} else {
+    chatAvatar.style.backgroundImage = '';
+    if (chatData.type === 'group') chatAvatar.classList.add('default-avatar-group');
+    else if (chatData.type === 'channel') chatAvatar.classList.add('default-avatar-channel');
+    else chatAvatar.classList.add('default-avatar-user');
+    chatAvatar.textContent = '';
+}
     
     if (chatData.type === 'private' && chatData.otherUserId) {
         var chatHeader = document.querySelector('.chat-user-info');
