@@ -614,15 +614,15 @@ const colorThemes = {
 function showThemeSettings() {
     const modalHtml = `
         <div id="theme-settings-modal" class="modal" style="z-index: 10002;">
-            <div style="background: white; width: 100%; max-width: 400px; border-radius: 28px; overflow: hidden; margin: auto;">
-                <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid #ddd;">
+            <div style="background: white; width: 100%; max-width: 500px; border-radius: 28px 28px 0 0; overflow: hidden; margin: auto; position: fixed; bottom: 0; left: 0; right: 0; max-height: 85vh; overflow-y: auto;">
+                <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid #ddd; position: sticky; top: 0; background: white; z-index: 10;">
                     <button onclick="closeThemeSettings()" style="background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 15px;">←</button>
                     <h3 style="margin: 0;">Оформление</h3>
                 </div>
                 
                 <div style="padding: 20px;">
-                    <div style="font-weight: 600; margin-bottom: 10px;">🎨 Цвет темы</div>
-                    <div id="themes-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;"></div>
+                    <div style="font-weight: 600; margin-bottom: 15px;">🎨 Цвет темы</div>
+                    <div id="themes-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;"></div>
                 </div>
             </div>
         </div>
@@ -654,22 +654,22 @@ function renderSimpleThemesGrid() {
         div.style.cssText = `
             background: ${theme.primary};
             border-radius: 16px;
-            padding: 12px;
+            padding: 12px 8px;
             text-align: center;
             cursor: pointer;
             border: 2px solid ${isActive ? theme.primary : 'transparent'};
             transition: transform 0.2s;
+            box-sizing: border-box;
         `;
         div.onclick = () => setSimpleTheme(key);
         div.innerHTML = `
             <div style="width: 100%; height: 50px; background: ${theme.secondary}; border-radius: 10px; margin-bottom: 8px;"></div>
-            <span style="font-size: 12px; color: white; font-weight: 500;">${theme.name}</span>
-            ${isActive ? '<div style="color: white; font-size: 14px;">✓</div>' : ''}
+            <span style="font-size: 12px; color: white; font-weight: 500; display: block;">${theme.name}</span>
+            ${isActive ? '<div style="color: white; font-size: 14px; margin-top: 4px;">✓</div>' : ''}
         `;
         container.appendChild(div);
     }
 }
-
 function setSimpleTheme(colorKey) {
     currentThemeColor = colorKey;
     localStorage.setItem('kukumber_theme_color', colorKey);
