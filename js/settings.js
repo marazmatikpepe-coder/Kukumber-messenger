@@ -978,6 +978,79 @@ function applyNightMode() {
         });
     }
 }
+// В функции applyNightMode, внутри if (nightModeEnabled) добавьте:
+
+// Печатная строка
+const messageInputArea = document.querySelector('.message-input-area');
+if (messageInputArea) {
+    messageInputArea.style.background = '#1e1e1e';
+    messageInputArea.style.borderTopColor = '#2c2c2c';
+}
+
+const messageInput = document.querySelector('#message-input');
+if (messageInput) {
+    messageInput.style.background = '#2d2d2d';
+    messageInput.style.color = '#ffffff';
+    messageInput.style.borderColor = '#3d3d3d';
+}
+
+// Кнопки в печатной строке
+const attachBtn = document.querySelector('.attach-btn');
+const voiceBtn = document.querySelector('.voice-btn');
+const emojiBtn = document.querySelector('.emoji-btn');
+if (attachBtn) attachBtn.style.background = 'transparent';
+if (voiceBtn) voiceBtn.style.background = 'transparent';
+if (emojiBtn) emojiBtn.style.background = 'transparent';
+
+// Сообщения собеседника
+document.querySelectorAll('.message.received').forEach(msg => {
+    msg.style.background = '#2d2d2d';
+    msg.style.color = '#e0e0e0';
+    const textDiv = msg.querySelector('.message-text');
+    if (textDiv) textDiv.style.color = '#e0e0e0';
+    const timeDiv = msg.querySelector('.message-time');
+    if (timeDiv) timeDiv.style.color = '#808080';
+});
+
+// Шапки модальных окон
+document.querySelectorAll('.modal-header').forEach(header => {
+    header.style.background = '#1e1e1e';
+    header.style.borderBottomColor = '#2c2c2c';
+    const title = header.querySelector('h3');
+    if (title) title.style.color = '#ffffff';
+    const closeBtn = header.querySelector('.btn-close');
+    if (closeBtn) closeBtn.style.color = '#ffffff';
+});
+
+// Модальные окна
+document.querySelectorAll('.modal-content, .profile-modal-content').forEach(modal => {
+    modal.style.background = '#1e1e1e';
+});
+
+// Профиль - вкладки
+document.querySelectorAll('.profile-tab-btn').forEach(tab => {
+    tab.style.background = '#1e1e1e';
+    tab.style.color = '#a0a0a0';
+});
+document.querySelectorAll('.profile-tab-btn.active').forEach(tab => {
+    tab.style.color = 'var(--forest)';
+});
+
+// Контент профиля
+const profileContent = document.querySelector('.profile-content');
+if (profileContent) profileContent.style.background = '#121212';
+
+// Имя в профиле
+const profileName = document.querySelector('.profile-name');
+if (profileName) profileName.style.color = '#ffffff';
+
+// Боковая панель
+const sidebar = document.querySelector('.sidebar');
+if (sidebar) sidebar.style.background = '#1e1e1e';
+
+// Нижняя навигация
+const bottomNav = document.querySelector('.bottom-nav');
+if (bottomNav) bottomNav.style.background = '#1e1e1e';
 // Добавляем кнопку ночного режима в меню оформления
 function updateThemeModalWithNightMode() {
     const nightModeBtn = document.getElementById('night-mode-toggle');
