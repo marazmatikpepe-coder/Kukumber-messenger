@@ -1,3251 +1,862 @@
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-:root{--forest:#228B22;--lime:#32CD32;--sage:#9DC183;--dark-green:#1a5c1a;--cucumber:#71BC78;--olive:#556B2F;--white:#fff;--background:#f5f7f5;--text-dark:#2c3e2c;--text-light:#6b8e6b;--text-muted:#94a894;--border:#d4e4d4;--shadow:rgba(47,79,47,0.15);--error:#dc3545;--success:#28a745}
-html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--background);color:var(--text-dark)}
-.hidden{display:none !important}
-.loading-screen{position:fixed;inset:0;background:linear-gradient(135deg,var(--forest),var(--olive));display:flex;justify-content:center;align-items:center;z-index:9999}
-.logo-container{text-align:center;color:white}
-.cucumber-logo{font-size:80px;animation:bounce 2s infinite}
-@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-15px)}}
-.logo-container h1{font-size:40px;margin:15px 0 5px}
-.loading-dots{display:flex;justify-content:center;gap:8px;margin-top:20px}
-.loading-dots span{width:10px;height:10px;background:var(--lime);border-radius:50%;animation:pulse 1.4s infinite}
-@keyframes pulse{0%,80%,100%{transform:scale(0.6);opacity:0.5}40%{transform:scale(1);opacity:1}}
-.auth-screen{position:fixed;inset:0;background:linear-gradient(135deg,var(--olive),var(--forest));display:flex;justify-content:center;align-items:center;padding:20px;z-index:100}
-.auth-container{background:white;padding:30px;border-radius:20px;width:100%;max-width:380px;box-shadow:0 20px 50px rgba(0,0,0,0.2)}
-.auth-logo{text-align:center;margin-bottom:25px}
-.cucumber-icon{font-size:60px}
-.auth-logo h1{font-size:28px;color:var(--forest);margin:10px 0 5px}
-.tagline{color:var(--text-light);font-size:14px}
-.auth-form h2{text-align:center;margin-bottom:20px;font-size:22px}
-.auth-form input{width:100%;padding:14px;margin-bottom:12px;border:2px solid var(--border);border-radius:12px;font-size:16px}
-.auth-form input:focus{outline:none;border-color:var(--forest)}
-.btn-primary{width:100%;padding:14px;background:linear-gradient(135deg,var(--forest),var(--lime));color:white;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer}
-.btn-primary:disabled{opacity:0.6}
-.btn-secondary{padding:12px 24px;background:var(--background);border:2px solid var(--border);border-radius:12px;cursor:pointer}
-.btn-danger{padding:12px 24px;background:var(--error);color:white;border:none;border-radius:12px;cursor:pointer}
-.btn-small{padding:8px 16px;font-size:14px;border-radius:8px}
-.switch-form{text-align:center;margin-top:20px;color:var(--text-light)}
-.switch-form a{color:var(--forest);font-weight:600;cursor:pointer}
-.main-screen{height:100%;display:flex;flex-direction:column}
-.tab-content{flex:1;overflow:hidden}
-.app-container{display:flex;height:100%}
-.sidebar{width:320px;min-width:320px;background:white;border-right:1px solid var(--border);display:flex;flex-direction:column;height:100%}
-.sidebar-header{padding:15px;background:linear-gradient(135deg,var(--forest),var(--olive));color:white;cursor:pointer}
-.user-info{display:flex;gap:12px;align-items:center}
-.avatar{width:45px;height:45px;border-radius:50%;background:var(--sage);display:flex;justify-content:center;align-items:center;font-size:20px;border:2px solid white;background-size:cover;background-position:center}
-.user-details h3{font-size:16px}
-.status{font-size:12px;background:rgba(50,205,50,0.3);padding:2px 8px;border-radius:10px}
-.search-bar{padding:10px;background:var(--background)}
-.search-bar input{width:100%;padding:10px 15px;border:none;border-radius:20px;font-size:14px}
-.create-buttons{display:flex;gap:6px;padding:8px}
-.btn-create{flex:1;padding:10px 5px;background:var(--background);border:none;border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;font-size:10px;color:var(--text-dark)}
-.btn-create span:first-child{font-size:18px;margin-bottom:3px}
-.btn-create:hover{background:var(--sage)}
-.chats-list{flex:1;overflow-y:auto}
-.chat-item{padding:12px 15px;display:flex;gap:12px;border-bottom:1px solid var(--border);cursor:pointer;align-items:center}
-.chat-item:hover{background:var(--background)}
-.chat-item.active{background:var(--sage)}
-.chat-item-avatar{position:relative}
-.chat-item-avatar .avatar{width:50px;height:50px;font-size:22px}
-.online-indicator{position:absolute;bottom:2px;right:2px;width:12px;height:12px;background:var(--lime);border-radius:50%;border:2px solid white}
-.chat-type-badge{position:absolute;top:-2px;right:-2px;font-size:12px;background:white;border-radius:50%;padding:2px}
-.chat-item-info{flex:1;min-width:0}
-.chat-item-header{display:flex;justify-content:space-between;margin-bottom:4px}
-.chat-item-name{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chat-item-time{font-size:11px;color:var(--text-muted)}
-.chat-item-preview{font-size:13px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.empty-chats{text-align:center;padding:40px;color:var(--text-muted)}
-.chat-area{flex:1;display:flex;flex-direction:column;background:var(--background);position:relative;height:100%;overflow:hidden}
-.mobile-menu-btn{display:none;position:absolute;top:12px;left:12px;z-index:50;width:40px;height:40px;background:var(--forest);color:white;border:none;border-radius:10px;font-size:20px;cursor:pointer}
-.no-chat{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;color:var(--text-light)}
-.cucumber-large{font-size:100px;opacity:0.4}
-.active-chat{display:flex;flex-direction:column;height:100%;overflow:hidden}
-.chat-header{padding:12px 15px;background:white;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
-.back-btn{display:none;background:none;border:none;font-size:24px;cursor:pointer;color:var(--forest)}
-.chat-user-info{display:flex;gap:10px;align-items:center;flex:1;cursor:pointer}
-.chat-user-info .avatar{width:42px;height:42px}
-.chat-user-info h3{font-size:15px}
-#chat-status{font-size:12px;color:var(--text-light)}
-.chat-actions{display:flex;gap:5px}
-.call-btn{width:40px;height:40px;background:var(--forest);border:none;border-radius:50%;cursor:pointer;font-size:20px;color:white;display:inline-flex;align-items:center;justify-content:center}
-.messages-container{flex:1;overflow-y:auto;padding:15px;display:flex;flex-direction:column;gap:8px}
-.message{max-width:75%;padding:10px 14px;border-radius:16px;animation:msgIn 0.2s}
-@keyframes msgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.message.sent{align-self:flex-end;background:linear-gradient(135deg,var(--forest),var(--cucumber));color:white;border-bottom-right-radius:4px}
-.message.received{align-self:flex-start;background:white;border-bottom-left-radius:4px;box-shadow:0 1px 3px var(--shadow)}
-.message-sender{font-size:12px;font-weight:600;color:var(--forest);margin-bottom:4px}
-.message.sent .message-sender{color:rgba(255,255,255,0.8)}
-.message-text{font-size:15px;line-height:1.4;margin-bottom:4px;word-break:break-word}
-.message-time{font-size:10px;text-align:right;opacity:0.7}
-.message-image{border-radius:10px;overflow:hidden;cursor:pointer;margin-bottom:5px}
-.message-image img{max-width:250px;max-height:300px;display:block}
-.message-input-area{padding:10px 12px;background:white;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap}
-.message-input-area input[type="text"]{flex:1;min-width:150px;padding:12px 16px;border:2px solid var(--border);border-radius:24px;font-size:15px;background:white}
-.message-input-area input:focus{outline:none;border-color:var(--forest)}
-.attach-btn{display:inline-flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;border-radius:50%;transition:all 0.2s;width:70px;height:70px}
-.attach-btn img{width:66px;height:66px;object-fit:contain}
-.attach-btn:hover{background:var(--background);transform:scale(1.05)}
-.voice-btn,.emoji-btn{background:none;border:none;font-size:22px;cursor:pointer;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%}
-.voice-btn:hover,.emoji-btn:hover{background:var(--background)}
-.send-btn{width:44px;height:44px;background:linear-gradient(135deg,var(--forest),var(--lime));color:white;border:none;border-radius:50%;font-size:18px;cursor:pointer}
-.channel-footer{padding:15px;text-align:center;background:var(--background);color:var(--text-light);flex-shrink:0}
-.emoji-picker{position:absolute;bottom:80px;right:15px;background:white;border-radius:16px;padding:12px;box-shadow:0 5px 25px rgba(0,0,0,0.15);z-index:200;width:280px}
-.emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:5px}
-.emoji-grid span{font-size:26px;cursor:pointer;padding:8px;text-align:center;border-radius:10px;transition:background 0.1s}
-.emoji-grid span:hover{background:var(--background)}
-.bottom-nav{height:60px;background:white;border-top:1px solid var(--border);display:flex;flex-shrink:0}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:var(--text-light);transition:color 0.2s}
-.nav-item.active{color:var(--forest)}
-.nav-icon{font-size:24px}
-.nav-icon img{width:24px;height:24px;object-fit:contain}
-.nav-label{font-size:11px;margin-top:2px}
-.slices-container{height:100%;display:flex;flex-direction:column;background:var(--background);overflow:hidden}
-.slices-header{display:flex;justify-content:space-between;align-items:center;padding:15px 20px;background:white;border-bottom:1px solid var(--border);flex-shrink:0}
-.slices-header-left{display:flex;align-items:center;gap:12px}
-.slices-logo-light,.slices-logo-dark{height:36px;width:auto}
-.slices-header h2{font-size:24px;color:var(--forest)}
-.btn-create-slice{padding:10px 20px;background:linear-gradient(135deg,var(--forest),var(--lime));color:white;border:none;border-radius:30px;font-weight:600;cursor:pointer;transition:all 0.2s}
-.btn-create-slice:hover{transform:scale(1.02)}
-.slices-search-bar{display:flex;gap:12px;padding:12px 20px;background:white;border-bottom:1px solid var(--border);flex-shrink:0}
-.slices-search-bar input{flex:1;padding:12px 18px;border:2px solid var(--border);border-radius:30px;font-size:15px;background:var(--background)}
-.slices-search-bar input:focus{outline:none;border-color:var(--forest)}
-.slices-profile-avatar{cursor:pointer}
-.slices-profile-avatar .avatar{width:48px;height:48px;background-size:cover}
-.slices-feed{flex:1;overflow-y:auto;padding:20px}
-.slice-card{background:white;border-radius:20px;margin-bottom:20px;overflow:hidden;box-shadow:0 2px 8px var(--shadow);transition:all 0.2s}
-.slice-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px var(--shadow)}
-.slice-header{display:flex;justify-content:space-between;align-items:center;padding:15px 20px}
-.slice-author{display:flex;align-items:center;gap:12px}
-.slice-author .avatar{width:48px;height:48px;background-size:cover}
-.slice-author-info{display:flex;flex-direction:column}
-.slice-author-name{font-weight:700;font-size:16px;color:var(--text-dark)}
-.slice-date{font-size:12px;color:var(--text-muted)}
-.slice-views{font-size:13px;color:var(--text-muted)}
-.slice-pinned-badge{display:inline-block;background:var(--forest);color:white;font-size:11px;padding:4px 10px;border-radius:20px;margin:0 20px 10px}
-.slice-media{width:100%;background:#f0f0f0;display:flex;justify-content:center;align-items:center}
-.slice-image{width:100%;max-height:500px;object-fit:contain;cursor:pointer}
-.slice-gif{max-width:100%;max-height:400px;object-fit:contain;cursor:pointer;border-radius:12px}
-.slice-media-multiple{position:relative;overflow:hidden}
-.slice-media-slider{display:flex;transition:transform 0.3s ease}
-.slice-slide{min-width:100%;display:flex;justify-content:center;background:#f0f0f0}
-.slice-slide img{width:100%;max-height:500px;object-fit:contain;cursor:pointer}
-.slice-slider-prev,.slice-slider-next{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,0.5);color:white;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px;transition:all 0.2s}
-.slice-slider-prev{left:10px}
-.slice-slider-next{right:10px}
-.slice-slider-prev:hover,.slice-slider-next:hover{background:rgba(0,0,0,0.8)}
-.slice-slider-dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px}
-.slice-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.5);cursor:pointer;transition:all 0.2s}
-.slice-dot.active{background:white;width:20px;border-radius:10px}
-.slice-text{padding:15px 20px;font-size:15px;line-height:1.5;color:var(--text-dark);word-break:break-word}
-.slice-text a{color:var(--forest);text-decoration:none}
-.slice-text a:hover{text-decoration:underline}
-.slice-mention{color:var(--forest);font-weight:600;cursor:pointer}
-.slice-hashtags{padding:0 20px 10px;display:flex;flex-wrap:wrap;gap:8px}
-.slice-hashtag{background:var(--background);padding:4px 12px;border-radius:20px;font-size:13px;color:var(--forest);cursor:pointer;transition:all 0.2s}
-.slice-hashtag:hover{background:var(--sage)}
-.slice-actions{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid var(--border)}
-.slice-actions-left{display:flex;gap:25px}
-.slice-action-btn{background:none;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--text-light);transition:all 0.2s;padding:6px 12px;border-radius:30px}
-.slice-action-btn:hover{background:var(--background)}
-.slice-action-btn.liked{color:#ff4757}
-.empty-slices{text-align:center;padding:80px 20px;color:var(--text-muted)}
-.empty-slices span{font-size:80px;display:block;margin-bottom:20px}
-.empty-slices p{font-size:18px;margin-bottom:10px}
-.slice-upload-area{margin:20px;padding:40px 20px;border:3px dashed var(--border);border-radius:16px;text-align:center;cursor:pointer}
-.slice-upload-area span{font-size:50px;display:block;margin-bottom:10px}
-.slice-preview-container{margin:15px 20px}
-.slice-preview-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.slice-add-more{background:var(--forest);color:white;border:none;padding:5px 12px;border-radius:20px;cursor:pointer;font-size:12px}
-.slice-preview-area{display:flex;gap:10px;flex-wrap:wrap}
-.slice-preview-item{position:relative;width:100px;height:100px;border-radius:12px;overflow:hidden}
-.slice-preview-img{width:100%;height:100%;object-fit:cover}
-.slice-preview-remove{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:white;border:none;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:16px}
-.slice-preview-gif-badge{position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.6);color:white;font-size:10px;padding:2px 6px;border-radius:10px}
-.slice-text-input{width:calc(100% - 40px);margin:10px 20px;padding:12px;border:2px solid var(--border);border-radius:16px;font-size:15px;resize:vertical;min-height:100px;font-family:inherit}
-.slice-hashtags-input{width:calc(100% - 40px);margin:0 20px 10px;padding:12px;border:2px solid var(--border);border-radius:16px;font-size:14px}
-#slice-context-menu{animation:menuFadeIn 0.1s ease}
-#slice-context-menu .context-menu-item{padding:12px 16px;cursor:pointer;transition:background 0.1s;font-size:14px;color:var(--text-dark)}
-#slice-context-menu .context-menu-item:hover{background:var(--background)}
-@keyframes menuFadeIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;justify-content:center;align-items:center;z-index:2000;padding:15px}
-.modal-content{background:white;border-radius:16px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto}
-.modal-header{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:white;z-index:10}
-.modal-header h3{font-size:18px}
-.btn-close{background:none;border:none;font-size:28px;cursor:pointer;color:var(--text-muted)}
-.modal-content input,.modal-content textarea{width:calc(100% - 40px);margin:15px 20px 0;padding:12px 15px;border:2px solid var(--border);border-radius:10px;font-size:15px}
-.modal-content textarea{min-height:80px;resize:vertical;font-family:inherit}
-.modal-buttons{display:flex;gap:10px;padding:20px}
-.users-list{max-height:300px;overflow-y:auto;padding:10px 0}
-.user-item{padding:10px 20px;display:flex;gap:12px;align-items:center;cursor:pointer}
-.user-item:hover{background:var(--background)}
-.user-item .avatar{width:42px;height:42px}
-.user-item-info h4{font-size:14px;margin-bottom:2px}
-.user-item.selected{background:var(--sage)}
-.user-item .check-mark{margin-left:auto;color:var(--forest);font-size:18px}
-.avatar-upload{text-align:center;padding:20px}
-.avatar-preview{width:100px;height:100px;border-radius:50%;background:var(--background);margin:0 auto 10px;display:flex;justify-content:center;align-items:center;font-size:40px;border:3px dashed var(--border);cursor:pointer;background-size:cover;background-position:center}
-.selected-members{display:flex;flex-wrap:wrap;gap:8px;padding:10px 20px}
-.selected-member-chip{display:flex;align-items:center;gap:5px;background:var(--sage);padding:5px 12px;border-radius:20px;font-size:13px}
-.selected-member-chip button{background:none;border:none;cursor:pointer;font-size:16px}
-.channel-type-options{padding:15px 20px;display:flex;flex-direction:column;gap:10px}
-.channel-type-options label{display:flex;align-items:center;gap:10px;padding:12px;border:2px solid var(--border);border-radius:10px;cursor:pointer}
-.hint{margin:5px 20px;font-size:12px}
-.hint.error{color:var(--error)}
-.hint.success{color:var(--success)}
-.call-container{background:#1a1a1a;border-radius:16px;width:95%;max-width:500px;overflow:hidden}
-.call-header{padding:15px;text-align:center;background:var(--forest);color:white}
-#call-timer{display:block;margin-top:5px;font-family:monospace}
-.video-container{position:relative;height:350px;background:#000}
-#remote-video{width:100%;height:100%;object-fit:cover}
-#local-video{position:absolute;bottom:15px;right:15px;width:120px;height:90px;border-radius:10px;border:2px solid white;object-fit:cover;background:#333}
-.call-avatar{position:absolute;inset:0;display:flex;justify-content:center;align-items:center}
-.avatar-large{width:100px;height:100px;background:var(--sage);border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:50px}
-.call-controls{padding:20px;display:flex;justify-content:center;gap:20px;background:#2a2a2a}
-.btn-call{width:55px;height:55px;border-radius:50%;border:none;font-size:24px;cursor:pointer;background:var(--sage)}
-.btn-call.muted{background:var(--error)}
-.btn-end-call{background:var(--error) !important}
-.btn-reject{background:var(--error) !important}
-.btn-accept{background:var(--lime) !important}
-.incoming-call-container{background:white;padding:30px;border-radius:16px;text-align:center}
-.incoming-call-avatar{font-size:60px;margin-bottom:15px}
-.incoming-call-actions{display:flex;justify-content:center;gap:30px;margin-top:25px}
-.image-preview-container{background:white;border-radius:16px;width:90%;max-width:400px;overflow:hidden}
-.image-preview-container img{width:100%;max-height:300px;object-fit:contain}
-.image-lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.95);display:flex;justify-content:center;align-items:center;z-index:10000;cursor:zoom-out}
-.image-lightbox img{max-width:95%;max-height:95%;object-fit:contain}
-.notifications-container{position:fixed;top:15px;right:15px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:320px}
-.notification{padding:12px 18px;border-radius:10px;color:white;box-shadow:0 4px 15px rgba(0,0,0,0.2);animation:slideIn 0.3s;font-size:14px}
-@keyframes slideIn{from{opacity:0;transform:translateX(100px)}to{opacity:1;transform:translateX(0)}}
-.notification.success{background:var(--forest)}
-.notification.error{background:var(--error)}
-.notification.info{background:var(--olive)}
-.audio-message{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.05);padding:6px 12px;border-radius:20px}
-.audio-message button{background:none;border:none;font-size:20px;cursor:pointer}
-.message.sent .audio-message{background:rgba(255,255,255,0.2)}
-#voice-record-btn.recording{background:var(--error);color:white;border-radius:50%;animation:pulse 1s infinite}
-@media (max-width:768px){
-.sidebar{position:fixed;left:0;top:0;bottom:0;width:85%;max-width:320px;z-index:1000;transform:translateX(-100%);transition:transform 0.3s;box-shadow:5px 0 20px rgba(0,0,0,0.3);height:100%}
-.sidebar.open{transform:translateX(0)}
-.mobile-menu-btn{display:flex;justify-content:center;align-items:center}
-.back-btn{display:block}
-.chat-area{height:100%}
-.message{max-width:85%}
-.call-btn{display:flex !important}
-.slices-feed{padding:12px}
-.slice-card{border-radius:16px}
-.slice-author .avatar{width:40px;height:40px}
-.slice-actions-left{gap:15px}
-.attach-btn{width:56px;height:56px}
-.attach-btn img{width:52px;height:52px}
-}
-@media (max-width:480px){
-.attach-btn{width:52px;height:52px}
-.attach-btn img{width:48px;height:48px}
-.slices-feed{padding:10px}
-}
-::-webkit-scrollbar{width:5px}
-::-webkit-scrollbar-thumb{background:var(--sage);border-radius:3px}
-/* ===== КОММЕНТАРИИ ===== */
-.comments-block {
-    border-top: 1px solid var(--border);
-    padding: 15px;
-    background: var(--background);
-}
-
-.comments-list {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.comment-item {
-    background: white;
-    border-radius: 12px;
-    padding: 12px;
-    margin-bottom: 10px;
-    box-shadow: 0 1px 2px var(--shadow);
-}
-
-.comment-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-}
-
-.comment-author-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--sage);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    background-size: cover;
-}
-
-.comment-author-info {
-    flex: 1;
-}
-
-.comment-author-name {
-    font-weight: 600;
-    font-size: 13px;
-    color: var(--text-dark);
-}
-
-.comment-status {
-    font-size: 10px;
-    color: var(--text-muted);
-}
-
-.comment-text {
-    font-size: 14px;
-    line-height: 1.4;
-    color: var(--text-dark);
-    margin: 8px 0 8px 42px;
-    word-break: break-word;
-}
-
-.comment-actions {
-    margin-left: 42px;
-}
-
-.comment-reply-btn,
-.load-replies-btn {
-    background: none;
-    border: none;
-    color: var(--forest);
-    font-size: 12px;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 12px;
-}
-
-.comment-reply-btn:hover,
-.load-replies-btn:hover {
-    background: var(--background);
-}
-
-.comment-like-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--text-light);
-}
-
-.reply-form {
-    margin: 10px 0 10px 42px;
-    display: flex;
-    gap: 8px;
-}
-
-.reply-form textarea {
-    flex: 1;
-    padding: 8px 12px;
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    font-size: 13px;
-    resize: none;
-    height: 36px;
-}
-
-.reply-form button,
-.add-comment button {
-    background: linear-gradient(135deg, var(--forest), var(--lime));
-    color: white;
-    border: none;
-    border-radius: 20px;
-    padding: 6px 16px;
-    cursor: pointer;
-}
-
-.add-comment {
-    margin-top: 15px;
-}
-
-.add-comment textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    font-size: 14px;
-    resize: none;
-    height: 60px;
-}
-
-.no-comments {
-    text-align: center;
-    color: var(--text-muted);
-    padding: 20px;
-}
-
-.reply-item {
-    background: var(--background);
-    margin-left: 40px;
-}
-
-.replies-list {
-    margin-top: 10px;
-}
-/* ===== КОММЕНТАРИИ ===== */
-.comments-block {
-    border-top: 1px solid var(--border);
-    padding: 15px;
-    background: var(--background);
-}
-
-.comments-list {
-    max-height: 500px;
-    overflow-y: auto;
-}
-
-.comments-loading {
-    text-align: center;
-    padding: 20px;
-    color: var(--text-muted);
-}
-
-.no-comments {
-    text-align: center;
-    padding: 20px;
-    color: var(--text-muted);
-}
-
-.comment-item {
-    background: white;
-    border-radius: 12px;
-    padding: 12px;
-    margin-bottom: 10px;
-    box-shadow: 0 1px 2px var(--shadow);
-}
-
-.comment-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-}
-
-.comment-author-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--sage);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    background-size: cover;
-}
-
-.comment-author-info {
-    flex: 1;
-}
-
-.comment-author-name {
-    font-weight: 600;
-    font-size: 13px;
-    color: var(--text-dark);
-}
-
-.comment-date {
-    font-size: 10px;
-    color: var(--text-muted);
-}
-
-.comment-text {
-    font-size: 14px;
-    line-height: 1.4;
-    color: var(--text-dark);
-    margin: 8px 0 8px 42px;
-    word-break: break-word;
-}
-
-.comment-actions {
-    margin-left: 42px;
-}
-
-.comment-reply-btn {
-    background: none;
-    border: none;
-    color: var(--forest);
-    font-size: 12px;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 12px;
-}
-
-.comment-reply-btn:hover {
-    background: var(--background);
-}
-
-.comment-like-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--text-light);
-}
-
-.comment-like-btn.liked {
-    color: #ff4757;
-}
-
-.reply-form {
-    margin: 10px 0 10px 42px;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.reply-form textarea {
-    flex: 1;
-    padding: 8px 12px;
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    font-size: 13px;
-    resize: none;
-    min-width: 150px;
-}
-
-.reply-form button,
-.add-comment button {
-    background: linear-gradient(135deg, var(--forest), var(--lime));
-    color: white;
-    border: none;
-    border-radius: 20px;
-    padding: 6px 16px;
-    cursor: pointer;
-}
-
-.cancel-reply-btn {
-    background: var(--error) !important;
-}
-
-.add-comment {
-    margin-top: 15px;
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-}
-
-.add-comment textarea {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    font-size: 14px;
-    resize: none;
-    font-family: inherit;
-}
-
-.replies-container {
-    margin-top: 10px;
-}
-
-.reply-item {
-    background: var(--background);
-    margin-bottom: 8px;
-}
-
-.replies-list {
-    margin-left: 42px;
-}
-/* ===== ПРОФИЛЬ ===== */
-.profile-modal-content {
-    background: white;
-    border-radius: 20px;
-    width: 100%;
-    max-width: 500px;
-    max-height: 85vh;
-    overflow-y: auto;
-    position: relative;
-}
-
-.profile-banner {
-    height: 120px;
-    position: relative;
-    border-radius: 20px 20px 0 0;
-    background-size: cover;
-    background-position: center;
-}
-
-.profile-close-btn {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    background: rgba(0,0,0,0.5);
-    color: white;
-    border: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    font-size: 18px;
-    cursor: pointer;
-    z-index: 10;
-}
-
-.profile-avatar-wrapper {
-    display: flex;
-    justify-content: center;
-    margin-top: -40px;
-}
-
-.profile-avatar {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: var(--sage);
-    border: 3px solid white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 40px;
-    background-size: cover;
-    background-position: center;
-}
-
-.profile-info {
-    text-align: center;
-    padding: 15px;
-}
-
-.profile-name-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.profile-name {
-    font-size: 22px;
-    color: var(--text-dark);
-}
-
-.profile-subscribe-btn {
-    background: #1a1a1a;
-    color: white;
-    border: none;
-    padding: 6px 16px;
-    border-radius: 30px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.profile-subscribe-btn:hover {
-    transform: scale(1.02);
-}
-
-.profile-notify-btn {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.profile-bio {
-    color: var(--text-light);
-    margin-top: 8px;
-    font-size: 14px;
-}
-
-.profile-tabs {
-    display: flex;
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
-}
-
-.profile-tab-btn {
-    flex: 1;
-    padding: 12px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--text-light);
-    transition: 0.2s;
-}
-
-.profile-tab-btn.active {
-    color: var(--forest);
-    border-bottom: 2px solid var(--forest);
-}
-
-.profile-content {
-    padding: 15px;
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.profile-loading, .profile-empty {
-    text-align: center;
-    padding: 40px;
-    color: var(--text-muted);
-}
-
-.profile-slice-card {
-    margin-bottom: 15px;
-}
-
-.repost-badge {
-    font-size: 12px;
-    color: var(--text-muted);
-    padding: 5px 15px;
-    background: var(--background);
-    margin-bottom: 10px;
-    border-radius: 8px;
-}
-
-/* ===== КОММЕНТАРИИ ===== */
-.comments-block {
-    border-top: 1px solid var(--border);
-    padding: 15px;
-    background: var(--background);
-}
-
-.comments-list {
-    max-height: 500px;
-    overflow-y: auto;
-}
-
-.comments-loading, .no-comments {
-    text-align: center;
-    padding: 20px;
-    color: var(--text-muted);
-}
-
-.comment-item {
-    background: white;
-    border-radius: 12px;
-    padding: 12px;
-    margin-bottom: 10px;
-    box-shadow: 0 1px 2px var(--shadow);
-}
-
-.comment-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-}
-
-.comment-author-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--sage);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    background-size: cover;
-}
-
-.comment-author-info {
-    flex: 1;
-}
-
-.comment-author-name {
-    font-weight: 600;
-    font-size: 13px;
-    color: var(--text-dark);
-}
-
-.comment-date {
-    font-size: 10px;
-    color: var(--text-muted);
-}
-
-.comment-text {
-    font-size: 14px;
-    line-height: 1.4;
-    color: var(--text-dark);
-    margin: 8px 0 8px 42px;
-    word-break: break-word;
-}
-
-.comment-actions {
-    margin-left: 42px;
-}
-
-.comment-reply-btn {
-    background: none;
-    border: none;
-    color: var(--forest);
-    font-size: 12px;
-    cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 12px;
-}
-
-.comment-reply-btn:hover {
-    background: var(--background);
-}
-
-.comment-like-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--text-light);
-}
-
-.reply-form {
-    margin: 10px 0 10px 42px;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.reply-form textarea {
-    flex: 1;
-    padding: 8px 12px;
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    font-size: 13px;
-    resize: none;
-    min-width: 150px;
-}
-
-.reply-form button,
-.add-comment button {
-    background: linear-gradient(135deg, var(--forest), var(--lime));
-    color: white;
-    border: none;
-    border-radius: 20px;
-    padding: 6px 16px;
-    cursor: pointer;
-}
-
-.cancel-reply-btn {
-    background: var(--error) !important;
-}
-
-.add-comment {
-    margin-top: 15px;
-    display: flex;
-    gap: 10px;
-    align-items: flex-start;
-}
-
-.add-comment textarea {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    font-size: 14px;
-    resize: none;
-    font-family: inherit;
-}
-
-.replies-container {
-    margin-top: 10px;
-}
-
-.reply-item {
-    background: var(--background);
-    margin-bottom: 8px;
-}
-
-.replies-list {
-    margin-left: 42px;
-}
-
-/* ===== ВЕРИФИКАЦИЯ ===== */
-.verified-badge {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.verified-badge:hover {
-    transform: scale(1.1);
-}
-
-/* ===== ПОИСК ===== */
-.search-logo-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.search-logo-btn img {
-    width: 24px;
-    height: 24px;
-}
-/* ===== НАСТРОЙКИ КАК В TELEGRAM ===== */
-.settings-container {
-    background: var(--background);
-    height: 100%;
-    overflow-y: auto;
-}
-
-.settings-header {
-    background: white;
-    padding: 20px;
-    border-bottom: 1px solid var(--border);
-}
-
-.settings-header h2 {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--text-dark);
-}
-
-.settings-profile {
-    background: white;
-    margin: 10px 15px;
-    border-radius: 16px;
-    padding: 15px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.settings-profile:hover {
-    background: var(--background);
-}
-
-.settings-avatar {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: var(--sage);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    background-size: cover;
-}
-
-.settings-profile-info {
-    flex: 1;
-}
-
-.settings-profile-info h3 {
-    font-size: 17px;
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-.settings-profile-info p {
-    font-size: 13px;
-    color: var(--text-light);
-}
-
-.settings-section {
-    background: white;
-    margin: 10px 15px;
-    border-radius: 16px;
-    overflow: hidden;
-}
-
-.settings-item {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.settings-item:last-child {
-    border-bottom: none;
-}
-
-.settings-item:hover {
-    background: var(--background);
-}
-
-.settings-icon {
-    font-size: 22px;
-    width: 32px;
-    text-align: center;
-}
-
-.settings-item span:nth-child(2) {
-    flex: 1;
-    font-size: 16px;
-}
-
-.settings-value {
-    color: var(--text-light);
-    font-size: 14px;
-}
-
-.settings-item.danger span:nth-child(2) {
-    color: var(--error);
-}
-
-.arrow {
-    color: var(--text-muted);
-    font-size: 20px;
-}
-
-.settings-footer {
-    text-align: center;
-    padding: 30px 20px;
-    color: var(--text-muted);
-    font-size: 13px;
-}
-
-/* ===== ИСПРАВЛЕННАЯ ПЕЧАТНАЯ СТРОКА (ТЕЛЕФОН/ПК) ===== */
-.message-input-area {
-    background: white;
-    border-top: 1px solid var(--border);
-    padding: 8px 12px;
-    display: flex;
-    align-items: flex-end;
-    gap: 8px;
-    flex-shrink: 0;
-}
-
-.attach-btn {
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
-    background: none;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-}
-
-.attach-btn img {
-    width: 36px;
-    height: 36px;
-}
-
-.voice-btn, .emoji-btn {
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
-    background: none;
-    border: none;
-    border-radius: 50%;
-    font-size: 22px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.voice-btn:hover, .emoji-btn:hover, .attach-btn:hover {
-    background: var(--background);
-}
-
-.message-input-area input[type="text"] {
-    flex: 1;
-    min-width: 100px;
-    padding: 12px 16px;
-    border: 2px solid var(--border);
-    border-radius: 28px;
-    font-size: 16px;
-    background: white;
-    outline: none;
-}
-
-.message-input-area input:focus {
-    border-color: var(--forest);
-}
-
-.send-btn {
-    width: 44px;
-    height: 44px;
-    flex-shrink: 0;
-    background: linear-gradient(135deg, var(--forest), var(--lime));
-    color: white;
-    border: none;
-    border-radius: 50%;
-    font-size: 18px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Мобильная адаптация печатной строки */
-@media (max-width: 768px) {
-    .message-input-area {
-        padding: 8px 10px;
-        gap: 6px;
+// KUKUMBER MESSENGER - SETTINGS (ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ)
+// Все функции: профиль, уведомления, темы, язык, оформление
+
+var translations = {
+    ru: {
+        app_name: 'K Messenger', settings: 'Настройки', edit_profile: 'Редактировать профиль',
+        username: 'Отображаемое имя', about_me: 'О себе', save: 'Сохранить',
+        notifications: 'Уведомления', privacy: 'Конфиденциальность', theme: 'Оформление',
+        language: 'Язык', storage: 'Данные и память', about: 'О приложении', help: 'Помощь',
+        logout: 'Выйти из аккаунта', version: 'v1.0', tagline: 'Свежее общение каждый день 🥒',
+        select_language: 'Выберите язык', settings_saved: 'Настройки сохранены',
+        profile_updated: 'Профиль обновлён', enter_username: 'Введите отображаемое имя',
+        in_development: 'в разработке', phone: 'Телефон', online: 'В сети', offline: 'Не в сети',
+        chats: 'Чаты', reels: 'Слайсы', new_chat: 'Чат', new_group: 'Группа', new_channel: 'Канал',
+        search_placeholder: '🔍 Поиск по чатам...', select_chat: 'Выберите чат',
+        create_group: 'Создать группу', create_channel: 'Создать канал',
+        group_name: 'Название группы', channel_name: 'Название канала',
+        channel_link: 'Ссылка (например: mychannel)', public: 'Публичный', private: 'Приватный',
+        description: 'Описание', members: 'Участники', subscribers: 'Подписчики',
+        add_members: 'Добавить участников', add_members_placeholder: 'Поиск...',
+        leave_chat: 'Покинуть', delete_chat: 'Удалить', subscribe: 'Подписаться',
+        unsubscribe: 'Отписаться', message_placeholder: 'Сообщение...', send: 'Отправить',
+        attach_file: 'Прикрепить файл', voice_message: 'Голосовое сообщение', emoji: 'Эмодзи',
+        create_reel: 'Создать слайс', reel_caption: 'Описание...', allow_comments: 'Разрешить комментарии',
+        publish: 'Опубликовать', feed: 'Лента', my_reels: 'Мои', liked_reels: 'Понравилось',
+        no_reels: 'Пока нет слайсов', be_first: 'Будьте первым!', voice_call: 'Аудиозвонок',
+        video_call: 'Видеозвонок', call_only_private: 'Звонки только в личных чатах',
+        user_unavailable: 'Пользователь недоступен', calling: 'Вызов...', connected: 'Подключено',
+        mute: 'Отключить звук', unmute: 'Включить звук', close: 'Закрыть', confirm: 'Подтвердить',
+        cancel: 'Отмена', yes: 'Да', no: 'Нет', ok: 'Хорошо', error: 'Ошибка', success: 'Успешно',
+        loading: 'Загрузка...', participants: 'Участники', you: 'Вы', admin: 'админ', owner: 'владелец',
+        join: 'Присоединиться', find_users: 'Найти', add_to_contacts: 'Добавить в контакты',
+        contacts: 'Контакты', no_contacts: 'Нет контактов', global_search: 'Поиск пользователей',
+        search_users_placeholder: 'Имя пользователя', delete_for_me: 'Удалить у меня',
+        delete_for_everyone: 'Удалить у всех', edit_message: 'Редактировать', add_reaction: 'Поставить реакцию',
+        pin_message: 'Закрепить', forward_message: 'Переслать', select_recipients: 'Выберите получателей (макс. 5)',
+        max_recipients: 'Максимум 5 получателей', typing: 'печатает...', recording: 'запись...',
+        sending_photo: 'отправляет фото...', no_messages: 'Нет сообщений', next: 'Далее', back: 'Назад'
+    },
+    en: {
+        app_name: 'K Messenger', settings: 'Settings', edit_profile: 'Edit Profile',
+        username: 'Display Name', about_me: 'About me', save: 'Save', notifications: 'Notifications',
+        privacy: 'Privacy', theme: 'Theme', language: 'Language', storage: 'Storage',
+        about: 'About', help: 'Help', logout: 'Logout', version: 'v1.0',
+        tagline: 'Fresh communication every day 🥒', select_language: 'Select language',
+        settings_saved: 'Settings saved', profile_updated: 'Profile updated',
+        enter_username: 'Enter display name', in_development: 'in development', phone: 'Phone',
+        online: 'Online', offline: 'Offline', chats: 'Chats', reels: 'Slices', new_chat: 'Chat',
+        new_group: 'Group', new_channel: 'Channel', search_placeholder: '🔍 Search chats...',
+        select_chat: 'Select a chat', create_group: 'Create group', create_channel: 'Create channel',
+        group_name: 'Group name', channel_name: 'Channel name', channel_link: 'Link (e.g., mychannel)',
+        public: 'Public', private: 'Private', description: 'Description', members: 'Members',
+        subscribers: 'Subscribers', add_members: 'Add members', add_members_placeholder: 'Search...',
+        leave_chat: 'Leave', delete_chat: 'Delete', subscribe: 'Subscribe', unsubscribe: 'Unsubscribe',
+        message_placeholder: 'Message...', send: 'Send', attach_file: 'Attach file',
+        voice_message: 'Voice message', emoji: 'Emoji', create_reel: 'Create slice',
+        reel_caption: 'Caption...', allow_comments: 'Allow comments', publish: 'Publish',
+        feed: 'Feed', my_reels: 'My', liked_reels: 'Liked', no_reels: 'No slices yet',
+        be_first: 'Be the first!', voice_call: 'Voice call', video_call: 'Video call',
+        call_only_private: 'Calls only in private chats', user_unavailable: 'User unavailable',
+        calling: 'Calling...', connected: 'Connected', mute: 'Mute', unmute: 'Unmute',
+        close: 'Close', confirm: 'Confirm', cancel: 'Cancel', yes: 'Yes', no: 'No', ok: 'OK',
+        error: 'Error', success: 'Success', loading: 'Loading...', participants: 'Participants',
+        you: 'You', admin: 'admin', owner: 'owner', join: 'Join', find_users: 'Find',
+        add_to_contacts: 'Add to contacts', contacts: 'Contacts',
+        no_contacts: 'No contacts', global_search: 'Search users',
+        search_users_placeholder: 'Username', delete_for_me: 'Delete for me',
+        delete_for_everyone: 'Delete for everyone', edit_message: 'Edit', add_reaction: 'Add reaction',
+        pin_message: 'Pin', forward_message: 'Forward', select_recipients: 'Select recipients (max 5)',
+        max_recipients: 'Maximum 5 recipients', typing: 'typing...', recording: 'recording...',
+        sending_photo: 'sending photo...', no_messages: 'No messages', next: 'Next', back: 'Back'
+    },
+    es: {
+        app_name: 'K Messenger', settings: 'Ajustes', edit_profile: 'Editar perfil',
+        username: 'Nombre de usuario', about_me: 'Sobre mí', save: 'Guardar',
+        notifications: 'Notificaciones', privacy: 'Privacidad', theme: 'Tema',
+        language: 'Idioma', storage: 'Almacenamiento', about: 'Acerca de', help: 'Ayuda',
+        logout: 'Cerrar sesión', version: 'v1.0', tagline: 'Comunicación fresca cada día 🥒',
+        select_language: 'Seleccionar idioma', settings_saved: 'Configuración guardada',
+        profile_updated: 'Perfil actualizado', enter_username: 'Ingrese nombre de usuario',
+        in_development: 'en desarrollo', phone: 'Teléfono', online: 'En línea', offline: 'Desconectado',
+        chats: 'Charlas', reels: 'Slices', new_chat: 'Chat', new_group: 'Grupo', new_channel: 'Canal',
+        search_placeholder: '🔍 Buscar chats...', select_chat: 'Selecciona un chat',
+        create_group: 'Crear grupo', create_channel: 'Crear canal',
+        group_name: 'Nombre del grupo', channel_name: 'Nombre del canal',
+        channel_link: 'Enlace (ej: micanal)', public: 'Público', private: 'Privado',
+        description: 'Descripción', members: 'Miembros', subscribers: 'Suscriptores',
+        add_members: 'Añadir miembros', add_members_placeholder: 'Buscar...',
+        leave_chat: 'Abandonar', delete_chat: 'Eliminar', subscribe: 'Suscribirse',
+        unsubscribe: 'Darse de baja', message_placeholder: 'Mensaje...', send: 'Enviar',
+        attach_file: 'Adjuntar archivo', voice_message: 'Mensaje de voz', emoji: 'Emoji',
+        create_reel: 'Crear slice', reel_caption: 'Descripción...', allow_comments: 'Permitir comentarios',
+        publish: 'Publicar', feed: 'Feed', my_reels: 'Mis', liked_reels: 'Me gusta',
+        no_reels: 'Todavía no hay slices', be_first: '¡Sé el primero!',
+        voice_call: 'Llamada de voz', video_call: 'Videollamada',
+        call_only_private: 'Llamadas solo en chats privados', user_unavailable: 'Usuario no disponible',
+        calling: 'Llamando...', connected: 'Conectado', mute: 'Silenciar', unmute: 'Activar sonido',
+        close: 'Cerrar', confirm: 'Confirmar', cancel: 'Cancelar', yes: 'Sí', no: 'No',
+        ok: 'OK', error: 'Error', success: 'Éxito', loading: 'Cargando...',
+        participants: 'Participantes', you: 'Tú', admin: 'admin', owner: 'propietario',
+        join: 'Unirse', find_users: 'Buscar', add_to_contacts: 'Añadir a contactos',
+        contacts: 'Contactos', no_contacts: 'No hay contactos', global_search: 'Buscar usuarios',
+        search_users_placeholder: 'Nombre de usuario', delete_for_me: 'Eliminar para mí',
+        delete_for_everyone: 'Eliminar para todos', edit_message: 'Editar', add_reaction: 'Añadir reacción',
+        pin_message: 'Fijar', forward_message: 'Reenviar', select_recipients: 'Selecciona destinatarios (máx. 5)',
+        max_recipients: 'Máximo 5 destinatarios', typing: 'escribiendo...', recording: 'grabando...',
+        sending_photo: 'enviando foto...', no_messages: 'Sin mensajes', next: 'Siguiente', back: 'Atrás'
+    },
+    de: {
+        app_name: 'K Messenger', settings: 'Einstellungen', edit_profile: 'Profil bearbeiten',
+        username: 'Benutzername', about_me: 'Über mich', save: 'Speichern',
+        notifications: 'Benachrichtigungen', privacy: 'Datenschutz', theme: 'Design',
+        language: 'Sprache', storage: 'Speicher', about: 'Über', help: 'Hilfe',
+        logout: 'Abmelden', version: 'v1.0', tagline: 'Frische Kommunikation jeden Tag 🥒',
+        select_language: 'Sprache auswählen', settings_saved: 'Einstellungen gespeichert',
+        profile_updated: 'Profil aktualisiert', enter_username: 'Benutzername eingeben',
+        in_development: 'in Entwicklung', phone: 'Telefon', online: 'Online', offline: 'Offline',
+        chats: 'Chats', reels: 'Slices', new_chat: 'Chat', new_group: 'Gruppe', new_channel: 'Kanal',
+        search_placeholder: '🔍 Chats durchsuchen...', select_chat: 'Wählen Sie einen Chat',
+        create_group: 'Gruppe erstellen', create_channel: 'Kanal erstellen',
+        group_name: 'Gruppenname', channel_name: 'Kanalname',
+        channel_link: 'Link (z.B. meinKanal)', public: 'Öffentlich', private: 'Privat',
+        description: 'Beschreibung', members: 'Mitglieder', subscribers: 'Abonnenten',
+        add_members: 'Mitglieder hinzufügen', add_members_placeholder: 'Suchen...',
+        leave_chat: 'Verlassen', delete_chat: 'Löschen', subscribe: 'Abonnieren',
+        unsubscribe: 'Abbestellen', message_placeholder: 'Nachricht...', send: 'Senden',
+        attach_file: 'Datei anhängen', voice_message: 'Sprachnachricht', emoji: 'Emoji',
+        create_reel: 'Slice erstellen', reel_caption: 'Beschreibung...', allow_comments: 'Kommentare erlauben',
+        publish: 'Veröffentlichen', feed: 'Feed', my_reels: 'Meine', liked_reels: 'Gefällt mir',
+        no_reels: 'Noch keine Slices', be_first: 'Seien Sie der Erste!',
+        voice_call: 'Sprachanruf', video_call: 'Videoanruf',
+        call_only_private: 'Anrufe nur in privaten Chats', user_unavailable: 'Benutzer nicht verfügbar',
+        calling: 'Ruft an...', connected: 'Verbunden', mute: 'Stumm', unmute: 'Ton an',
+        close: 'Schließen', confirm: 'Bestätigen', cancel: 'Abbrechen', yes: 'Ja', no: 'Nein',
+        ok: 'OK', error: 'Fehler', success: 'Erfolg', loading: 'Laden...',
+        participants: 'Teilnehmer', you: 'Du', admin: 'Admin', owner: 'Besitzer',
+        join: 'Beitreten', find_users: 'Finden', add_to_contacts: 'Zu Kontakten hinzufügen',
+        contacts: 'Kontakte', no_contacts: 'Keine Kontakte', global_search: 'Benutzer suchen',
+        search_users_placeholder: 'Benutzername', delete_for_me: 'Für mich löschen',
+        delete_for_everyone: 'Für alle löschen', edit_message: 'Bearbeiten', add_reaction: 'Reaktion hinzufügen',
+        pin_message: 'Anheften', forward_message: 'Weiterleiten', select_recipients: 'Empfänger auswählen (max. 5)',
+        max_recipients: 'Maximal 5 Empfänger', typing: 'tippt...', recording: 'nimmt auf...',
+        sending_photo: 'sendet Foto...', no_messages: 'Keine Nachrichten', next: 'Weiter', back: 'Zurück'
+    },
+    fr: {
+        app_name: 'K Messenger', settings: 'Paramètres', edit_profile: 'Modifier le profil',
+        username: "Nom d'utilisateur", about_me: 'À propos de moi', save: 'Enregistrer',
+        notifications: 'Notifications', privacy: 'Confidentialité', theme: 'Thème',
+        language: 'Langue', storage: 'Stockage', about: 'À propos', help: 'Aide',
+        logout: 'Déconnexion', version: 'v1.0', tagline: 'Communication fraîche chaque jour 🥒',
+        select_language: 'Choisir la langue', settings_saved: 'Paramètres enregistrés',
+        profile_updated: 'Profil mis à jour', enter_username: "Entrez le nom d'utilisateur",
+        in_development: 'en développement', phone: 'Téléphone', online: 'En ligne', offline: 'Hors ligne',
+        chats: 'Discussions', reels: 'Slices', new_chat: 'Chat', new_group: 'Groupe', new_channel: 'Canal',
+        search_placeholder: '🔍 Rechercher des discussions...', select_chat: 'Sélectionnez une discussion',
+        create_group: 'Créer un groupe', create_channel: 'Créer un canal',
+        group_name: 'Nom du groupe', channel_name: 'Nom du canal',
+        channel_link: 'Lien (ex: moncanal)', public: 'Public', private: 'Privé',
+        description: 'Description', members: 'Membres', subscribers: 'Abonnés',
+        add_members: 'Ajouter des membres', add_members_placeholder: 'Rechercher...',
+        leave_chat: 'Quitter', delete_chat: 'Supprimer', subscribe: "S'abonner",
+        unsubscribe: 'Se désabonner', message_placeholder: 'Message...', send: 'Envoyer',
+        attach_file: 'Joindre un fichier', voice_message: 'Message vocal', emoji: 'Émoji',
+        create_reel: 'Créer un slice', reel_caption: 'Légende...', allow_comments: 'Autoriser les commentaires',
+        publish: 'Publier', feed: 'Flux', my_reels: 'Mes', liked_reels: 'J\'aime',
+        no_reels: 'Pas encore de slices', be_first: 'Soyez le premier !',
+        voice_call: 'Appel vocal', video_call: 'Appel vidéo',
+        call_only_private: 'Appels uniquement dans les discussions privées',
+        user_unavailable: 'Utilisateur indisponible', calling: 'Appel...', connected: 'Connecté',
+        mute: 'Muets', unmute: 'Activer le son', close: 'Fermer', confirm: 'Confirmer',
+        cancel: 'Annuler', yes: 'Oui', no: 'Non', ok: 'OK', error: 'Erreur', success: 'Succès',
+        loading: 'Chargement...', participants: 'Participants', you: 'Vous', admin: 'admin',
+        owner: 'propriétaire', join: 'Rejoindre', find_users: 'Trouver',
+        add_to_contacts: 'Ajouter aux contacts', contacts: 'Contacts', no_contacts: 'Aucun contact',
+        global_search: 'Rechercher des utilisateurs', search_users_placeholder: "Nom d'utilisateur",
+        delete_for_me: 'Supprimer pour moi', delete_for_everyone: 'Supprimer pour tous',
+        edit_message: 'Modifier', add_reaction: 'Ajouter une réaction', pin_message: 'Épingler',
+        forward_message: 'Transférer', select_recipients: 'Sélectionnez les destinataires (max 5)',
+        max_recipients: 'Maximum 5 destinataires', typing: 'écrit...', recording: 'enregistrement...',
+        sending_photo: 'envoie une photo...', no_messages: 'Aucun message', next: 'Suivant', back: 'Retour'
+    },
+    it: {
+        app_name: 'K Messenger', settings: 'Impostazioni', edit_profile: 'Modifica profilo',
+        username: 'Nome utente', about_me: 'Su di me', save: 'Salva',
+        notifications: 'Notifiche', privacy: 'Privacy', theme: 'Tema',
+        language: 'Lingua', storage: 'Archiviazione', about: 'Informazioni', help: 'Aiuto',
+        logout: 'Esci', version: 'v1.0', tagline: 'Comunicazione fresca ogni giorno 🥒',
+        select_language: 'Seleziona lingua', settings_saved: 'Impostazioni salvate',
+        profile_updated: 'Profilo aggiornato', enter_username: 'Inserisci nome utente',
+        in_development: 'in sviluppo', phone: 'Telefono', online: 'Online', offline: 'Offline',
+        chats: 'Chat', reels: 'Slices', new_chat: 'Chat', new_group: 'Gruppo', new_channel: 'Canale',
+        search_placeholder: '🔍 Cerca chat...', select_chat: 'Seleziona una chat',
+        create_group: 'Crea gruppo', create_channel: 'Crea canale',
+        group_name: 'Nome del gruppo', channel_name: 'Nome del canale',
+        channel_link: 'Link (es. miocanale)', public: 'Pubblico', private: 'Privato',
+        description: 'Descrizione', members: 'Membri', subscribers: 'Iscritti',
+        add_members: 'Aggiungi membri', add_members_placeholder: 'Cerca...',
+        leave_chat: 'Abbandona', delete_chat: 'Elimina', subscribe: 'Iscriviti',
+        unsubscribe: 'Annulla iscrizione', message_placeholder: 'Messaggio...', send: 'Invia',
+        attach_file: 'Allega file', voice_message: 'Messaggio vocale', emoji: 'Emoji',
+        create_reel: 'Crea slice', reel_caption: 'Didascalia...', allow_comments: 'Permetti commenti',
+        publish: 'Pubblica', feed: 'Feed', my_reels: 'Miei', liked_reels: 'Mi piace',
+        no_reels: 'Nessuno slice ancora', be_first: 'Sii il primo!',
+        voice_call: 'Chiamata vocale', video_call: 'Videochiamata',
+        call_only_private: 'Chiamate solo in chat private', user_unavailable: 'Utente non disponibile',
+        calling: 'Chiamata...', connected: 'Connesso', mute: 'Silenzia', unmute: 'Attiva audio',
+        close: 'Chiudi', confirm: 'Conferma', cancel: 'Annulla', yes: 'Sì', no: 'No',
+        ok: 'OK', error: 'Errore', success: 'Successo', loading: 'Caricamento...',
+        participants: 'Partecipanti', you: 'Tu', admin: 'admin', owner: 'proprietario',
+        join: 'Unisciti', find_users: 'Trova', add_to_contacts: 'Aggiungi ai contatti',
+        contacts: 'Contatti', no_contacts: 'Nessun contatto', global_search: 'Cerca utenti',
+        search_users_placeholder: 'Nome utente', delete_for_me: 'Elimina per me',
+        delete_for_everyone: 'Elimina per tutti', edit_message: 'Modifica', add_reaction: 'Aggiungi reazione',
+        pin_message: 'Fissa', forward_message: 'Inoltra', select_recipients: 'Seleziona destinatari (max 5)',
+        max_recipients: 'Massimo 5 destinatari', typing: 'sta scrivendo...', recording: 'registrazione...',
+        sending_photo: 'invio foto...', no_messages: 'Nessun messaggio', next: 'Avanti', back: 'Indietro'
+    },
+    be: {
+        app_name: 'K Messenger', settings: 'Налады', edit_profile: 'Рэдагаваць профіль',
+        username: 'Імя карыстальніка', about_me: 'Пра сябе', save: 'Захаваць',
+        notifications: 'Апавяшчэнні', privacy: 'Прыватнасць', theme: 'Тэма',
+        language: 'Мова', storage: 'Памяць', about: 'Пра праграму', help: 'Дапамога',
+        logout: 'Выйсці', version: 'v1.0', tagline: 'Свежая камунікацыя кожны дзень 🥒',
+        select_language: 'Абярыце мову', settings_saved: 'Налады захаваны',
+        profile_updated: 'Профіль абноўлены', enter_username: 'Увядзіце імя карыстальніка',
+        in_development: 'у распрацоўцы', phone: 'Тэлефон', online: 'У сетцы', offline: 'Не ў сетцы',
+        chats: 'Чаты', reels: 'Слайсы', new_chat: 'Чат', new_group: 'Група', new_channel: 'Канал',
+        search_placeholder: '🔍 Пошук па чатах...', select_chat: 'Абярыце чат',
+        create_group: 'Стварыць групу', create_channel: 'Стварыць канал',
+        group_name: 'Назва групы', channel_name: 'Назва канала',
+        channel_link: 'Спасылка (напрыклад: mychannel)', public: 'Публічны', private: 'Прыватны',
+        description: 'Апісанне', members: 'Удзельнікі', subscribers: 'Падпісчыкі',
+        add_members: 'Дадаць удзельнікаў', add_members_placeholder: 'Пошук...',
+        leave_chat: 'Пакінуць', delete_chat: 'Выдаліць', subscribe: 'Падпісацца',
+        unsubscribe: 'Адпісацца', message_placeholder: 'Паведамленне...', send: 'Даслаць',
+        attach_file: 'Далучыць файл', voice_message: 'Галасавое паведамленне', emoji: 'Эмодзі',
+        create_reel: 'Стварыць слайс', reel_caption: 'Апісанне...', allow_comments: 'Дазволіць каментары',
+        publish: 'Апублікаваць', feed: 'Стужка', my_reels: 'Мае', liked_reels: 'Падабаецца',
+        no_reels: 'Пакуль няма слайсаў', be_first: 'Будзьце першым!',
+        voice_call: 'Галасавы выклік', video_call: 'Відэавыклік',
+        call_only_private: 'Выклікі толькі ў прыватных чатах', user_unavailable: 'Карыстальнік недаступны',
+        calling: 'Выклік...', connected: 'Падключана', mute: 'Адключыць гук', unmute: 'Уключыць гук',
+        close: 'Зачыніць', confirm: 'Пацвердзіць', cancel: 'Адмена', yes: 'Так', no: 'Не',
+        ok: 'Добра', error: 'Памылка', success: 'Паспяхова', loading: 'Загрузка...',
+        participants: 'Удзельнікі', you: 'Вы', admin: 'адмін', owner: 'уладальнік',
+        join: 'Далучыцца', find_users: 'Знайсці', add_to_contacts: 'Дадаць у кантакты',
+        contacts: 'Кантакты', no_contacts: 'Няма кантактаў', global_search: 'Пошук карыстальнікаў',
+        search_users_placeholder: 'Імя карыстальніка', delete_for_me: 'Выдаліць у мяне',
+        delete_for_everyone: 'Выдаліць ва ўсіх', edit_message: 'Рэдагаваць', add_reaction: 'Дадаць рэакцыю',
+        pin_message: 'Замацаваць', forward_message: 'Пераслаць', select_recipients: 'Абярыце атрымальнікаў (макс. 5)',
+        max_recipients: 'Максімум 5 атрымальнікаў', typing: 'друкуе...', recording: 'запіс...',
+        sending_photo: 'адпраўляе фота...', no_messages: 'Няма паведамленняў', next: 'Далей', back: 'Назад'
+    },
+    uk: {
+        app_name: 'K Messenger', settings: 'Налаштування', edit_profile: 'Редагувати профіль',
+        username: "Ім'я користувача", about_me: 'Про себе', save: 'Зберегти',
+        notifications: 'Сповіщення', privacy: 'Конфіденційність', theme: 'Тема',
+        language: 'Мова', storage: "Пам'ять", about: 'Про додаток', help: 'Допомога',
+        logout: 'Вийти', version: 'v1.0', tagline: 'Свіже спілкування щодня 🥒',
+        select_language: 'Виберіть мову', settings_saved: 'Налаштування збережено',
+        profile_updated: 'Профіль оновлено', enter_username: "Введіть ім'я користувача",
+        in_development: 'в розробці', phone: 'Телефон', online: 'В мережі', offline: 'Не в мережі',
+        chats: 'Чати', reels: 'Слайси', new_chat: 'Чат', new_group: 'Група', new_channel: 'Канал',
+        search_placeholder: '🔍 Пошук по чатах...', select_chat: 'Виберіть чат',
+        create_group: 'Створити групу', create_channel: 'Створити канал',
+        group_name: 'Назва групи', channel_name: 'Назва каналу',
+        channel_link: 'Посилання (наприклад: mychannel)', public: 'Публічний', private: 'Приватний',
+        description: 'Опис', members: 'Учасники', subscribers: 'Підписники',
+        add_members: 'Додати учасників', add_members_placeholder: 'Пошук...',
+        leave_chat: 'Покинути', delete_chat: 'Видалити', subscribe: 'Підписатися',
+        unsubscribe: 'Відписатися', message_placeholder: 'Повідомлення...', send: 'Надіслати',
+        attach_file: 'Прикріпити файл', voice_message: 'Голосове повідомлення', emoji: 'Емодзі',
+        create_reel: 'Створити слайс', reel_caption: 'Опис...', allow_comments: 'Дозволити коментарі',
+        publish: 'Опублікувати', feed: 'Стрічка', my_reels: 'Мої', liked_reels: 'Подобається',
+        no_reels: 'Поки немає слайсів', be_first: 'Будьте першим!',
+        voice_call: 'Голосовий дзвінок', video_call: 'Відеодзвінок',
+        call_only_private: 'Дзвінки тільки в особистих чатах', user_unavailable: 'Користувач недоступний',
+        calling: 'Дзвінок...', connected: 'Підключено', mute: 'Вимкнути звук', unmute: 'Увімкнути звук',
+        close: 'Закрити', confirm: 'Підтвердити', cancel: 'Скасувати', yes: 'Так', no: 'Ні',
+        ok: 'Добре', error: 'Помилка', success: 'Успішно', loading: 'Завантаження...',
+        participants: 'Учасники', you: 'Ви', admin: 'адмін', owner: 'власник',
+        join: 'Приєднатися', find_users: 'Знайти', add_to_contacts: 'Додати в контакти',
+        contacts: 'Контакти', no_contacts: 'Немає контактів', global_search: 'Пошук користувачів',
+        search_users_placeholder: "Ім'я користувача", delete_for_me: 'Видалити у мене',
+        delete_for_everyone: 'Видалити у всіх', edit_message: 'Редагувати', add_reaction: 'Додати реакцію',
+        pin_message: 'Закріпити', forward_message: 'Переслати', select_recipients: 'Виберіть отримувачів (макс. 5)',
+        max_recipients: 'Максимум 5 отримувачів', typing: 'друкує...', recording: 'запис...',
+        sending_photo: 'надсилає фото...', no_messages: 'Немає повідомлень', next: 'Далі', back: 'Назад'
+    },
+    pl: {
+        app_name: 'K Messenger', settings: 'Ustawienia', edit_profile: 'Edytuj profil',
+        username: 'Nazwa użytkownika', about_me: 'O mnie', save: 'Zapisz',
+        notifications: 'Powiadomienia', privacy: 'Prywatność', theme: 'Motyw',
+        language: 'Język', storage: 'Pamięć', about: 'O aplikacji', help: 'Pomoc',
+        logout: 'Wyloguj', version: 'v1.0', tagline: 'Świeża komunikacja każdego dnia 🥒',
+        select_language: 'Wybierz język', settings_saved: 'Ustawienia zapisane',
+        profile_updated: 'Profil zaktualizowany', enter_username: 'Wprowadź nazwę użytkownika',
+        in_development: 'w rozwoju', phone: 'Telefon', online: 'Online', offline: 'Offline',
+        chats: 'Czaty', reels: 'Slices', new_chat: 'Czat', new_group: 'Grupa', new_channel: 'Kanał',
+        search_placeholder: '🔍 Szukaj czatów...', select_chat: 'Wybierz czat',
+        create_group: 'Utwórz grupę', create_channel: 'Utwórz kanał',
+        group_name: 'Nazwa grupy', channel_name: 'Nazwa kanału',
+        channel_link: 'Link (np. mojkanal)', public: 'Publiczny', private: 'Prywatny',
+        description: 'Opis', members: 'Członkowie', subscribers: 'Subskrybenci',
+        add_members: 'Dodaj członków', add_members_placeholder: 'Szukaj...',
+        leave_chat: 'Opuść', delete_chat: 'Usuń', subscribe: 'Subskrybuj',
+        unsubscribe: 'Anuluj subskrypcję', message_placeholder: 'Wiadomość...', send: 'Wyślij',
+        attach_file: 'Załącz plik', voice_message: 'Wiadomość głosowa', emoji: 'Emoji',
+        create_reel: 'Utwórz slice', reel_caption: 'Opis...', allow_comments: 'Zezwól na komentarze',
+        publish: 'Opublikuj', feed: 'Feed', my_reels: 'Moje', liked_reels: 'Polubione',
+        no_reels: 'Brak slice\'ów', be_first: 'Bądź pierwszy!',
+        voice_call: 'Połączenie głosowe', video_call: 'Połączenie wideo',
+        call_only_private: 'Połączenia tylko w prywatnych czatach', user_unavailable: 'Użytkownik niedostępny',
+        calling: 'Dzwonienie...', connected: 'Połączono', mute: 'Wycisz', unmute: 'Włącz dźwięk',
+        close: 'Zamknij', confirm: 'Potwierdź', cancel: 'Anuluj', yes: 'Tak', no: 'Nie',
+        ok: 'OK', error: 'Błąd', success: 'Sukces', loading: 'Ładowanie...',
+        participants: 'Uczestnicy', you: 'Ty', admin: 'admin', owner: 'właściciel',
+        join: 'Dołącz', find_users: 'Znajdź', add_to_contacts: 'Dodaj do kontaktów',
+        contacts: 'Kontakty', no_contacts: 'Brak kontaktów', global_search: 'Szukaj użytkowników',
+        search_users_placeholder: 'Nazwa użytkownika', delete_for_me: 'Usuń dla mnie',
+        delete_for_everyone: 'Usuń dla wszystkich', edit_message: 'Edytuj', add_reaction: 'Dodaj reakcję',
+        pin_message: 'Przypnij', forward_message: 'Przekaż', select_recipients: 'Wybierz odbiorców (max 5)',
+        max_recipients: 'Maksymalnie 5 odbiorców', typing: 'pisze...', recording: 'nagrywa...',
+        sending_photo: 'wysyła zdjęcie...', no_messages: 'Brak wiadomości', next: 'Dalej', back: 'Wstecz'
+    }
+};
+
+var currentLanguage = localStorage.getItem('kukumber_language') || 'ru';
+
+function applyTranslations() {
+    var t = translations[currentLanguage];
+    if (!t) return;
+    
+    // Заголовок настроек
+    var settingsHeader = document.querySelector('#settings-tab .settings-header h2');
+    if (settingsHeader) settingsHeader.textContent = t.settings;
+    
+    // Нижняя навигация
+    var navChats = document.querySelector('#nav-chats .nav-label');
+    var navReels = document.querySelector('#nav-reels .nav-label');
+    var navSettings = document.querySelector('#nav-settings .nav-label');
+    if (navChats) navChats.textContent = t.chats;
+    if (navReels) navReels.textContent = t.reels;
+    if (navSettings) navSettings.textContent = t.settings;
+    
+    // Поиск в чатах
+    var searchInput = document.querySelector('#search-chats');
+    if (searchInput) searchInput.placeholder = t.search_placeholder;
+    
+    // Кнопки создания в чатах
+    var chatBtns = document.querySelectorAll('.create-buttons .btn-create span:last-child');
+    if (chatBtns[0]) chatBtns[0].textContent = t.new_chat;
+    if (chatBtns[1]) chatBtns[1].textContent = t.new_group;
+    if (chatBtns[2]) chatBtns[2].textContent = t.new_channel;
+    if (chatBtns[3]) chatBtns[3].textContent = t.find_users;
+    
+    // Сообщение "Выберите чат"
+    var noChat = document.querySelector('#no-chat-selected h2');
+    if (noChat) noChat.textContent = t.select_chat;
+    
+    // Поле ввода сообщения
+    var messageInput = document.querySelector('#message-input');
+    if (messageInput) messageInput.placeholder = t.message_placeholder;
+    
+    // Заголовок Slices
+    var reelsHeader = document.querySelector('#reels-tab .slices-header h2');
+    if (reelsHeader) reelsHeader.textContent = t.reels;
+    
+    // Кнопка создания слайса
+    var createReelBtn = document.querySelector('.btn-create-slice');
+    if (createReelBtn) createReelBtn.innerHTML = '+ ' + t.create_reel;
+    
+    // Настройки - пункты меню
+    var menuItems = document.querySelectorAll('#settings-tab .settings-section .settings-item');
+    var menuLabels = [t.notifications, t.privacy, t.theme, t.language, t.storage, t.about, t.help, t.logout];
+    for (var i = 0; i < menuItems.length && i < menuLabels.length; i++) {
+        var span = menuItems[i].querySelector('span:nth-child(2)');
+        if (span) span.textContent = menuLabels[i];
     }
     
-    .attach-btn, .voice-btn, .emoji-btn, .send-btn {
-        width: 40px;
-        height: 40px;
+    // Футер настроек
+    var footer = document.querySelector('#settings-tab .settings-footer');
+    if (footer) {
+        var firstP = footer.querySelector('p:first-child');
+        var lastP = footer.querySelector('p:last-child');
+        if (firstP) firstP.textContent = t.app_name;
+        if (lastP) lastP.textContent = t.tagline;
     }
     
-    .attach-btn img {
-        width: 32px;
-        height: 32px;
+    // Кнопка выхода
+    var logoutItem = document.querySelector('#settings-tab .settings-item.danger span:nth-child(2)');
+    if (logoutItem) logoutItem.textContent = t.logout;
+    
+    // Модальные окна
+    updateModalTexts();
+}
+
+function showLanguageSettings() {
+    var t = translations[currentLanguage];
+    
+    var langCodes = {
+        ru: 'Русский', en: 'English', es: 'Español', de: 'Deutsch', fr: 'Français',
+        it: 'Italiano', be: 'Беларуская', uk: 'Українська', pl: 'Polski'
+    };
+    
+    var langList = '';
+    for (var code in langCodes) {
+        var isSelected = (code === currentLanguage);
+        langList += '<div class="user-item" onclick="setLanguage(\'' + code + '\')" style="justify-content:space-between; cursor:pointer;">' +
+            '<span>' + (isSelected ? '✓ ' : '') + langCodes[code] + '</span>' +
+            '<span style="color:var(--forest);">' + (isSelected ? '✓' : '→') + '</span>' +
+        '</div>';
     }
     
-    .message-input-area input[type="text"] {
-        padding: 10px 14px;
-        font-size: 15px;
+    var oldModal = document.getElementById('language-modal');
+    if (oldModal) oldModal.remove();
+    
+    var modal = document.createElement('div');
+    modal.id = 'language-modal';
+    modal.className = 'modal';
+    modal.innerHTML = '<div class="modal-content">' +
+        '<div class="modal-header"><h3>' + (t?.select_language || 'Выберите язык') + '</h3><button onclick="closeLanguageModal()" class="btn-close">×</button></div>' +
+        '<div class="users-list" style="max-height:70vh;">' + langList + '</div>' +
+    '</div>';
+    document.body.appendChild(modal);
+    modal.classList.remove('hidden');
+}
+
+function closeLanguageModal() {
+    var modal = document.getElementById('language-modal');
+    if (modal) modal.remove();
+}
+
+function setLanguage(langCode) {
+    if (translations[langCode]) {
+        currentLanguage = langCode;
+        localStorage.setItem('kukumber_language', langCode);
+        showNotification((translations[langCode]?.settings_saved || 'Language changed'), 'success');
+        closeLanguageModal();
+        applyTranslations();
     }
 }
 
-@media (max-width: 480px) {
-    .attach-btn, .voice-btn, .emoji-btn, .send-btn {
-        width: 38px;
-        height: 38px;
+function updateModalTexts() {
+    var t = translations[currentLanguage];
+    if (!t) return;
+    
+    var editProfileTitle = document.querySelector('#edit-profile-modal .modal-header h3');
+    if (editProfileTitle) editProfileTitle.textContent = t.edit_profile;
+    
+    var editUsername = document.getElementById('edit-username');
+    if (editUsername) editUsername.placeholder = t.username;
+    
+    var editBio = document.getElementById('edit-bio');
+    if (editBio) editBio.placeholder = t.about_me;
+    
+    var saveBtn = document.querySelector('#edit-profile-modal .btn-primary');
+    if (saveBtn) saveBtn.textContent = t.save;
+}
+
+// ========== ПРОФИЛЬ ==========
+function showEditProfileModal() {
+    if (!currentUserData) {
+        showNotification('Данные пользователя не загружены', 'error');
+        return;
     }
     
-    .attach-btn img {
-        width: 30px;
-        height: 30px;
-    }
-}
-
-/* ===== ПРОФИЛЬ: АВАТАРКА ПЕРЕКРЫВАЕТ БАННЕР ===== */
-.profile-modal-content {
-    background: white;
-    border-radius: 24px;
-    width: 100%;
-    max-width: 500px;
-    max-height: 85vh;
-    overflow-y: auto;
-    position: relative;
-}
-
-.profile-banner {
-    height: 140px;
-    position: relative;
-    border-radius: 24px 24px 0 0;
-    background-size: cover;
-    background-position: center;
-    cursor: pointer;
-}
-
-.profile-banner-edit-btn {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    background: rgba(0,0,0,0.6);
-    border: none;
-    color: white;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 16px;
-}
-
-.profile-avatar-wrapper {
-    display: flex;
-    justify-content: center;
-    margin-top: -50px;
-    position: relative;
-    z-index: 10;
-}
-
-.profile-avatar {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background: var(--sage);
-    border: 4px solid white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 48px;
-    background-size: cover;
-    background-position: center;
-    cursor: pointer;
-    position: relative;
-}
-
-.profile-avatar-edit-btn {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    background: var(--forest);
-    border: none;
-    color: white;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-/* Цвета баннера */
-.banner-color-picker {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 10px;
-    justify-content: center;
-}
-
-.banner-color-option {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    cursor: pointer;
-    transition: transform 0.2s;
-    border: 2px solid white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-}
-
-.banner-color-option:hover {
-    transform: scale(1.1);
-}
-/* Для профиля из чата */
-.mutual-contact-item:hover {
-    background: var(--background);
-}
-
-.profile-subscribers {
-    font-size: 13px;
-    color: var(--text-muted);
-    margin-top: 5px;
-}
-
-.profile-media-item {
-    margin-bottom: 10px;
-}
-
-.profile-media-img {
-    width: 100%;
-    max-height: 200px;
-    object-fit: cover;
-    border-radius: 12px;
-    cursor: pointer;
-}
-
-.profile-media-video {
-    width: 100%;
-    max-height: 200px;
-    border-radius: 12px;
-}
-
-.profile-file-item, .profile-voice-item, .profile-link-item {
-    padding: 8px 12px;
-    background: var(--background);
-    border-radius: 12px;
-    margin-bottom: 8px;
-    word-break: break-all;
-}
-
-.profile-file-item a, .profile-link-item a {
-    color: var(--forest);
-    text-decoration: none;
-}
-
-.gif-badge-small {
-    position: relative;
-    top: -30px;
-    left: 10px;
-    background: rgba(0,0,0,0.6);
-    color: white;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 10px;
-}
-.cucumber-logo,
-.cucumber-icon,
-.cucumber-large {
-    position: relative;
-    text-indent: -9999px;
-}
-
-.cucumber-logo::before,
-.cucumber-icon::before,
-.cucumber-large::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url('https://i.ibb.co/MyfV2nqs/image.png');
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
-    text-indent: 0;
-}
-
-.cucumber-logo::before { width: 80px; height: 80px; }
-.cucumber-icon::before { width: 60px; height: 60px; }
-.cucumber-large::before { width: 100px; height: 100px; }
-/* Отключаем выделение текста при долгом тапе на мобилках */
-* {
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-}
-
-/* Разрешаем выделение в полях ввода */
-input, textarea {
-    -webkit-user-select: text;
-    user-select: text;
-}
-/* Центрирование загрузочного экрана */
-.loading-screen .logo-container {
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-}
-
-.loading-screen .cucumber-logo {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-.loading-screen .cucumber-logo img {
-    display: block;
-    margin: 0 auto;
-}
-
-/* Центрирование экрана "Выберите чат" */
-.no-chat {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    color: var(--text-light);
-}
-
-.no-chat .cucumber-large {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
-.no-chat .cucumber-large img {
-    display: block;
-    margin: 0 auto;
-}
-
-.no-chat h2 {
-    margin-top: 20px;
-    font-size: 18px;
-}
-
-/* Центрирование на экране авторизации */
-.auth-logo {
-    text-align: center;
-    margin-bottom: 25px;
-}
-
-.auth-logo .cucumber-icon {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 15px;
-}
-
-.auth-logo .cucumber-icon img {
-    display: block;
-    margin: 0 auto;
-}
-.cucumber-icon::before,
-.cucumber-icon::after {
-    display: none !important;
-    content: none !important;
-}
-/* Настройки уведомлений */
-.back-btn-notifications:hover {
-    background: var(--background);
-    border-radius: 50%;
-}
-
-.notification-switch {
-    width: 44px;
-    height: 24px;
-    background: #ccc;
-    border-radius: 24px;
-    position: relative;
-    cursor: pointer;
-    transition: background 0.2s;
-    display: inline-block;
-}
-
-.notification-switch.active {
-    background: var(--forest);
-}
-
-.notification-switch::after {
-    content: "";
-    width: 20px;
-    height: 20px;
-    background: white;
-    border-radius: 50%;
-    position: absolute;
-    top: 2px;
-    left: 3px;
-    transition: left 0.2s;
-}
-
-.notification-switch.active::after {
-    left: 21px;
-}
-
-.notification-setting-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.notification-setting-label {
-    font-size: 15px;
-}
-
-.notification-setting-desc {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 4px;
-}
-
-.sound-picker {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-    flex-wrap: wrap;
-}
-
-.sound-option {
-    padding: 8px 16px;
-    background: var(--background);
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 13px;
-}
-
-.sound-option.active {
-    background: var(--forest);
-    color: white;
-}
-
-.reset-notifications {
-    text-align: center;
-    padding: 20px;
-    color: var(--error);
-    cursor: pointer;
-    font-weight: 600;
-}
-/* ===== ЗВОНКИ ===== */
-.call-container {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #1a1a1a, #0d0d0d);
-}
-
-/* Полноэкранный режим */
-.call-fullscreen {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    color: white;
-}
-
-/* Видео */
-.call-videos {
-    position: absolute;
-    inset: 0;
-}
-
-#remote-video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-#local-video {
-    position: absolute;
-    bottom: 100px;
-    right: 20px;
-    width: 120px;
-    height: 160px;
-    border-radius: 16px;
-    border: 2px solid white;
-    object-fit: cover;
-    z-index: 10;
-}
-
-/* Аватарка и свечение */
-.call-avatar-container {
-    position: relative;
-    margin-bottom: 30px;
-}
-
-.call-avatar {
-    width: 120px;
-    height: 120px;
-    background: var(--sage);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 60px;
-    position: relative;
-    z-index: 2;
-}
-
-.call-glow {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 140px;
-    height: 140px;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(34,195,94,0.6) 0%, rgba(34,195,94,0) 70%);
-    animation: glowPulse 1.5s ease-out infinite;
-    z-index: 1;
-}
-
-@keyframes glowPulse {
-    0% {
-        transform: translate(-50%, -50%) scale(0.8);
-        opacity: 0.8;
-    }
-    100% {
-        transform: translate(-50%, -50%) scale(1.5);
-        opacity: 0;
-    }
-}
-
-/* Информация */
-.call-info {
-    text-align: center;
-    margin-bottom: 50px;
-}
-
-.call-info h2 {
-    font-size: 28px;
-    margin-bottom: 8px;
-}
-
-.call-info p {
-    font-size: 16px;
-    opacity: 0.8;
-}
-
-/* Панель управления */
-.call-controls-bar {
-    position: absolute;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 40px;
-    background: rgba(30,30,30,0.9);
-    backdrop-filter: blur(20px);
-    padding: 12px 30px;
-    border-radius: 60px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-}
-
-.call-control-btn {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-}
-
-.call-mic-btn {
-    background: linear-gradient(135deg, #228B22, #32CD32);
-    box-shadow: 0 0 20px rgba(34,195,94,0.5);
-}
-
-.call-mic-btn.muted {
-    background: #555;
-    box-shadow: none;
-}
-
-.call-mic-btn.muted img {
-    opacity: 0.5;
-}
-
-.call-end-btn {
-    background: #dc3545;
-}
-
-.call-end-btn:hover {
-    transform: scale(1.05);
-    background: #ff4757;
-}
-
-/* Кнопка сворачивания */
-.call-minimize-btn {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: rgba(0,0,0,0.5);
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Свёрнутое окно */
-.call-minimized {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 280px;
-    background: rgba(0,0,0,0.9);
-    border-radius: 60px;
-    z-index: 10000;
-    cursor: pointer;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-}
-
-.call-minimized-content {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 16px;
-}
-
-.call-minimized-avatar {
-    width: 40px;
-    height: 40px;
-    background: var(--sage);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-}
-
-.call-minimized-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    color: white;
-}
-
-.call-minimized-info span:first-child {
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.call-minimized-info span:last-child {
-    font-size: 11px;
-    opacity: 0.7;
-}
-
-.call-restore-btn {
-    background: none;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-}
-
-@media (max-width: 768px) {
-    .call-control-btn {
-        width: 60px;
-        height: 60px;
-    }
-    .call-controls-bar {
-        gap: 25px;
-        padding: 10px 25px;
-    }
-    .call-avatar {
-        width: 100px;
-        height: 100px;
-        font-size: 50px;
-    }
-}
-/* ===== АНИМАЦИИ ДЛЯ СВАЙПОВ ===== */
-
-/* Анимация для модальных окон */
-.modal {
-    transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-.modal:not(.hidden) {
-    animation: modalFadeIn 0.2s ease;
-}
-
-@keyframes modalFadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-/* Анимация для боковой панели */
-.sidebar {
-    transition: transform 0.3s ease;
-    transform: translateX(-100%);
-}
-
-.sidebar.open {
-    transform: translateX(0);
-}
-
-/* Улучшенная анимация для вкладок */
-.tab-content {
-    transition: opacity 0.2s ease;
-}
-
-/* Отключаем выделение при свайпах */
-* {
-    -webkit-tap-highlight-color: transparent;
-}
-
-/* Улучшаем скролл внутри модальных окон */
-.modal-content {
-    -webkit-overflow-scrolling: touch;
-}
-/* Кнопка меню (три полоски) - всегда видна на ПК и телефоне */
-.mobile-menu-btn {
-    display: flex !important;
-    position: fixed;
-    top: 12px;
-    left: 12px;
-    z-index: 100;
-    width: 44px;
-    height: 44px;
-    background: var(--forest);
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-size: 24px;
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-}
-
-/* На мобильных и так показывалось, но дублируем */
-@media (max-width: 768px) {
-    .mobile-menu-btn {
-        display: flex !important;
-    }
-}
-/* Крестик закрытия боковой панели */
-.sidebar-close-btn {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    width: 36px;
-    height: 36px;
-    background: rgba(0,0,0,0.2);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    color: white;
-    cursor: pointer;
-    z-index: 10;
-}
-
-.sidebar-close-btn:hover {
-    background: rgba(0,0,0,0.4);
-}
-/* Новая боковая панель */
-.search-container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px;
-    background: var(--background);
-    border-bottom: 1px solid var(--border);
-}
-
-.search-bar-new {
-    flex: 1;
-}
-
-.search-bar-new input {
-    width: 100%;
-    padding: 12px 16px;
-    border: 2px solid var(--border);
-    border-radius: 30px;
-    font-size: 14px;
-    background: white;
-}
-
-.floating-plus-btn {
-    width: 55px;
-    height: 55px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    flex-shrink: 0;
-}
-
-.floating-plus-btn img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-
-.global-search-results {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: white;
-    z-index: 20;
-    display: flex;
-    flex-direction: column;
-}
-
-.search-results-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px;
-    border-bottom: 1px solid var(--border);
-}
-
-.search-results-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px;
-}
-
-.search-result-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-}
-
-.search-result-item:hover {
-    background: var(--background);
-}
-
-.search-result-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    background: var(--sage);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    background-size: cover;
-}
-
-.search-result-info {
-    flex: 1;
-}
-
-.search-result-name {
-    font-weight: 600;
-    font-size: 16px;
-}
-
-.search-result-username {
-    font-size: 12px;
-    color: var(--text-muted);
-}
-
-.search-result-badge {
-    font-size: 12px;
-    padding: 2px 8px;
-    border-radius: 12px;
-    background: var(--background);
-}
-/* Меню создания */
-.create-menu-item {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 14px 20px;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.create-menu-item:hover {
-    background: var(--background);
-}
-
-.create-menu-icon {
-    width: 50px;
-    height: 50px;
-    background: var(--sage);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 26px;
-}
-
-.create-menu-info {
-    flex: 1;
-}
-
-.create-menu-title {
-    font-weight: 600;
-    font-size: 16px;
-    color: var(--text-dark);
-}
-
-.create-menu-desc {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-top: 2px;
-}
-
-.create-menu-arrow {
-    font-size: 24px;
-    color: var(--text-muted);
-}
-/* Мастер создания */
-.wizard-header {
-    position: sticky;
-    top: 0;
-    background: white;
-    padding: 15px 20px;
-    border-bottom: 1px solid var(--border);
-}
-
-.wizard-back-btn {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    position: absolute;
-    left: 15px;
-    top: 15px;
-}
-
-.wizard-header h3 {
-    text-align: center;
-    margin: 0;
-}
-
-.wizard-steps {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    margin-top: 15px;
-}
-
-.wizard-step {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    color: var(--text-muted);
-}
-
-.wizard-step.active {
-    background: var(--forest);
-    color: white;
-}
-
-.wizard-step-content {
-    padding: 20px;
-}
-
-.wizard-input {
-    width: 100%;
-    padding: 12px 15px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 15px;
-    font-size: 15px;
-}
-
-.wizard-select {
-    width: 100%;
-    padding: 12px 15px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    font-size: 15px;
-    background: white;
-}
-
-.channel-type-option {
-    display: flex;
-    flex-direction: column;
-    padding: 12px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 10px;
-    cursor: pointer;
-}
-
-.channel-type-option input {
-    margin-bottom: 5px;
-}
-
-.channel-type-option small {
-    color: var(--text-muted);
-    font-size: 11px;
-}
-
-.setting-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.setting-label {
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-.setting-desc {
-    font-size: 12px;
-    color: var(--text-muted);
-}
-
-/* Переключатель */
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 50px;
-    height: 24px;
-}
-
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: 0.3s;
-    border-radius: 24px;
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: 0.3s;
-    border-radius: 50%;
-}
-
-input:checked + .slider {
-    background-color: var(--forest);
-}
-
-input:checked + .slider:before {
-    transform: translateX(26px);
-}
-
-.wizard-buttons {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.wizard-back-btn-step {
-    flex: 1;
-    padding: 12px;
-    background: var(--background);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    cursor: pointer;
-}
-
-.wizard-next-btn, .wizard-create-btn {
-    flex: 1;
-    padding: 12px;
-    background: linear-gradient(135deg, var(--forest), var(--lime));
-    color: white;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 600;
-}
-/* Канал/группа - иконка редактирования */
-.profile-banner-edit-btn {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    background: rgba(0,0,0,0.6);
-    border: none;
-    color: white;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 16px;
-}
-
-.profile-avatar-edit-btn {
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    background: var(--forest);
-    border: none;
-    color: white;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-/* Админ-панель */
-.admin-panel {
-    padding: 10px;
-}
-
-.admin-panel .setting-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-}
-
-.admin-panel .setting-item:hover {
-    background: var(--background);
-}
-
-.admin-panel .setting-item.danger {
-    color: var(--error);
-}
-
-/* Выбор прав администратора */
-.admin-permissions {
-    padding: 15px;
-}
-
-.permission-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border);
-}
-
-.permission-label {
-    font-size: 14px;
-}
-
-.permission-desc {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 2px;
-}
-/* ===== ДЕФОЛТНЫЕ АВАТАРКИ ===== */
-.default-avatar-user {
-    background-image: url('https://i.ibb.co/W4xM0wf7/image.png');
-    background-size: cover;
-    background-position: center;
-}
-
-.default-avatar-group {
-    background-image: url('https://i.ibb.co/0RWPwqwQ/image.png');
-    background-size: cover;
-    background-position: center;
-}
-
-.default-avatar-channel {
-    background-image: url('https://i.ibb.co/3ydBsv59/image.png');
-    background-size: cover;
-    background-position: center;
-}
-
-/* Для случаев когда аватарка пустая, но текст не нужен */
-.avatar:empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-/* ===== МЕНЮ ОФОРМЛЕНИЯ (МОБИЛЬНАЯ АДАПТАЦИЯ) ===== */
-@media (max-width: 768px) {
-    #theme-settings-modal > div {
-        width: 100% !important;
-        max-width: 100% !important;
-        border-radius: 28px 28px 0 0 !important;
-        margin: 0 !important;
+    var t = translations[currentLanguage];
+    
+    document.getElementById('edit-profile-modal').classList.remove('hidden');
+    document.getElementById('edit-username').value = currentUserData.username || '';
+    document.getElementById('edit-usertag').value = (currentUserData.userTag || '').replace('@', '');
+    document.getElementById('edit-bio').value = currentUserData.bio || '';
+    
+    var preview = document.getElementById('edit-avatar-preview');
+    if (currentUserData.avatar) {
+        preview.style.backgroundImage = 'url(' + currentUserData.avatar + ')';
+        preview.style.backgroundSize = 'cover';
+        preview.textContent = '';
+    } else {
+        preview.style.backgroundImage = '';
+        preview.textContent = '🥒';
     }
     
-    #themes-grid {
-        display: grid !important;
-        grid-template-columns: repeat(4, 1fr) !important;
-        gap: 10px !important;
-        padding: 0 5px !important;
+    var header = document.querySelector('#edit-profile-modal .modal-header h3');
+    if (header) header.textContent = t.edit_profile;
+    
+    var usernameInput = document.getElementById('edit-username');
+    if (usernameInput) usernameInput.placeholder = t.username;
+    
+    var bioInput = document.getElementById('edit-bio');
+    if (bioInput) bioInput.placeholder = t.about_me;
+    
+    var saveBtn = document.querySelector('#edit-profile-modal .btn-primary');
+    if (saveBtn) saveBtn.textContent = t.save;
+}
+
+function closeEditProfileModal() {
+    document.getElementById('edit-profile-modal').classList.add('hidden');
+}
+
+function previewEditAvatar(event) {
+    var file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+        window.pendingAvatarFile = file;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var preview = document.getElementById('edit-avatar-preview');
+            if (preview) {
+                preview.style.backgroundImage = 'url(' + e.target.result + ')';
+                preview.style.backgroundSize = 'cover';
+                preview.textContent = '';
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function saveProfile() {
+    var t = translations[currentLanguage];
+    var newUsername = document.getElementById('edit-username').value.trim();
+    var newUserTagRaw = document.getElementById('edit-usertag').value.trim().toLowerCase();
+    var newBio = document.getElementById('edit-bio').value.trim();
+    
+    if (!newUsername) {
+        showNotification(t.enter_username, 'error');
+        return;
     }
     
-    #themes-grid > div {
-        width: 100% !important;
-        min-width: 0 !important;
-        padding: 10px 5px !important;
+    var updates = { username: newUsername, bio: newBio };
+    var oldUserTag = currentUserData.userTag;
+    var newUserTag = '@' + newUserTagRaw.replace(/[^a-z0-9_]/g, '');
+    
+    function saveData(avatarUrl) {
+        if (avatarUrl) updates.avatar = avatarUrl;
+        
+        if (newUserTag !== oldUserTag && newUserTagRaw.length >= 3) {
+            database.ref('userTags/' + newUserTag).once('value').then(function(snap) {
+                if (snap.exists() && snap.val() !== currentUser.uid) {
+                    showNotification('Юзернейм ' + newUserTag + ' уже занят', 'error');
+                    return;
+                }
+                updates.userTag = newUserTag;
+                return database.ref('users/' + currentUser.uid).update(updates);
+            }).then(function() {
+                if (newUserTag !== oldUserTag && oldUserTag) {
+                    return database.ref('userTags/' + oldUserTag).remove();
+                }
+            }).then(function() {
+                if (newUserTag !== oldUserTag && newUserTag) {
+                    return database.ref('userTags/' + newUserTag).set(currentUser.uid);
+                }
+            }).then(function() {
+                closeEditProfileModal();
+                showNotification(t.profile_updated, 'success');
+                if (typeof updateUserDisplay === 'function') updateUserDisplay();
+                if (currentUserData) {
+                    currentUserData.username = newUsername;
+                    currentUserData.userTag = newUserTag;
+                    currentUserData.bio = newBio;
+                    if (avatarUrl) currentUserData.avatar = avatarUrl;
+                }
+            }).catch(function(err) {
+                showNotification('Ошибка: ' + err.message, 'error');
+            });
+        } else {
+            database.ref('users/' + currentUser.uid).update(updates).then(function() {
+                closeEditProfileModal();
+                showNotification(t.profile_updated, 'success');
+                if (typeof updateUserDisplay === 'function') updateUserDisplay();
+                if (currentUserData) {
+                    currentUserData.username = newUsername;
+                    currentUserData.bio = newBio;
+                    if (avatarUrl) currentUserData.avatar = avatarUrl;
+                }
+            }).catch(function(err) {
+                showNotification('Ошибка: ' + err.message, 'error');
+            });
+        }
     }
     
-    #themes-grid > div > div:first-child {
-        height: 45px !important;
+    if (window.pendingAvatarFile) {
+        if (typeof uploadToImgBB === 'function') {
+            uploadToImgBB(window.pendingAvatarFile).then(function(url) {
+                window.pendingAvatarFile = null;
+                saveData(url);
+            }).catch(function() { saveData(null); });
+        } else {
+            saveData(null);
+        }
+    } else {
+        saveData(null);
     }
+}
+
+// ========== УВЕДОМЛЕНИЯ ==========
+var notificationSettings = {
+    private: { enabled: true, showText: true, sound: 'classic', soundUrl: 'https://s17.aconvert.com/convert/p3r68-cdx67/wxmml-vgmt8.mp3' },
+    groups: { enabled: true, showText: true, sound: 'classic', soundUrl: 'https://s17.aconvert.com/convert/p3r68-cdx67/wxmml-vgmt8.mp3' },
+    channels: { enabled: true, showText: true, sound: 'classic', soundUrl: 'https://s17.aconvert.com/convert/p3r68-cdx67/wxmml-vgmt8.mp3' }
+};
+
+var soundsList = {
+    'classic': { name: 'Классика', url: 'https://s17.aconvert.com/convert/p3r68-cdx67/wxmml-vgmt8.mp3' },
+    'bell': { name: 'Колокол', url: 'https://s31.aconvert.com/convert/p3r68-cdx67/tzal6-g8cc5.mp3' },
+    'xylophone': { name: 'Ксилофон', url: 'https://s31.aconvert.com/convert/p3r68-cdx67/abjcm-e8f3f.mp3' }
+};
+
+function loadNotificationSettings() {
+    var saved = localStorage.getItem('k_notification_settings');
+    if (saved) {
+        try {
+            notificationSettings = JSON.parse(saved);
+        } catch(e) {}
+    }
+}
+
+function saveNotificationSettings() {
+    localStorage.setItem('k_notification_settings', JSON.stringify(notificationSettings));
+}
+
+function showNotificationSettings() {
+    var modalHtml = `
+        <div id="notifications-settings-modal" class="modal" style="z-index: 10002;">
+            <div class="modal-content" style="max-width: 500px; border-radius: 20px; overflow: hidden;">
+                <div class="modal-header">
+                    <h3>🔔 Уведомления и звук</h3>
+                    <button onclick="closeNotificationSettings()" class="btn-close">×</button>
+                </div>
+                <div style="padding: 15px;">
+                    <div class="notification-category" onclick="openCategorySettings('private')" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--background); border-radius: 16px; margin-bottom: 10px; cursor: pointer;">
+                        <span>📱 Личные чаты</span>
+                        <span>›</span>
+                    </div>
+                    <div class="notification-category" onclick="openCategorySettings('groups')" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--background); border-radius: 16px; margin-bottom: 10px; cursor: pointer;">
+                        <span>👥 Группы</span>
+                        <span>›</span>
+                    </div>
+                    <div class="notification-category" onclick="openCategorySettings('channels')" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--background); border-radius: 16px; margin-bottom: 10px; cursor: pointer;">
+                        <span>📢 Каналы</span>
+                        <span>›</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     
-    #themes-grid > div span {
-        font-size: 10px !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-    }
+    var oldModal = document.getElementById('notifications-settings-modal');
+    if (oldModal) oldModal.remove();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('notifications-settings-modal').classList.remove('hidden');
 }
-/* Меню оформления - мобильная версия */
-@media (max-width: 768px) {
-    #theme-settings-modal > div {
-        width: 100% !important;
-        max-width: 100% !important;
-        border-radius: 28px 28px 0 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-    }
+
+function closeNotificationSettings() {
+    var modal = document.getElementById('notifications-settings-modal');
+    if (modal) modal.remove();
+    var categoryModal = document.getElementById('category-settings-modal');
+    if (categoryModal) categoryModal.remove();
+}
+
+function openCategorySettings(category) {
+    closeNotificationSettings();
     
-    #themes-grid {
-        padding: 0 5px 10px 5px !important;
-    }
-}
-/* ===== НОЧНОЙ РЕЖИМ ===== */
-body.night-mode {
-    background: #121212;
-}
-
-body.night-mode .chat-item {
-    background: #1e1e1e;
-    border-bottom-color: #2c2c2c;
-}
-
-body.night-mode .chat-item:hover {
-    background: #2a2a2a;
-}
-
-body.night-mode .chat-item.active {
-    background: #2a4a2a;
-}
-
-body.night-mode .chat-item-name,
-body.night-mode .chat-item-preview {
-    color: #e0e0e0;
-}
-
-body.night-mode .chat-item-time {
-    color: #808080;
-}
-
-body.night-mode .settings-header {
-    background: #1e1e1e;
-    border-bottom-color: #2c2c2c;
-}
-
-body.night-mode .settings-header h2 {
-    color: #ffffff;
-}
-
-body.night-mode .settings-footer {
-    color: #808080;
-}
-
-body.night-mode .slice-header {
-    background: #1e1e1e;
-}
-
-body.night-mode .slice-actions {
-    border-top-color: #2c2c2c;
-    background: #1e1e1e;
-}
-
-body.night-mode .slice-hashtag {
-    background: #2d2d2d;
-    color: #ffffff;
-}
-
-body.night-mode .comments-block {
-    background: #121212;
-    border-top-color: #2c2c2c;
-}
-
-body.night-mode .add-comment textarea,
-body.night-mode .reply-form textarea {
-    background: #2d2d2d;
-    color: #ffffff;
-    border-color: #3d3d3d;
-}
-
-body.night-mode .search-result-item {
-    background: #1e1e1e;
-    border-bottom-color: #2c2c2c;
-}
-
-body.night-mode .search-result-name {
-    color: #ffffff;
-}
-
-body.night-mode .user-item {
-    background: #1e1e1e;
-    border-bottom-color: #2c2c2c;
-}
-
-body.night-mode .user-item:hover {
-    background: #2a2a2a;
-}
-
-body.night-mode .user-item-info h4 {
-    color: #ffffff;
-}
-
-body.night-mode .wizard-header {
-    background: #1e1e1e;
-    border-bottom-color: #2c2c2c;
-}
-
-body.night-mode .wizard-header h3 {
-    color: #ffffff;
-}
-
-body.night-mode .wizard-input,
-body.night-mode .wizard-select {
-    background: #2d2d2d;
-    color: #ffffff;
-    border-color: #3d3d3d;
-}
-
-body.night-mode .wizard-input::placeholder {
-    color: #808080;
-}
-
-body.night-mode .channel-type-option {
-    background: #2d2d2d;
-    border-color: #3d3d3d;
-    color: #ffffff;
-}
-
-body.night-mode .selected-member-chip {
-    background: #2a4a2a;
-    color: #ffffff;
-}
-
-body.night-mode .modal {
-    background: rgba(0,0,0,0.8);
-}
-
-body.night-mode .call-container {
-    background: #1a1a1a;
-}
-
-body.night-mode .call-controls-bar {
-    background: rgba(30,30,30,0.9);
-}
-/* ===== ПОЛНАЯ ТЁМНАЯ ТЕМА ===== */
-body.night-mode {
-    background: #121212;
-}
-
-/* Печатная строка и область вокруг */
-body.night-mode .message-input-area {
-    background: #1e1e1e;
-    border-top-color: #2c2c2c;
-}
-
-body.night-mode .message-input-area input[type="text"] {
-    background: #2d2d2d;
-    color: #ffffff;
-    border-color: #3d3d3d;
-}
-
-body.night-mode .message-input-area input[type="text"]:focus {
-    border-color: var(--forest);
-}
-
-body.night-mode .message-input-area input[type="text"]::placeholder {
-    color: #808080;
-}
-
-body.night-mode .attach-btn:hover,
-body.night-mode .voice-btn:hover,
-body.night-mode .emoji-btn:hover {
-    background: #2d2d2d;
-}
-
-/* Сообщения собеседника (полученные) */
-body.night-mode .message.received {
-    background: #2d2d2d !important;
-    color: #e0e0e0 !important;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-}
-
-body.night-mode .message.received .message-text {
-    color: #e0e0e0 !important;
-}
-
-body.night-mode .message.received .message-time {
-    color: #808080 !important;
-}
-
-body.night-mode .message.received .message-sender {
-    color: #a0a0a0 !important;
-}
-
-/* Сообщения отправителя (свои) */
-body.night-mode .message.sent {
-    background: linear-gradient(135deg, var(--forest), var(--lime)) !important;
-    color: #ffffff !important;
-}
-
-body.night-mode .message.sent .message-text {
-    color: #ffffff !important;
-}
-
-body.night-mode .message.sent .message-time {
-    color: rgba(255,255,255,0.7) !important;
-}
-
-/* Шапки модальных окон */
-body.night-mode .modal-header {
-    background: #1e1e1e !important;
-    border-bottom-color: #2c2c2c !important;
-}
-
-body.night-mode .modal-header h3 {
-    color: #ffffff !important;
-}
-
-body.night-mode .modal-content {
-    background: #1e1e1e !important;
-}
-
-/* Профиль модальных окон */
-body.night-mode .profile-modal-content {
-    background: #1e1e1e !important;
-}
-
-body.night-mode .profile-info .profile-name {
-    color: #ffffff !important;
-}
-
-body.night-mode .profile-info .profile-bio {
-    color: #a0a0a0 !important;
-}
-
-body.night-mode .profile-info .profile-subscribers {
-    color: #808080 !important;
-}
-
-body.night-mode .profile-tabs {
-    background: #1e1e1e !important;
-    border-top-color: #2c2c2c !important;
-    border-bottom-color: #2c2c2c !important;
-}
-
-body.night-mode .profile-tab-btn {
-    background: #1e1e1e !important;
-    color: #a0a0a0 !important;
-}
-
-body.night-mode .profile-tab-btn.active {
-    color: var(--forest) !important;
-    border-bottom-color: var(--forest) !important;
-}
-
-body.night-mode .profile-content {
-    background: #121212 !important;
-}
-
-/* Боковая панель */
-body.night-mode .sidebar {
-    background: #1e1e1e !important;
-    border-right-color: #2c2c2c !important;
-}
-
-body.night-mode .sidebar-header {
-    background: linear-gradient(135deg, #2a4a2a, #3a5a3a) !important;
-}
-
-body.night-mode .sidebar-header .user-details h3 {
-    color: #ffffff !important;
-}
-
-/* Вкладки (чаты, слайсы, настройки) */
-body.night-mode .bottom-nav {
-    background: #1e1e1e !important;
-    border-top-color: #2c2c2c !important;
-}
-
-body.night-mode .nav-item {
-    color: #808080 !important;
-}
-
-body.night-mode .nav-item.active {
-    color: var(--forest) !important;
-}
-
-/* Баннер в профиле (по умолчанию) */
-body.night-mode .profile-banner {
-    background: linear-gradient(135deg, #2a4a2a, #3a5a3a) !important;
-}
-
-/* Кнопки в модальных окнах */
-body.night-mode .btn-close {
-    color: #ffffff !important;
-}
-
-body.night-mode .btn-close:hover {
-    background: #2d2d2d !important;
-}
-
-/* Аватарки по умолчанию */
-body.night-mode .default-avatar-user {
-    background-image: url('https://i.ibb.co/W4xM0wf7/image.png') !important;
-}
-
-body.night-mode .default-avatar-group {
-    background-image: url('https://i.ibb.co/0RWPwqwQ/image.png') !important;
-}
-
-body.night-mode .default-avatar-channel {
-    background-image: url('https://i.ibb.co/3ydBsv59/image.png') !important;
-}
-/* ===== СЛАЙСЫ В ТЁМНОЙ ТЕМЕ ===== */
-body.night-mode .slices-container {
-    background: #121212;
-}
-
-body.night-mode .slices-header {
-    background: #1e1e1e;
-    border-bottom-color: #2c2c2c;
-}
-
-body.night-mode .slices-header h2 {
-    color: #ffffff;
-}
-
-body.night-mode .slices-search-bar {
-    background: #1e1e1e;
-    border-bottom-color: #2c2c2c;
-}
-
-body.night-mode .slices-search-bar input {
-    background: #2d2d2d;
-    color: #ffffff;
-    border-color: #3d3d3d;
-}
-
-body.night-mode .slices-search-bar input::placeholder {
-    color: #808080;
-}
-
-/* Карточка поста */
-body.night-mode .slice-card {
-    background: #1e1e1e !important;
-    border-radius: 20px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-
-/* Шапка поста */
-body.night-mode .slice-header {
-    background: #1e1e1e !important;
-    padding: 12px 16px;
-}
-
-body.night-mode .slice-author-name {
-    color: #ffffff !important;
-}
-
-body.night-mode .slice-date {
-    color: #808080 !important;
-}
-
-body.night-mode .slice-views {
-    color: #808080 !important;
-}
-
-/* Текст поста */
-body.night-mode .slice-text {
-    color: #e0e0e0 !important;
-    background: #1e1e1e !important;
-    padding: 12px 16px;
-}
-
-body.night-mode .slice-text a {
-    color: var(--forest) !important;
-}
-
-body.night-mode .slice-mention {
-    color: var(--forest) !important;
-}
-
-/* Хэштеги */
-body.night-mode .slice-hashtags {
-    background: #1e1e1e !important;
-    padding: 0 16px 12px 16px;
-}
-
-body.night-mode .slice-hashtag {
-    background: #2d2d2d !important;
-    color: #e0e0e0 !important;
-}
-
-body.night-mode .slice-hashtag:hover {
-    background: #3d3d3d !important;
-}
-
-/* Кнопки действий (лайк, комментарий, репост) */
-body.night-mode .slice-actions {
-    background: #1e1e1e !important;
-    border-top-color: #2c2c2c !important;
-    padding: 10px 16px;
-}
-
-body.night-mode .slice-action-btn {
-    color: #a0a0a0 !important;
-}
-
-body.night-mode .slice-action-btn:hover {
-    background: #2d2d2d !important;
-}
-
-body.night-mode .slice-action-btn.liked {
-    color: #ff4757 !important;
-}
-
-/* Медиа контент */
-body.night-mode .slice-media {
-    background: #0d0d0d !important;
-}
-
-body.night-mode .slice-image,
-body.night-mode .slice-gif {
-    background: #0d0d0d;
-}
-
-/* Слайдер */
-body.night-mode .slice-slider-prev,
-body.night-mode .slice-slider-next {
-    background: rgba(0,0,0,0.6);
-    color: white;
-}
-
-body.night-mode .slice-slider-prev:hover,
-body.night-mode .slice-slider-next:hover {
-    background: rgba(0,0,0,0.8);
-}
-
-/* Закреплённый пост */
-body.night-mode .slice-pinned-badge {
-    background: #2a4a2a;
-    color: #ffffff;
-}
-
-/* Репост бейдж */
-body.night-mode .repost-badge {
-    background: #2d2d2d;
-    color: #a0a0a0;
-}
-
-/* Пустое состояние */
-body.night-mode .empty-slices {
-    color: #808080;
-}
-
-body.night-mode .empty-slices span {
-    opacity: 0.5;
-}
-
-/* Модальное окно создания слайса */
-body.night-mode #create-slice-modal .modal-content {
-    background: #1e1e1e !important;
-}
-
-body.night-mode .slice-text-input,
-body.night-mode .slice-hashtags-input {
-    background: #2d2d2d !important;
-    color: #ffffff !important;
-    border-color: #3d3d3d !important;
-}
-
-body.night-mode .slice-text-input::placeholder,
-body.night-mode .slice-hashtags-input::placeholder {
-    color: #808080 !important;
-}
-
-body.night-mode .slice-upload-area {
-    background: #2d2d2d !important;
-    border-color: #3d3d3d !important;
-    color: #a0a0a0 !important;
-}
-
-body.night-mode .slice-preview-item {
-    background: #2d2d2d;
-}
-
-body.night-mode .slice-preview-remove {
-    background: rgba(0,0,0,0.6);
-    color: white;
-}
-
-/* Кнопка создания слайса */
-body.night-mode .btn-create-slice {
-    background: linear-gradient(135deg, var(--forest), var(--lime));
-    color: white;
-}
-/* ===== ПРОФИЛИ ГРУПП И КАНАЛОВ В ТЁМНОЙ ТЕМЕ ===== */
-body.night-mode #beauty-channel-profile-modal > div,
-body.night-mode #beauty-group-profile-modal > div,
-body.night-mode #simple-channel-profile > div,
-body.night-mode #simple-group-profile > div {
-    background: #1e1e1e !important;
-}
-
-body.night-mode .profile-modal-content {
-    background: #1e1e1e !important;
-}
-
-/* Баннер в профиле */
-body.night-mode .profile-banner {
-    background: linear-gradient(135deg, #2a4a2a, #3a5a3a) !important;
-}
-
-/* Аватарка */
-body.night-mode .profile-avatar {
-    background: #2a4a2a !important;
-    border-color: #1e1e1e !important;
-}
-
-/* Информация профиля */
-body.night-mode .profile-info {
-    background: #1e1e1e !important;
-}
-
-body.night-mode .profile-name {
-    color: #ffffff !important;
-}
-
-body.night-mode .profile-username {
-    color: #a0a0a0 !important;
-}
-
-body.night-mode .profile-subscribers {
-    color: #808080 !important;
-}
-
-body.night-mode .profile-status {
-    color: #a0a0a0 !important;
-}
-
-body.night-mode .profile-bio {
-    color: #c0c0c0 !important;
-}
-
-/* Вкладки профиля */
-body.night-mode .profile-tabs {
-    background: #1e1e1e !important;
-    border-top-color: #2c2c2c !important;
-    border-bottom-color: #2c2c2c !important;
-}
-
-body.night-mode .profile-tab-btn {
-    background: #1e1e1e !important;
-    color: #a0a0a0 !important;
-}
-
-body.night-mode .profile-tab-btn.active {
-    color: var(--forest) !important;
-    border-bottom-color: var(--forest) !important;
-}
-
-/* Контент вкладок */
-body.night-mode .profile-content {
-    background: #121212 !important;
-}
-
-/* Список участников/подписчиков */
-body.night-mode .member-item,
-body.night-mode .user-item {
-    background: #1e1e1e !important;
-    border-bottom-color: #2c2c2c !important;
-}
-
-body.night-mode .member-item .member-name,
-body.night-mode .user-item .user-item-info h4 {
-    color: #ffffff !important;
-}
-
-body.night-mode .member-role {
-    background: #2a4a2a !important;
-    color: #ffffff !important;
-}
-
-/* Кнопки в профиле */
-body.night-mode .profile-subscribe-btn,
-body.night-mode .profile-notify-btn {
-    background: #2d2d2d !important;
-    color: #ffffff !important;
-}
-
-body.night-mode .profile-subscribe-btn:hover {
-    background: #3d3d3d !important;
-}
-
-/* Панель администратора */
-body.night-mode .admin-panel {
-    background: #1e1e1e !important;
-}
-
-body.night-mode .setting-item {
-    background: #1e1e1e !important;
-    border-bottom-color: #2c2c2c !important;
-    color: #ffffff !important;
-}
-
-body.night-mode .setting-item span {
-    color: #ffffff !important;
-}
-
-body.night-mode .setting-item.danger span {
-    color: #ff6b6b !important;
-}
-
-/* Переключатели */
-body.night-mode .switch .slider {
-    background-color: #3d3d3d !important;
-}
-
-body.night-mode .switch input:checked + .slider {
-    background-color: var(--forest) !important;
-}
-
-/* Кнопка удаления */
-body.night-mode .btn-danger {
-    background: #dc3545 !important;
-    color: white !important;
-}
-
-/* Кнопка подписаться/вступить */
-body.night-mode .btn-primary {
-    background: linear-gradient(135deg, var(--forest), var(--lime)) !important;
-    color: white !important;
-}
-
-/* Модальное окно профиля */
-body.night-mode .modal {
-    background: rgba(0,0,0,0.85) !important;
-}
-
-/* Список выбора администраторов */
-body.night-mode .users-list {
-    background: #1e1e1e !important;
-}
-
-body.night-mode .user-item.selected {
-    background: #2a4a2a !important;
-}
-
-/* Простой профиль (альтернативная версия) */
-body.night-mode #simple-channel-profile > div,
-body.night-mode #simple-group-profile > div {
-    background: #1e1e1e !important;
-}
-
-body.night-mode #simple-channel-profile h2,
-body.night-mode #simple-group-profile h2 {
-    color: #ffffff !important;
-}
-
-body.night-mode #simple-channel-profile p,
-body.night-mode #simple-group-profile p {
-    color: #c0c0c0 !important;
-}
-
-body.night-mode #simple-channel-profile .avatar,
-body.night-mode #simple-group-profile .avatar {
-    background: #2a4a2a !important;
-}
-
-/* Крестик закрытия */
-body.night-mode .profile-close-btn {
-    background: rgba(0,0,0,0.5) !important;
-    color: white !important;
-}
-
-body.night-mode .profile-close-btn:hover {
-    background: rgba(0,0,0,0.7) !important;
-}
-/* ===== ИСПРАВЛЕНИЕ БЕЛЫХ ЭЛЕМЕНТОВ (ТОЛЬКО СЕРЫЕ ТОНА) ===== */
-
-/* Пункты настроек (уведомления, конфиденциальность, оформление и т.д.) */
-.settings-item {
-    background: #2a2a2a !important;
-    border-bottom-color: #3a3a3a !important;
-}
-.settings-item span {
-    color: #e0e0e0 !important;
-}
-.settings-item .settings-icon {
-    color: #aaaaaa !important;
-}
-.settings-profile {
-    background: #2a2a2a !important;
-}
-.settings-profile-info h3 {
-    color: #ffffff !important;
-}
-.settings-profile-info p {
-    color: #aaaaaa !important;
-}
-.settings-section {
-    background: #1e1e1e !important;
-}
-.settings-header {
-    background: #1e1e1e !important;
-    border-bottom-color: #3a3a3a !important;
-}
-.settings-header h2 {
-    color: #ffffff !important;
-}
-.settings-footer p {
-    color: #888888 !important;
-}
-
-/* Шапка чата */
-.chat-header {
-    background: #2a2a2a !important;
-    border-bottom-color: #3a3a3a !important;
-}
-.chat-user-info h3 {
-    color: #ffffff !important;
-}
-#chat-status {
-    color: #aaaaaa !important;
-}
-.back-btn, .call-btn {
-    color: #dddddd !important;
-    background: #3a3a3a !important;
-}
-
-/* Шапка канала/группы (профиль) */
-.profile-modal-content {
-    background: #1e1e1e !important;
-}
-.profile-banner {
-    background: #2a2a2a !important;
-}
-.profile-name {
-    color: #ffffff !important;
-}
-.profile-username, .profile-status {
-    color: #aaaaaa !important;
-}
-.profile-bio {
-    color: #cccccc !important;
-}
-.profile-tab-btn {
-    background: #1e1e1e !important;
-    color: #aaaaaa !important;
-}
-.profile-tab-btn.active {
-    color: var(--forest) !important;
-    border-bottom-color: var(--forest) !important;
-}
-.profile-content {
-    background: #121212 !important;
-}
-
-/* Глобальный поиск */
-.global-search-results {
-    background: #1e1e1e !important;
-}
-.search-results-header {
-    background: #2a2a2a !important;
-    border-bottom-color: #3a3a3a !important;
-    color: #ffffff !important;
-}
-.search-results-header button {
-    color: #ffffff !important;
-    background: none !important;
-}
-.search-result-item {
-    background: #2a2a2a !important;
-    border-bottom-color: #3a3a3a !important;
-}
-.search-result-name {
-    color: #ffffff !important;
-}
-.search-result-username, .search-result-desc {
-    color: #aaaaaa !important;
-}
-.search-result-badge {
-    background: #3a3a3a !important;
-    color: #dddddd !important;
-}
-.search-bar-new input {
-    background: #2a2a2a !important;
-    border-color: #3a3a3a !important;
-    color: #ffffff !important;
-}
-.search-bar-new input::placeholder {
-    color: #888888 !important;
-}
-
-/* Боковая панель */
-.sidebar {
-    background: #1e1e1e !important;
-    border-right-color: #3a3a3a !important;
-}
-.sidebar-header {
-    background: #2a2a2a !important;
-}
-.user-details h3 {
-    color: #ffffff !important;
-}
-.status {
-    background: #3a3a3a !important;
-    color: #dddddd !important;
-}
-
-/* Чат-лист */
-.chat-item {
-    background: #1e1e1e !important;
-    border-bottom-color: #3a3a3a !important;
-}
-.chat-item:hover {
-    background: #2a2a2a !important;
-}
-.chat-item.active {
-    background: #3a3a3a !important;
-}
-.chat-item-name {
-    color: #ffffff !important;
-}
-.chat-item-preview {
-    color: #aaaaaa !important;
-}
-.chat-item-time {
-    color: #777777 !important;
-}
-
-/* Нижняя навигация */
-.bottom-nav {
-    background: #1e1e1e !important;
-    border-top-color: #3a3a3a !important;
-}
-.nav-item {
-    color: #888888 !important;
-}
-.nav-item.active {
-    color: var(--forest) !important;
-}
-.nav-label {
-    color: inherit !important;
-}
-/* ===== ВОССТАНОВЛЕНИЕ ОРИГИНАЛЬНЫХ ЗЕЛЕНЫХ ЦВЕТОВ ===== */
-:root {
-    --forest: #228B22;
-    --lime: #32CD32;
-    --sage: #9DC183;
-    --dark-green: #1a5c1a;
-    --cucumber: #71BC78;
-    --olive: #556B2F;
-    --white: #fff;
-    --background: #f5f7f5;
-    --text-dark: #2c3e2c;
-    --text-light: #6b8e6b;
-    --text-muted: #94a894;
-    --border: #d4e4d4;
-    --shadow: rgba(47,79,47,0.15);
-    --error: #dc3545;
-    --success: #28a745;
-}
-
-/* Градиенты на кнопках */
-.btn-primary, .send-btn, .btn-create-slice, .wizard-next-btn, 
-.wizard-create-btn, .profile-subscribe-btn {
-    background: linear-gradient(135deg, var(--forest), var(--lime)) !important;
-    color: white !important;
-}
-
-/* Активные вкладки */
-.nav-item.active, .profile-tab-btn.active, .channel-tab-btn-ui.active {
-    color: var(--forest) !important;
-}
-
-/* Зеленые акценты */
-.slice-mention, .comment-reply-btn, .search-result-badge {
-    color: var(--forest) !important;
-}
-
-/* Хэштеги */
-.slice-hashtag {
-    background: var(--background);
-    color: var(--forest);
-}
-
-/* Сообщения отправленные */
-.message.sent {
-    background: linear-gradient(135deg, var(--forest), var(--cucumber)) !important;
-    color: white !important;
-}
-
-/* Сообщения полученные */
-.message.received {
-    background: white !important;
-    color: var(--text-dark) !important;
-}
-
-/* Кнопка подписки */
-.profile-subscribe-btn {
-    background: linear-gradient(135deg, var(--forest), var(--lime)) !important;
-}
-
-/* Зеленые ссылки и упоминания */
-a, .slice-mention, .message-text a {
-    color: var(--forest) !important;
-}
-// ========== ДОБАВЛЕНО: ОФОРМЛЕНИЕ С ТЕМАМИ И НОЧНЫМ РЕЖИМОМ ==========
-
+    var categoryNames = { private: 'Личные чаты', groups: 'Группы', channels: 'Каналы' };
+    var settings = notificationSettings[category];
+    
+    var modalHtml = `
+        <div id="category-settings-modal" class="modal" style="z-index: 10003;">
+            <div class="modal-content" style="max-width: 500px; border-radius: 20px; overflow: hidden;">
+                <div class="modal-header">
+                    <button onclick="showNotificationSettings()" class="back-btn" style="position: absolute; left: 15px; top: 12px; background: none; border: none; font-size: 20px; cursor: pointer;">←</button>
+                    <h3 style="text-align: center;">${categoryNames[category]}</h3>
+                    <button onclick="closeNotificationSettings()" class="btn-close">×</button>
+                </div>
+                <div style="padding: 15px;">
+                    <div style="margin-bottom: 20px;">
+                        <div class="notification-setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border);">
+                            <div>
+                                <div class="notification-setting-label" style="font-weight: 600;">Уведомления</div>
+                                <div class="notification-setting-desc" style="font-size: 12px; color: var(--text-muted);">Показывать уведомления</div>
+                            </div>
+                            <div class="notification-switch ${settings.enabled ? 'active' : ''}" style="width: 44px; height: 24px; background: ${settings.enabled ? 'var(--forest)' : '#ccc'}; border-radius: 24px; position: relative; cursor: pointer;" onclick="toggleNotificationEnabled('${category}')">
+                                <div style="position: absolute; width: 20px; height: 20px; background: white; border-radius: 50%; top: 2px; left: ${settings.enabled ? '21px' : '3px'}; transition: left 0.2s;"></div>
+                            </div>
+                        </div>
+                        
+                        ${settings.enabled ? `
+                            <div class="notification-setting-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border);">
+                                <div>
+                                    <div class="notification-setting-label" style="font-weight: 600;">Показывать текст</div>
+                                    <div class="notification-setting-desc" style="font-size: 12px; color: var(--text-muted);">Содержание сообщения в уведомлении</div>
+                                </div>
+                                <div class="notification-switch ${settings.showText ? 'active' : ''}" style="width: 44px; height: 24px; background: ${settings.showText ? 'var(--forest)' : '#ccc'}; border-radius: 24px; position: relative; cursor: pointer;" onclick="toggleShowText('${category}')">
+                                    <div style="position: absolute; width: 20px; height: 20px; background: white; border-radius: 50%; top: 2px; left: ${settings.showText ? '21px' : '3px'}; transition: left 0.2s;"></div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 15px;">
+                                <div style="font-weight: 600; margin-bottom: 10px;">Звук уведомления</div>
+                                <div class="sound-picker" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    ${Object.entries(soundsList).map(([key, sound]) => `
+                                        <div class="sound-option ${settings.sound === key ? 'active' : ''}" style="padding: 8px 16px; background: ${settings.sound === key ? 'var(--forest)' : 'var(--background)'}; color: ${settings.sound === key ? 'white' : 'inherit'}; border-radius: 20px; cursor: pointer;" onclick="selectSound('${category}', '${key}')">${sound.name}</div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="reset-notifications" onclick="resetCategorySettings('${category}')" style="text-align: center; padding: 15px; color: var(--error); cursor: pointer; font-weight: 600;">
+                        Сбросить настройки
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    var oldModal = document.getElementById('category-settings-modal');
+    if (oldModal) oldModal.remove();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('category-settings-modal').classList.remove('hidden');
+}
+
+function toggleNotificationEnabled(category) {
+    notificationSettings[category].enabled = !notificationSettings[category].enabled;
+    saveNotificationSettings();
+    openCategorySettings(category);
+}
+
+function toggleShowText(category) {
+    notificationSettings[category].showText = !notificationSettings[category].showText;
+    saveNotificationSettings();
+    openCategorySettings(category);
+}
+
+function selectSound(category, soundKey) {
+    notificationSettings[category].sound = soundKey;
+    notificationSettings[category].soundUrl = soundsList[soundKey].url;
+    saveNotificationSettings();
+    
+    var audio = new Audio(soundsList[soundKey].url);
+    audio.volume = 0.3;
+    audio.play().catch(e => console.log('Автоплей заблокирован'));
+    
+    openCategorySettings(category);
+}
+
+function resetCategorySettings(category) {
+    notificationSettings[category] = { 
+        enabled: true, 
+        showText: true, 
+        sound: 'classic', 
+        soundUrl: 'https://s17.aconvert.com/convert/p3r68-cdx67/wxmml-vgmt8.mp3' 
+    };
+    saveNotificationSettings();
+    openCategorySettings(category);
+    showNotification('Настройки сброшены', 'success');
+}
+
+// ========== ОФОРМЛЕНИЕ ==========
 var currentThemeColor = localStorage.getItem('kukumber_theme_color') || 'green';
 var nightModeEnabled = localStorage.getItem('kukumber_night_mode') === 'true';
 
 var colorThemes = {
     green: { primary: '#228B22', secondary: '#32CD32', name: 'Зеленый' },
-    turquoise: { primary: '#008080', secondary: '#20B2AA', name: 'Бирюзовый' },
-    yellow: { primary: '#FFD700', secondary: '#FFA500', name: 'Желтый' },
+    blue: { primary: '#1E90FF', secondary: '#63B8FF', name: 'Синий' },
     red: { primary: '#DC143C', secondary: '#FF6B6B', name: 'Красный' },
+    purple: { primary: '#8A2BE2', secondary: '#BA55D3', name: 'Фиолетовый' },
     orange: { primary: '#FF8C00', secondary: '#FFB347', name: 'Оранжевый' },
     pink: { primary: '#FF69B4', secondary: '#FFB6C1', name: 'Розовый' },
-    blue: { primary: '#1E90FF', secondary: '#63B8FF', name: 'Синий' },
-    purple: { primary: '#8A2BE2', secondary: '#BA55D3', name: 'Фиолетовый' }
+    turquoise: { primary: '#008080', secondary: '#20B2AA', name: 'Бирюзовый' },
+    yellow: { primary: '#FFD700', secondary: '#FFA500', name: 'Желтый' }
 };
 
-// Переопределяем showThemeSettings
-window.showThemeSettings = function() {
+function showThemeSettings() {
+    var isMobile = window.innerWidth <= 768;
+    
     var modalHtml = `
         <div id="theme-settings-modal" class="modal" style="z-index: 10002;">
-            <div class="modal-content" style="max-width: 450px; border-radius: 24px; overflow: hidden;">
-                <div class="modal-header" style="position: relative; padding: 15px 20px;">
-                    <button onclick="closeThemeSettingsModal()" style="position: absolute; left: 15px; top: 12px; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-dark);">←</button>
-                    <h3 style="text-align: center; margin: 0;">Оформление</h3>
+            <div class="modal-content" style="max-width: 500px; border-radius: 20px; overflow: hidden;">
+                <div class="modal-header">
+                    <h3>🎨 Оформление</h3>
+                    <button onclick="closeThemeSettings()" class="btn-close">×</button>
                 </div>
-                <div style="padding: 15px 20px 20px 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 10px 0;">
-                        <span style="font-weight: 600;">🌙 Ночной режим</span>
-                        <div class="night-toggle-switch" onclick="toggleNightModeSetting()" style="width: 50px; height: 26px; background: ${nightModeEnabled ? '#228B22' : '#ccc'}; border-radius: 26px; position: relative; cursor: pointer; transition: background 0.2s;">
-                            <div style="position: absolute; width: 22px; height: 22px; background: white; border-radius: 50%; top: 2px; left: ${nightModeEnabled ? '26px' : '2px'}; transition: left 0.2s;"></div>
-                        </div>
+                <div style="padding: 15px;">
+                    <div style="margin-bottom: 20px;">
+                        <button id="night-mode-toggle-btn" onclick="toggleNightModeUI()" style="width: 100%; padding: 14px; background: ${nightModeEnabled ? '#2d2d2d' : 'var(--background)'}; border: 2px solid var(--border); border-radius: 16px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                            ${nightModeEnabled ? '🌙 Ночной режим (вкл)' : '☀️ Ночной режим (выкл)'}
+                        </button>
                     </div>
+                    
                     <div style="font-weight: 600; margin-bottom: 15px;">🎨 Цвет темы</div>
-                    <div id="themes-grid-settings" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;"></div>
+                    <div id="themes-grid" style="display: grid; grid-template-columns: repeat(${isMobile ? '3' : '4'}, 1fr); gap: 15px;"></div>
                 </div>
             </div>
         </div>
     `;
+    
     var oldModal = document.getElementById('theme-settings-modal');
     if (oldModal) oldModal.remove();
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     document.getElementById('theme-settings-modal').classList.remove('hidden');
-    renderThemesGridSettings();
-};
+    
+    renderThemesGrid();
+}
 
-window.closeThemeSettingsModal = function() {
+function closeThemeSettings() {
     var modal = document.getElementById('theme-settings-modal');
     if (modal) modal.remove();
-};
+}
 
-function renderThemesGridSettings() {
-    var container = document.getElementById('themes-grid-settings');
+function renderThemesGrid() {
+    var container = document.getElementById('themes-grid');
     if (!container) return;
+    
+    var isMobile = window.innerWidth <= 768;
+    container.style.gridTemplateColumns = 'repeat(' + (isMobile ? '3' : '4') + ', 1fr)';
     container.innerHTML = '';
+    
     for (var key in colorThemes) {
         var theme = colorThemes[key];
         var isActive = currentThemeColor === key;
         var div = document.createElement('div');
-        div.style.cssText = 'background: ' + theme.primary + '; border-radius: 16px; padding: 12px 8px; text-align: center; cursor: pointer; border: 2px solid ' + (isActive ? '#fff' : 'transparent'); + ' transition: transform 0.2s;';
-        div.onclick = (function(k) { return function() { setThemeColorSettings(k); }; })(key);
-        div.innerHTML = '<div style="width: 100%; height: 45px; background: ' + theme.secondary + '; border-radius: 10px; margin-bottom: 8px;"></div><span style="font-size: 12px; color: white; font-weight: 500;">' + theme.name + '</span>';
-        if (isActive) div.innerHTML += '<div style="color: white; font-size: 14px; margin-top: 4px;">✓</div>';
+        div.style.cssText = 'background: ' + theme.primary + '; border-radius: 16px; padding: 12px 8px; text-align: center; cursor: pointer; border: 2px solid ' + (isActive ? theme.primary : 'transparent') + '; transition: transform 0.2s;';
+        div.onclick = (function(k) { return function() { setSimpleTheme(k); }; })(key);
+        div.innerHTML = '<div style="width: 100%; height: 50px; background: ' + theme.secondary + '; border-radius: 10px; margin-bottom: 8px;"></div><span style="font-size: 12px; color: white; font-weight: 500;">' + theme.name + '</span>' + (isActive ? '<div style="color: white; font-size: 14px; margin-top: 4px;">✓</div>' : '');
         container.appendChild(div);
     }
 }
 
-function setThemeColorSettings(colorKey) {
+function setSimpleTheme(colorKey) {
     currentThemeColor = colorKey;
     localStorage.setItem('kukumber_theme_color', colorKey);
+    
     var theme = colorThemes[colorKey];
     document.documentElement.style.setProperty('--forest', theme.primary);
     document.documentElement.style.setProperty('--lime', theme.secondary);
+    
     var gradient = 'linear-gradient(135deg, ' + theme.primary + ', ' + theme.secondary + ')';
-    document.querySelectorAll('.btn-primary, .send-btn, .btn-create-slice').forEach(function(btn) {
-        if (btn) btn.style.background = gradient;
+    document.querySelectorAll('.btn-primary, .send-btn, .btn-create-slice, .wizard-next-btn, .wizard-create-btn').forEach(function(btn) {
+        btn.style.background = gradient;
     });
-    renderThemesGridSettings();
-    if (typeof showNotification === 'function') showNotification('Тема "' + theme.name + '" применена', 'success');
+    
+    renderThemesGrid();
+    showNotification('Тема "' + theme.name + '" применена', 'success');
 }
 
-window.toggleNightModeSetting = function() {
+function toggleNightModeUI() {
     nightModeEnabled = !nightModeEnabled;
     localStorage.setItem('kukumber_night_mode', nightModeEnabled);
+    applyNightModeToBody();
     
+    var btn = document.getElementById('night-mode-toggle-btn');
+    if (btn) {
+        btn.innerHTML = nightModeEnabled ? '🌙 Ночной режим (вкл)' : '☀️ Ночной режим (выкл)';
+    }
+    showNotification(nightModeEnabled ? 'Ночной режим включён 🌙' : 'Ночной режим выключен ☀️', 'success');
+}
+
+function applyNightModeToBody() {
     if (nightModeEnabled) {
         document.body.classList.add('night-mode');
         document.documentElement.style.setProperty('--background', '#121212');
@@ -3253,10 +864,8 @@ window.toggleNightModeSetting = function() {
         document.documentElement.style.setProperty('--text-light', '#a0a0a0');
         document.documentElement.style.setProperty('--text-muted', '#808080');
         document.documentElement.style.setProperty('--border', '#2c2c2c');
-        document.querySelectorAll('.message.received').forEach(function(msg) {
-            msg.style.background = '#2d2d2d';
-            msg.style.color = '#e0e0e0';
-        });
+        document.documentElement.style.setProperty('--sage', '#2a4a2a');
+        document.documentElement.style.setProperty('--olive', '#3a5a3a');
     } else {
         document.body.classList.remove('night-mode');
         document.documentElement.style.setProperty('--background', '#f5f7f5');
@@ -3264,30 +873,56 @@ window.toggleNightModeSetting = function() {
         document.documentElement.style.setProperty('--text-light', '#6b8e6b');
         document.documentElement.style.setProperty('--text-muted', '#94a894');
         document.documentElement.style.setProperty('--border', '#d4e4d4');
-        document.querySelectorAll('.message.received').forEach(function(msg) {
-            msg.style.background = 'white';
-            msg.style.color = '#2c3e2c';
-        });
+        document.documentElement.style.setProperty('--sage', '#9DC183');
+        document.documentElement.style.setProperty('--olive', '#556B2F');
     }
-    
-    var modal = document.getElementById('theme-settings-modal');
-    if (modal) modal.remove();
-    setTimeout(function() { if (window.showThemeSettings) window.showThemeSettings(); }, 100);
-    if (typeof showNotification === 'function') showNotification(nightModeEnabled ? 'Ночной режим включён 🌙' : 'Ночной режим выключен ☀️', 'success');
-};
-
-// Применяем сохраненные настройки при загрузке
-if (typeof window.addEventListener === 'function') {
-    window.addEventListener('DOMContentLoaded', function() {
-        var savedTheme = localStorage.getItem('kukumber_theme_color');
-        if (savedTheme && colorThemes[savedTheme]) {
-            setThemeColorSettings(savedTheme);
-        }
-        if (localStorage.getItem('kukumber_night_mode') === 'true') {
-            document.body.classList.add('night-mode');
-            document.documentElement.style.setProperty('--background', '#121212');
-            document.documentElement.style.setProperty('--text-dark', '#ffffff');
-            document.documentElement.style.setProperty('--border', '#2c2c2c');
-        }
-    });
 }
+
+// ========== ПРОЧИЕ НАСТРОЙКИ ==========
+function showPrivacySettings() {
+    showNotification('Конфиденциальность: в разработке', 'info');
+}
+
+function showStorageSettings() {
+    showNotification('Данные и память: в разработке', 'info');
+}
+
+function showAbout() {
+    var t = translations[currentLanguage];
+    alert(t.app_name + ' ' + (t.version || 'v1.0') + '\n\n' + (t.tagline || 'Свежее общение каждый день 🥒'));
+}
+
+function showHelp() {
+    showNotification('Помощь: в разработке', 'info');
+}
+
+// ========== ИНИЦИАЛИЗАЦИЯ ==========
+function detectUserLanguage() {
+    var saved = localStorage.getItem('kukumber_language');
+    if (saved && translations[saved]) {
+        currentLanguage = saved;
+    } else {
+        var browserLang = (navigator.language || 'ru').substring(0, 2).toLowerCase();
+        var supported = ['ru', 'en', 'es', 'de', 'fr', 'it', 'be', 'uk', 'pl'];
+        if (supported.indexOf(browserLang) !== -1 && translations[browserLang]) {
+            currentLanguage = browserLang;
+        } else {
+            currentLanguage = 'ru';
+        }
+        localStorage.setItem('kukumber_language', currentLanguage);
+    }
+    applyTranslations();
+}
+
+function initSettings() {
+    loadNotificationSettings();
+    detectUserLanguage();
+    applyNightModeToBody();
+    var savedTheme = localStorage.getItem('kukumber_theme_color');
+    if (savedTheme && colorThemes[savedTheme]) {
+        currentThemeColor = savedTheme;
+        setSimpleTheme(currentThemeColor);
+    }
+}
+
+initSettings();
