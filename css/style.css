@@ -2397,3 +2397,172 @@ body.night-mode .call-container {
 body.night-mode .call-controls-bar {
     background: rgba(30,30,30,0.9);
 }
+/* ===== ПОЛНАЯ ТЁМНАЯ ТЕМА ===== */
+body.night-mode {
+    background: #121212;
+}
+
+/* Печатная строка и область вокруг */
+body.night-mode .message-input-area {
+    background: #1e1e1e;
+    border-top-color: #2c2c2c;
+}
+
+body.night-mode .message-input-area input[type="text"] {
+    background: #2d2d2d;
+    color: #ffffff;
+    border-color: #3d3d3d;
+}
+
+body.night-mode .message-input-area input[type="text"]:focus {
+    border-color: var(--forest);
+}
+
+body.night-mode .message-input-area input[type="text"]::placeholder {
+    color: #808080;
+}
+
+body.night-mode .attach-btn:hover,
+body.night-mode .voice-btn:hover,
+body.night-mode .emoji-btn:hover {
+    background: #2d2d2d;
+}
+
+/* Сообщения собеседника (полученные) */
+body.night-mode .message.received {
+    background: #2d2d2d !important;
+    color: #e0e0e0 !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+body.night-mode .message.received .message-text {
+    color: #e0e0e0 !important;
+}
+
+body.night-mode .message.received .message-time {
+    color: #808080 !important;
+}
+
+body.night-mode .message.received .message-sender {
+    color: #a0a0a0 !important;
+}
+
+/* Сообщения отправителя (свои) */
+body.night-mode .message.sent {
+    background: linear-gradient(135deg, var(--forest), var(--lime)) !important;
+    color: #ffffff !important;
+}
+
+body.night-mode .message.sent .message-text {
+    color: #ffffff !important;
+}
+
+body.night-mode .message.sent .message-time {
+    color: rgba(255,255,255,0.7) !important;
+}
+
+/* Шапки модальных окон */
+body.night-mode .modal-header {
+    background: #1e1e1e !important;
+    border-bottom-color: #2c2c2c !important;
+}
+
+body.night-mode .modal-header h3 {
+    color: #ffffff !important;
+}
+
+body.night-mode .modal-content {
+    background: #1e1e1e !important;
+}
+
+/* Профиль модальных окон */
+body.night-mode .profile-modal-content {
+    background: #1e1e1e !important;
+}
+
+body.night-mode .profile-info .profile-name {
+    color: #ffffff !important;
+}
+
+body.night-mode .profile-info .profile-bio {
+    color: #a0a0a0 !important;
+}
+
+body.night-mode .profile-info .profile-subscribers {
+    color: #808080 !important;
+}
+
+body.night-mode .profile-tabs {
+    background: #1e1e1e !important;
+    border-top-color: #2c2c2c !important;
+    border-bottom-color: #2c2c2c !important;
+}
+
+body.night-mode .profile-tab-btn {
+    background: #1e1e1e !important;
+    color: #a0a0a0 !important;
+}
+
+body.night-mode .profile-tab-btn.active {
+    color: var(--forest) !important;
+    border-bottom-color: var(--forest) !important;
+}
+
+body.night-mode .profile-content {
+    background: #121212 !important;
+}
+
+/* Боковая панель */
+body.night-mode .sidebar {
+    background: #1e1e1e !important;
+    border-right-color: #2c2c2c !important;
+}
+
+body.night-mode .sidebar-header {
+    background: linear-gradient(135deg, #2a4a2a, #3a5a3a) !important;
+}
+
+body.night-mode .sidebar-header .user-details h3 {
+    color: #ffffff !important;
+}
+
+/* Вкладки (чаты, слайсы, настройки) */
+body.night-mode .bottom-nav {
+    background: #1e1e1e !important;
+    border-top-color: #2c2c2c !important;
+}
+
+body.night-mode .nav-item {
+    color: #808080 !important;
+}
+
+body.night-mode .nav-item.active {
+    color: var(--forest) !important;
+}
+
+/* Баннер в профиле (по умолчанию) */
+body.night-mode .profile-banner {
+    background: linear-gradient(135deg, #2a4a2a, #3a5a3a) !important;
+}
+
+/* Кнопки в модальных окнах */
+body.night-mode .btn-close {
+    color: #ffffff !important;
+}
+
+body.night-mode .btn-close:hover {
+    background: #2d2d2d !important;
+}
+
+/* Аватарки по умолчанию */
+body.night-mode .default-avatar-user {
+    background-image: url('https://i.ibb.co/W4xM0wf7/image.png') !important;
+}
+
+body.night-mode .default-avatar-group {
+    background-image: url('https://i.ibb.co/0RWPwqwQ/image.png') !important;
+}
+
+body.night-mode .default-avatar-channel {
+    background-image: url('https://i.ibb.co/3ydBsv59/image.png') !important;
+}
