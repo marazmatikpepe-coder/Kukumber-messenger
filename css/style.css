@@ -2253,3 +2253,17 @@ input:checked + .slider:before {
         text-overflow: ellipsis !important;
     }
 }
+/* Меню оформления - мобильная версия */
+@media (max-width: 768px) {
+    #theme-settings-modal > div {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 28px 28px 0 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+    }
+    
+    #themes-grid {
+        padding: 0 5px 10px 5px !important;
+    }
+}
