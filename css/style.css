@@ -2220,3 +2220,36 @@ input:checked + .slider:before {
     align-items: center;
     justify-content: center;
 }
+/* ===== МЕНЮ ОФОРМЛЕНИЯ (МОБИЛЬНАЯ АДАПТАЦИЯ) ===== */
+@media (max-width: 768px) {
+    #theme-settings-modal > div {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 28px 28px 0 0 !important;
+        margin: 0 !important;
+    }
+    
+    #themes-grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 10px !important;
+        padding: 0 5px !important;
+    }
+    
+    #themes-grid > div {
+        width: 100% !important;
+        min-width: 0 !important;
+        padding: 10px 5px !important;
+    }
+    
+    #themes-grid > div > div:first-child {
+        height: 45px !important;
+    }
+    
+    #themes-grid > div span {
+        font-size: 10px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+}
