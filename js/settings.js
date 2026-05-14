@@ -598,37 +598,38 @@ loadNotificationSettings();
 // ========== НАСТРОЙКИ ОФОРМЛЕНИЯ ==========
 
 let currentTheme = localStorage.getItem('kukumber_theme') || 'light';
+let currentThemeColor = localStorage.getItem('kukumber_theme_color') || 'green';
 let currentWallpaper = localStorage.getItem('kukumber_wallpaper') || null;
-let currentWallpaperType = localStorage.getItem('kukumber_wallpaper_type') || 'color'; // 'color' or 'image'
-let nightModeStatus = localStorage.getItem('kukumber_night_mode') || 'system'; // 'system', 'on', 'off'
+let currentWallpaperType = localStorage.getItem('kukumber_wallpaper_type') || 'color';
+let nightModeStatus = localStorage.getItem('kukumber_night_mode') || 'system';
 let fontSize = localStorage.getItem('kukumber_font_size') || '16';
 
-// ТЕМЫ для светлого режима
+// ТЕМЫ для светлого режима (только цветовые схемы)
 const lightThemes = {
-    green: { name: 'Зеленый', primary: '#228B22', secondary: '#32CD32', bg: '#f5f7f5', text: '#2c3e2c', messageBg: '#ffffff', image: 'https://i.ibb.co/Lhc7Hx3G/image.jpg' },
-    turquoise: { name: 'Бирюзовый', primary: '#008080', secondary: '#20B2AA', bg: '#f0f8f7', text: '#004d4d', messageBg: '#ffffff', image: 'https://i.ibb.co/yFzv2rsk/image.jpg' },
-    yellow: { name: 'Желтый', primary: '#FFD700', secondary: '#FFA500', bg: '#fffdf5', text: '#663d00', messageBg: '#ffffff', image: 'https://i.ibb.co/wFTGr0jH/image.jpg' },
-    red: { name: 'Красный', primary: '#DC143C', secondary: '#FF6B6B', bg: '#fff5f5', text: '#8b0000', messageBg: '#ffffff', image: 'https://i.ibb.co/0p6vhFXP/image.jpg' },
-    orange: { name: 'Оранжевый', primary: '#FF8C00', secondary: '#FFB347', bg: '#fff8f0', text: '#663300', messageBg: '#ffffff', image: 'https://i.ibb.co/GQ73QY3x/image.jpg' },
-    pink: { name: 'Розовый', primary: '#FF69B4', secondary: '#FFB6C1', bg: '#fff5f8', text: '#8b0045', messageBg: '#ffffff', image: 'https://i.ibb.co/4cfcTDj/image.jpg' },
-    blue: { name: 'Синий', primary: '#1E90FF', secondary: '#63B8FF', bg: '#f0f8ff', text: '#003366', messageBg: '#ffffff', image: 'https://i.ibb.co/23F6YggW/image.jpg' },
-    purple: { name: 'Фиолетовый', primary: '#8A2BE2', secondary: '#BA55D3', bg: '#f9f0ff', text: '#4a0080', messageBg: '#ffffff', image: 'https://i.ibb.co/RGS27DCF/image.jpg' }
+    green: { name: 'Зеленый', primary: '#228B22', secondary: '#32CD32', gradient: 'linear-gradient(135deg, #228B22, #32CD32)', bg: '#f5f7f5', text: '#2c3e2c', messageBg: '#ffffff', navBg: '#ffffff', buttonText: '#ffffff' },
+    turquoise: { name: 'Бирюзовый', primary: '#008080', secondary: '#20B2AA', gradient: 'linear-gradient(135deg, #008080, #20B2AA)', bg: '#f0f8f7', text: '#004d4d', messageBg: '#ffffff', navBg: '#ffffff', buttonText: '#ffffff' },
+    yellow: { name: 'Желтый', primary: '#FFD700', secondary: '#FFA500', gradient: 'linear-gradient(135deg, #FFD700, #FFA500)', bg: '#fffdf5', text: '#663d00', messageBg: '#ffffff', navBg: '#ffffff', buttonText: '#ffffff' },
+    red: { name: 'Красный', primary: '#DC143C', secondary: '#FF6B6B', gradient: 'linear-gradient(135deg, #DC143C, #FF6B6B)', bg: '#fff5f5', text: '#8b0000', messageBg: '#ffffff', navBg: '#ffffff', buttonText: '#ffffff' },
+    orange: { name: 'Оранжевый', primary: '#FF8C00', secondary: '#FFB347', gradient: 'linear-gradient(135deg, #FF8C00, #FFB347)', bg: '#fff8f0', text: '#663300', messageBg: '#ffffff', navBg: '#ffffff', buttonText: '#ffffff' },
+    pink: { name: 'Розовый', primary: '#FF69B4', secondary: '#FFB6C1', gradient: 'linear-gradient(135deg, #FF69B4, #FFB6C1)', bg: '#fff5f8', text: '#8b0045', messageBg: '#ffffff', navBg: '#ffffff', buttonText: '#ffffff' },
+    blue: { name: 'Синий', primary: '#1E90FF', secondary: '#63B8FF', gradient: 'linear-gradient(135deg, #1E90FF, #63B8FF)', bg: '#f0f8ff', text: '#003366', messageBg: '#ffffff', navBg: '#ffffff', buttonText: '#ffffff' },
+    purple: { name: 'Фиолетовый', primary: '#8A2BE2', secondary: '#BA55D3', gradient: 'linear-gradient(135deg, #8A2BE2, #BA55D3)', bg: '#f9f0ff', text: '#4a0080', messageBg: '#ffffff', navBg: '#ffffff', buttonText: '#ffffff' }
 };
 
 // ТЕМЫ для темного режима
 const darkThemes = {
-    black: { name: 'Черный', primary: '#2C2C2C', secondary: '#444444', bg: '#1a1a1a', text: '#ffffff', messageBg: '#2d2d2d', image: 'https://i.ibb.co/QF0kBQ5Z/image.jpg' },
-    turquoise: { name: 'Бирюзовый', primary: '#008080', secondary: '#20B2AA', bg: '#0a2a2a', text: '#e0ffff', messageBg: '#1a3a3a', image: 'https://i.ibb.co/xtLkWD5m/image.jpg' },
-    yellow: { name: 'Желтый', primary: '#FFD700', secondary: '#FFA500', bg: '#2a2a0a', text: '#ffffe0', messageBg: '#3a3a1a', image: 'https://i.ibb.co/TMZbytkg/image.jpg' },
-    green: { name: 'Зеленый', primary: '#228B22', secondary: '#32CD32', bg: '#0a2a0a', text: '#e0ffe0', messageBg: '#1a3a1a', image: 'https://i.ibb.co/0jjxkCJ0/image.jpg' },
-    red: { name: 'Красный', primary: '#DC143C', secondary: '#FF6B6B', bg: '#2a0a0a', text: '#ffe0e0', messageBg: '#3a1a1a', image: 'https://i.ibb.co/W441VxS2/image.jpg' },
-    orange: { name: 'Оранжевый', primary: '#FF8C00', secondary: '#FFB347', bg: '#2a1a0a', text: '#ffe0c0', messageBg: '#3a2a1a', image: 'https://i.ibb.co/hFVfx8RN/image.jpg' },
-    pink: { name: 'Розовый', primary: '#FF69B4', secondary: '#FFB6C1', bg: '#2a0a1a', text: '#ffe0f0', messageBg: '#3a1a2a', image: 'https://i.ibb.co/R12CFHd/image.jpg' },
-    purple: { name: 'Фиолетовый', primary: '#8A2BE2', secondary: '#BA55D3', bg: '#1a0a2a', text: '#f0e0ff', messageBg: '#2a1a3a', image: 'https://i.ibb.co/gbHMzK4P/image.jpg' },
-    blue: { name: 'Синий', primary: '#1E90FF', secondary: '#63B8FF', bg: '#0a1a2a', text: '#e0f0ff', messageBg: '#1a2a3a', image: 'https://i.ibb.co/F430m6Yd/image.jpg' }
+    black: { name: 'Черный', primary: '#2C2C2C', secondary: '#444444', gradient: 'linear-gradient(135deg, #2C2C2C, #444444)', bg: '#1a1a1a', text: '#ffffff', messageBg: '#2d2d2d', navBg: '#0d0d0d', buttonText: '#ffffff' },
+    turquoise: { name: 'Бирюзовый', primary: '#008080', secondary: '#20B2AA', gradient: 'linear-gradient(135deg, #008080, #20B2AA)', bg: '#0a2a2a', text: '#e0ffff', messageBg: '#1a3a3a', navBg: '#0a1a1a', buttonText: '#ffffff' },
+    yellow: { name: 'Желтый', primary: '#FFD700', secondary: '#FFA500', gradient: 'linear-gradient(135deg, #FFD700, #FFA500)', bg: '#2a2a0a', text: '#ffffe0', messageBg: '#3a3a1a', navBg: '#1a1a0a', buttonText: '#ffffff' },
+    green: { name: 'Зеленый', primary: '#228B22', secondary: '#32CD32', gradient: 'linear-gradient(135deg, #228B22, #32CD32)', bg: '#0a2a0a', text: '#e0ffe0', messageBg: '#1a3a1a', navBg: '#0a1a0a', buttonText: '#ffffff' },
+    red: { name: 'Красный', primary: '#DC143C', secondary: '#FF6B6B', gradient: 'linear-gradient(135deg, #DC143C, #FF6B6B)', bg: '#2a0a0a', text: '#ffe0e0', messageBg: '#3a1a1a', navBg: '#1a0a0a', buttonText: '#ffffff' },
+    orange: { name: 'Оранжевый', primary: '#FF8C00', secondary: '#FFB347', gradient: 'linear-gradient(135deg, #FF8C00, #FFB347)', bg: '#2a1a0a', text: '#ffe0c0', messageBg: '#3a2a1a', navBg: '#1a0f05', buttonText: '#ffffff' },
+    pink: { name: 'Розовый', primary: '#FF69B4', secondary: '#FFB6C1', gradient: 'linear-gradient(135deg, #FF69B4, #FFB6C1)', bg: '#2a0a1a', text: '#ffe0f0', messageBg: '#3a1a2a', navBg: '#1a0a0f', buttonText: '#ffffff' },
+    purple: { name: 'Фиолетовый', primary: '#8A2BE2', secondary: '#BA55D3', gradient: 'linear-gradient(135deg, #8A2BE2, #BA55D3)', bg: '#1a0a2a', text: '#f0e0ff', messageBg: '#2a1a3a', navBg: '#0f0a1a', buttonText: '#ffffff' },
+    blue: { name: 'Синий', primary: '#1E90FF', secondary: '#63B8FF', gradient: 'linear-gradient(135deg, #1E90FF, #63B8FF)', bg: '#0a1a2a', text: '#e0f0ff', messageBg: '#1a2a3a', navBg: '#0a0f1a', buttonText: '#ffffff' }
 };
 
-// Обои мессенджера
+// Обои мессенджера (маленькие, не растягиваются)
 const wallpaperImages = [
     'https://i.ibb.co/kVWvmFxR/image.png',
     'https://i.ibb.co/v630bmZ2/image.png',
@@ -644,24 +645,27 @@ const wallpaperImages = [
 ];
 
 function showThemeSettings() {
+    const isDark = nightModeStatus === 'on' || (nightModeStatus === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const themes = isDark ? darkThemes : lightThemes;
+    const currentThemeColorName = themes[currentThemeColor]?.name || (isDark ? 'Черный' : 'Зеленый');
+    
     const modalHtml = `
         <div id="theme-settings-modal" class="modal" style="z-index: 10002;">
-            <div style="background: white; width: 100%; max-width: 500px; border-radius: 28px; overflow: hidden; margin: auto; max-height: 90vh; overflow-y: auto;">
-                <!-- Шапка -->
-                <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: white; z-index: 10;">
-                    <button onclick="closeThemeSettings()" style="background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 15px;">←</button>
-                    <h3 style="margin: 0;">Оформление</h3>
+            <div style="background: ${isDark ? '#1a1a1a' : 'white'}; width: 100%; max-width: 500px; border-radius: 28px; overflow: hidden; margin: auto; max-height: 90vh; overflow-y: auto;">
+                <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: ${isDark ? '#1a1a1a' : 'white'}; z-index: 10;">
+                    <button onclick="closeThemeSettings()" style="background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 15px; color: var(--text-dark);">←</button>
+                    <h3 style="margin: 0; color: var(--text-dark);">Оформление</h3>
                 </div>
                 
                 <div style="padding: 20px;">
                     <!-- Ночной режим -->
                     <div style="margin-bottom: 25px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-weight: 600;">🌙 Ночной режим</span>
+                            <span style="font-weight: 600; color: var(--text-dark);">🌙 Ночной режим</span>
                             <div class="notification-switch ${nightModeStatus === 'on' ? 'active' : ''}" onclick="toggleNightModeQuick()"></div>
                         </div>
                         <div style="margin-top: 10px;">
-                            <select id="night-mode-select" onchange="setNightMode(this.value)" style="width: 100%; padding: 10px; border-radius: 12px; border: 1px solid var(--border);">
+                            <select id="night-mode-select" onchange="setNightMode(this.value)" style="width: 100%; padding: 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--background); color: var(--text-dark);">
                                 <option value="system" ${nightModeStatus === 'system' ? 'selected' : ''}>Системная</option>
                                 <option value="off" ${nightModeStatus === 'off' ? 'selected' : ''}>Выключена</option>
                                 <option value="on" ${nightModeStatus === 'on' ? 'selected' : ''}>Включена</option>
@@ -672,33 +676,27 @@ function showThemeSettings() {
                     <!-- Размер текста -->
                     <div style="margin-bottom: 25px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-weight: 600;">🔤 Размер текста</span>
+                            <span style="font-weight: 600; color: var(--text-dark);">🔤 Размер текста</span>
                             <span id="font-size-value" style="color: var(--text-muted);">${fontSize}px</span>
                         </div>
                         <input type="range" id="font-size-slider" min="12" max="24" step="1" value="${fontSize}" 
                                style="width: 100%; margin-top: 10px;" oninput="previewFontSize(this.value)">
-                        <div style="display: flex; justify-content: space-between; margin-top: 5px;">
-                            <span style="font-size: 12px;">A</span>
-                            <span style="font-size: 16px;">A</span>
-                            <span style="font-size: 20px;">A</span>
-                            <span style="font-size: 24px;">A</span>
-                        </div>
                     </div>
                     
                     <!-- Предпросмотр чата -->
                     <div style="margin-bottom: 25px;">
-                        <div style="font-weight: 600; margin-bottom: 10px;">💬 Предпросмотр</div>
-                        <div id="chat-preview" style="background: var(--bg-color); border-radius: 16px; padding: 15px; min-height: 200px;">
+                        <div style="font-weight: 600; margin-bottom: 10px; color: var(--text-dark);">💬 Предпросмотр</div>
+                        <div id="chat-preview" style="background: var(--bg-color); border-radius: 16px; padding: 15px;">
                             <div style="display: flex; justify-content: flex-start; margin-bottom: 12px;">
                                 <div style="max-width: 75%; background: var(--message-bg); border-radius: 16px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
-                                    <div style="font-size: 14px;">Какой час в Токио?</div>
-                                    <div style="font-size: 10px; opacity: 0.6; margin-top: 4px;">10:42</div>
+                                    <div style="font-size: 14px; color: var(--text-dark);">Какой час в Токио?</div>
+                                    <div style="font-size: 10px; opacity: 0.6; margin-top: 4px; color: var(--text-muted);">10:42</div>
                                 </div>
                             </div>
                             <div style="display: flex; justify-content: flex-end;">
-                                <div style="max-width: 75%; background: var(--primary-color); color: white; border-radius: 16px; padding: 10px 14px;">
-                                    <div style="font-size: 14px;">В Токио утро 😎</div>
-                                    <div style="font-size: 10px; opacity: 0.6; margin-top: 4px;">10:43</div>
+                                <div style="max-width: 75%; background: var(--primary-color); border-radius: 16px; padding: 10px 14px;">
+                                    <div style="font-size: 14px; color: white;">В Токио утро 😎</div>
+                                    <div style="font-size: 10px; opacity: 0.6; margin-top: 4px; color: rgba(255,255,255,0.7);">10:43</div>
                                 </div>
                             </div>
                         </div>
@@ -706,17 +704,17 @@ function showThemeSettings() {
                     
                     <!-- ТЕМЫ -->
                     <div style="margin-bottom: 25px;">
-                        <div style="font-weight: 600; margin-bottom: 10px;">🎨 Темы</div>
+                        <div style="font-weight: 600; margin-bottom: 10px; color: var(--text-dark);">🎨 Цвет темы</div>
                         <div id="themes-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;"></div>
                     </div>
                     
-                    <!-- Обои -->
-                    <div>
+                    <!-- Обои (только для телефона) -->
+                    <div class="wallpaper-section">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <span style="font-weight: 600;">🖼️ Обои для чатов</span>
+                            <span style="font-weight: 600; color: var(--text-dark);">🖼️ Обои для чатов</span>
                             <button onclick="openWallpaperMenu()" style="background: none; border: none; color: var(--forest); cursor: pointer;">Выбрать →</button>
                         </div>
-                        <div id="wallpaper-preview" style="width: 100%; height: 100px; border-radius: 16px; background: ${currentWallpaper ? `url(${currentWallpaper}) center/cover` : 'var(--bg-color)'}; border: 1px solid var(--border);"></div>
+                        <div id="wallpaper-preview" style="width: 100%; height: 100px; border-radius: 16px; background: ${currentWallpaper ? `url(${currentWallpaper}) center/cover no-repeat` : 'var(--bg-color)'}; border: 1px solid var(--border); background-size: cover;"></div>
                     </div>
                 </div>
             </div>
@@ -748,7 +746,7 @@ function renderThemesGrid() {
     container.innerHTML = '';
     
     for (const [key, theme] of Object.entries(themes)) {
-        const isActive = currentTheme === key;
+        const isActive = currentThemeColor === key;
         const div = document.createElement('div');
         div.style.cssText = `
             background: ${theme.primary};
@@ -760,7 +758,7 @@ function renderThemesGrid() {
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             transition: transform 0.2s;
         `;
-        div.onclick = () => setTheme(key);
+        div.onclick = () => setThemeColor(key);
         div.innerHTML = `
             <div style="width: 100%; height: 60px; background: ${theme.secondary}; border-radius: 12px; margin-bottom: 8px;"></div>
             <span style="font-size: 12px; color: white; font-weight: 500;">${theme.name}</span>
@@ -770,59 +768,92 @@ function renderThemesGrid() {
     }
 }
 
-function setTheme(themeKey) {
-    currentTheme = themeKey;
-    localStorage.setItem('kukumber_theme', themeKey);
+function setThemeColor(colorKey) {
+    currentThemeColor = colorKey;
+    localStorage.setItem('kukumber_theme_color', colorKey);
     applyTheme();
     renderThemesGrid();
     applyThemeToPreview();
-    showNotification('Тема применена', 'success');
+    showNotification('Цвет темы применён', 'success');
 }
 
 function applyTheme() {
     const isDark = nightModeStatus === 'on' || (nightModeStatus === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     const themes = isDark ? darkThemes : lightThemes;
-    const theme = themes[currentTheme] || (isDark ? darkThemes.black : lightThemes.green);
+    const theme = themes[currentThemeColor] || (isDark ? darkThemes.black : lightThemes.green);
     
-    // Применяем CSS переменные
+    // Основные CSS переменные
     document.documentElement.style.setProperty('--forest', theme.primary);
     document.documentElement.style.setProperty('--lime', theme.secondary);
     document.documentElement.style.setProperty('--background', theme.bg);
     document.documentElement.style.setProperty('--text-dark', theme.text);
     document.documentElement.style.setProperty('--message-bg', theme.messageBg);
+    document.documentElement.style.setProperty('--nav-bg', theme.navBg);
+    document.documentElement.style.setProperty('--button-text', theme.buttonText);
     
-    // Применяем обои
-    if (currentWallpaper && currentWallpaperType === 'image') {
-        document.documentElement.style.setProperty('--chat-wallpaper', `url(${currentWallpaper})`);
+    // Градиент для кнопок
+    document.documentElement.style.setProperty('--btn-gradient', theme.gradient);
+    
+    // Применяем градиент к кнопкам
+    document.querySelectorAll('.btn-primary, .send-btn, .btn-create-slice, .wizard-next-btn, .wizard-create-btn').forEach(btn => {
+        btn.style.background = theme.gradient;
+    });
+    
+    // Применяем цвет фона для нижней навигации
+    const bottomNav = document.querySelector('.bottom-nav');
+    if (bottomNav) bottomNav.style.background = theme.navBg;
+    
+    // Применяем обои (только для мобильных устройств)
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile && currentWallpaper && currentWallpaperType === 'image') {
         document.querySelector('.chat-area')?.style.setProperty('background-image', `url(${currentWallpaper})`);
         document.querySelector('.messages-container')?.style.setProperty('background-image', `url(${currentWallpaper})`);
+        document.querySelector('.chat-area')?.style.setProperty('background-size', 'cover');
+        document.querySelector('.messages-container')?.style.setProperty('background-size', 'cover');
+        document.querySelector('.chat-area')?.style.setProperty('background-position', 'center');
+        document.querySelector('.messages-container')?.style.setProperty('background-position', 'center');
+        document.querySelector('.chat-area')?.style.setProperty('background-repeat', 'no-repeat');
+        document.querySelector('.messages-container')?.style.setProperty('background-repeat', 'no-repeat');
     } else {
-        document.documentElement.style.setProperty('--chat-wallpaper', 'none');
         document.querySelector('.chat-area')?.style.setProperty('background-image', 'none');
         document.querySelector('.messages-container')?.style.setProperty('background-image', 'none');
+        document.querySelector('.chat-area')?.style.setProperty('background', theme.bg);
+        document.querySelector('.messages-container')?.style.setProperty('background', theme.bg);
     }
     
     // Применяем размер шрифта
     document.documentElement.style.setProperty('--font-size', fontSize + 'px');
     document.querySelector('.messages-container')?.style.setProperty('font-size', fontSize + 'px');
+    
+    // Для ПК убираем обои
+    if (!isMobile) {
+        document.querySelector('.chat-area')?.style.setProperty('background-image', 'none');
+        document.querySelector('.messages-container')?.style.setProperty('background-image', 'none');
+        document.querySelector('.chat-area')?.style.setProperty('background', theme.bg);
+        document.querySelector('.messages-container')?.style.setProperty('background', theme.bg);
+    }
 }
 
 function applyThemeToPreview() {
     const isDark = nightModeStatus === 'on' || (nightModeStatus === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     const themes = isDark ? darkThemes : lightThemes;
-    const theme = themes[currentTheme] || (isDark ? darkThemes.black : lightThemes.green);
+    const theme = themes[currentThemeColor] || (isDark ? darkThemes.black : lightThemes.green);
     
     const preview = document.getElementById('chat-preview');
     if (preview) {
         preview.style.setProperty('--bg-color', theme.bg);
         preview.style.setProperty('--message-bg', theme.messageBg);
         preview.style.setProperty('--primary-color', theme.primary);
+        preview.style.setProperty('--text-dark', theme.text);
+        preview.style.setProperty('--text-muted', isDark ? '#aaa' : '#94a894');
+        preview.style.background = theme.bg;
     }
 }
 
 function previewFontSize(value) {
     document.getElementById('font-size-value').textContent = value + 'px';
     document.documentElement.style.setProperty('--font-size', value + 'px');
+    document.querySelector('.messages-container')?.style.setProperty('font-size', value + 'px');
 }
 
 function setFontSize() {
@@ -862,32 +893,30 @@ function setNightMode(value) {
 }
 
 function openWallpaperMenu() {
+    const isDark = nightModeStatus === 'on' || (nightModeStatus === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     const modalHtml = `
         <div id="wallpaper-menu-modal" class="modal" style="z-index: 10003;">
-            <div style="background: white; width: 100%; max-width: 500px; border-radius: 28px; overflow: hidden; margin: auto; max-height: 90vh; overflow-y: auto;">
-                <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: white;">
-                    <button onclick="closeWallpaperMenu()" style="background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 15px;">←</button>
-                    <h3 style="margin: 0;">Обои для чатов</h3>
+            <div style="background: ${isDark ? '#1a1a1a' : 'white'}; width: 100%; max-width: 500px; border-radius: 28px; overflow: hidden; margin: auto; max-height: 90vh; overflow-y: auto;">
+                <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: ${isDark ? '#1a1a1a' : 'white'};">
+                    <button onclick="closeWallpaperMenu()" style="background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 15px; color: var(--text-dark);">←</button>
+                    <h3 style="margin: 0; color: var(--text-dark);">Обои для чатов</h3>
                 </div>
                 
                 <div style="padding: 20px;">
-                    <!-- Выбрать свои -->
                     <div style="margin-bottom: 25px;">
-                        <div style="font-weight: 600; margin-bottom: 10px;">Мои обои</div>
+                        <div style="font-weight: 600; margin-bottom: 10px; color: var(--text-dark);">Мои обои</div>
                         <div onclick="uploadCustomWallpaper()" style="width: 100px; height: 100px; background: #e0e0e0; border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid var(--forest);">
                             <div style="width: 36px; height: 36px; background: var(--forest); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">+</div>
                         </div>
                     </div>
                     
-                    <!-- Обои мессенджера -->
                     <div>
-                        <div style="font-weight: 600; margin-bottom: 10px;">Обои мессенджера</div>
+                        <div style="font-weight: 600; margin-bottom: 10px; color: var(--text-dark);">Обои мессенджера</div>
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;" id="wallpaper-grid"></div>
                     </div>
                     
-                    <!-- Сброс обоев -->
                     <div style="margin-top: 20px;">
-                        <button onclick="resetWallpaper()" style="width: 100%; padding: 12px; background: var(--background); border: 1px solid var(--border); border-radius: 12px; cursor: pointer;">Сбросить обои</button>
+                        <button onclick="resetWallpaper()" style="width: 100%; padding: 12px; background: var(--background); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; color: var(--text-dark);">Сбросить обои</button>
                     </div>
                 </div>
             </div>
@@ -909,15 +938,16 @@ function renderWallpaperGrid() {
     
     container.innerHTML = '';
     
-    wallpaperImages.forEach((url, index) => {
+    wallpaperImages.forEach((url) => {
         const div = document.createElement('div');
         div.style.cssText = `
             aspect-ratio: 1;
-            background: url(${url}) center/cover;
+            background: url(${url}) center/cover no-repeat;
             border-radius: 16px;
             cursor: pointer;
             border: 2px solid ${currentWallpaper === url ? 'var(--forest)' : 'transparent'};
             transition: transform 0.2s;
+            background-size: cover;
         `;
         div.onclick = () => setWallpaper(url, 'image');
         container.appendChild(div);
@@ -931,9 +961,8 @@ function setWallpaper(url, type) {
     localStorage.setItem('kukumber_wallpaper_type', type);
     applyTheme();
     
-    // Обновляем превью
     const preview = document.getElementById('wallpaper-preview');
-    if (preview) preview.style.background = `url(${url}) center/cover`;
+    if (preview) preview.style.background = `url(${url}) center/cover no-repeat`;
     
     showNotification('Обои применены', 'success');
     closeWallpaperMenu();
@@ -976,7 +1005,7 @@ async function uploadCustomWallpaper() {
     input.click();
 }
 
-// Инициализация темы при загрузке
+// Инициализация темы
 function initTheme() {
     applyTheme();
     
@@ -990,30 +1019,26 @@ function initTheme() {
             }
         }
     });
+    
+    // Следим за шириной экрана для обоев
+    window.addEventListener('resize', () => {
+        applyTheme();
+    });
 }
 
-// Вызываем инициализацию
 initTheme();
-// Сохранение размера текста при отпускании слайдера
+
+// Сохранение размера текста
 document.addEventListener('mouseup', function() {
     const slider = document.getElementById('font-size-slider');
     if (slider && !slider.closest('.modal')) {
-        const newSize = slider.value;
-        fontSize = newSize;
-        localStorage.setItem('kukumber_font_size', fontSize);
-        applyTheme();
-        showNotification('Размер текста сохранён', 'success');
+        setFontSize();
     }
 });
 
-// Также для touch-устройств (мобильные)
 document.addEventListener('touchend', function() {
     const slider = document.getElementById('font-size-slider');
     if (slider && !slider.closest('.modal')) {
-        const newSize = slider.value;
-        fontSize = newSize;
-        localStorage.setItem('kukumber_font_size', fontSize);
-        applyTheme();
-        showNotification('Размер текста сохранён', 'success');
+        setFontSize();
     }
 });
