@@ -1600,7 +1600,12 @@ async function searchUsersForChat(query) {
         const searchQuery = query.replace('@', '');
         
         if (username.includes(searchQuery) || userTag.includes(searchQuery)) {
-            results.push({ uid, ...user });
+            results.push({ 
+                uid, 
+                username: user.username,
+                userTag: user.userTag,
+                avatar: user.avatar || ''  // Убедимся что avatar есть
+            });
         }
         if (results.length >= 20) break;
     }
@@ -1622,11 +1627,16 @@ function renderUsersForNewChat(users, container) {
         div.onmouseenter = () => div.style.background = 'var(--background)';
         div.onmouseleave = () => div.style.background = 'white';
         
-        const avatarStyle = user.avatar ? `background-image: url(${user.avatar}); background-size: cover;` : '';
-        const avatarContent = user.avatar ? '' : '👤';
+        // Правильное отображение аватарки
+        let avatarHtml = '';
+        if (user.avatar && user.avatar.startsWith('http')) {
+            avatarHtml = `<div class="avatar" style="width: 50px; height: 50px; background-image: url(${user.avatar}); background-size: cover; background-position: center; border-radius: 50%;"></div>`;
+        } else {
+            avatarHtml = `<div class="avatar" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: var(--sage); border-radius: 50%; font-size: 24px;">👤</div>`;
+        }
         
         div.innerHTML = `
-            <div class="avatar" style="width: 50px; height: 50px; ${avatarStyle} display: flex; align-items: center; justify-content: center; background: var(--sage); border-radius: 50%;">${avatarContent}</div>
+            ${avatarHtml}
             <div style="flex: 1;">
                 <div style="font-weight: 600; font-size: 16px;">${escapeHtml(user.username)}</div>
                 <div style="font-size: 12px; color: var(--text-muted);">${user.userTag ? '@' + user.userTag : '@' + user.username.toLowerCase().replace(/\s/g, '')}</div>
@@ -1638,7 +1648,6 @@ function renderUsersForNewChat(users, container) {
         container.appendChild(div);
     });
 }
-
 async function createNewChatAndOpen(otherUserId, otherUser) {
     showNotification('Создание чата...', 'info');
     
