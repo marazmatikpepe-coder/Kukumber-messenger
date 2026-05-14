@@ -78,7 +78,7 @@ function createSliceCard(sliceId, sliceData) {
     var div = document.createElement('div');
     div.className = 'slice-card';
     div.setAttribute('data-slice-id', sliceId);
-    
+
     // Контекстное меню
     div.addEventListener('contextmenu', function(e) {
         e.preventDefault();
@@ -96,9 +96,9 @@ function createSliceCard(sliceId, sliceData) {
     div.addEventListener('touchmove', function() { if (touchTimer) clearTimeout(touchTimer); });
     
     // Шапка с кликабельной аватаркой
-    var avatarStyle = sliceData.authorAvatar ? 'background-image:url('+sliceData.authorAvatar+');background-size:cover;' : '';
-    var avatarContent = sliceData.authorAvatar ? '' : '👤';
-    
+   var avatarStyle = sliceData.authorAvatar ? 'background-image:url('+sliceData.authorAvatar+');background-size:cover;' : '';
+var avatarClass = (!sliceData.authorAvatar) ? 'default-avatar-user' : '';
+var avatarContent = ''; // убираем эмодзи
     // Медиа контент
     var mediaHtml = '';
     if (sliceData.mediaType === 'multiple' && sliceData.mediaUrls && sliceData.mediaUrls.length > 0) {
@@ -366,8 +366,9 @@ function loadComments(sliceId) {
 function renderComment(commentId, comment, sliceId, level) {
     if (!level) level = 0;
     
-    var avatarStyle = comment.authorAvatar ? 'background-image:url('+comment.authorAvatar+');background-size:cover;' : '';
-    var avatarContent = comment.authorAvatar ? '' : '👤';
+   var avatarStyle = comment.authorAvatar ? 'background-image:url('+comment.authorAvatar+');background-size:cover;' : '';
+var avatarClass = (!comment.authorAvatar) ? 'default-avatar-user' : '';
+var avatarContent = '';
     var marginLeft = level * 40;
     
     return `
@@ -577,8 +578,7 @@ function openUserProfile(userId) {
                         <button class="profile-close-btn" onclick="closeProfileModal()">×</button>
                     </div>
                     <div class="profile-avatar-wrapper">
-                        <div class="profile-avatar" id="profile-avatar" style="background-image: url(${userAvatar}); background-size: cover;">
-                            ${!userAvatar ? '👤' : ''}
+                       <div class="profile-avatar ${!userAvatar ? 'default-avatar-user' : ''}" id="profile-avatar" style="${userAvatar ? 'background-image: url('+userAvatar+'); background-size: cover;' : ''}">
                             ${canEdit ? '<button class="profile-avatar-edit-btn" onclick="editProfileAvatar()">✏️</button>' : ''}
                         </div>
                     </div>
@@ -733,8 +733,9 @@ function createProfileSliceCard(sliceId, sliceData) {
     div.className = 'slice-card profile-slice-card';
     div.setAttribute('data-slice-id', sliceId);
     
-    var avatarStyle = sliceData.authorAvatar ? 'background-image:url('+sliceData.authorAvatar+');background-size:cover;' : '';
-    var avatarContent = sliceData.authorAvatar ? '' : '👤';
+  var avatarStyle = sliceData.authorAvatar ? 'background-image:url('+sliceData.authorAvatar+');background-size:cover;' : '';
+var avatarClass = (!sliceData.authorAvatar) ? 'default-avatar-user' : '';
+var avatarContent = '';
     
     var mediaHtml = '';
     if (sliceData.mediaUrl) {
