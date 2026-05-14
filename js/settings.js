@@ -856,6 +856,7 @@ function toggleNightModeUI() {
     showNotification(nightModeEnabled ? 'Ночной режим включён 🌙' : 'Ночной режим выключен ☀️', 'success');
 }
 
+// Замени функцию applyNightModeToBody на эту:
 function applyNightModeToBody() {
     if (nightModeEnabled) {
         document.body.classList.add('night-mode');
@@ -875,6 +876,23 @@ function applyNightModeToBody() {
         document.documentElement.style.setProperty('--border', '#d4e4d4');
         document.documentElement.style.setProperty('--sage', '#9DC183');
         document.documentElement.style.setProperty('--olive', '#556B2F');
+    }
+}
+
+// В initSettings() убери проверку системной темы, просто ставь light:
+function initSettings() {
+    loadNotificationSettings();
+    detectUserLanguage();
+    
+    // ПРИНУДИТЕЛЬНО СВЕТЛАЯ ТЕМА (nightModeEnabled = false)
+    nightModeEnabled = false;
+    localStorage.setItem('kukumber_night_mode', 'false');
+    applyNightModeToBody();
+    
+    var savedTheme = localStorage.getItem('kukumber_theme_color');
+    if (savedTheme && colorThemes[savedTheme]) {
+        currentThemeColor = savedTheme;
+        setSimpleTheme(currentThemeColor);
     }
 }
 
