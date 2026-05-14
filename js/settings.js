@@ -705,8 +705,7 @@ function setSimpleTheme(colorKey) {
     renderSimpleThemesGrid();
     showNotification(`Тема "${theme.name}" применена`, 'success');
 }
-<!-- Кнопка выбора обоев -->
-<div style="margin-top: 20px;">
+
     <button id="wallpaper-select-btn" onclick="openWallpaperMenu()" style="width: 100%; padding: 14px; background: ${nightModeEnabled ? '#2d2d2d' : '#f0f0f0'}; border: none; border-radius: 16px; font-size: 16px; cursor: pointer; color: ${nightModeEnabled ? 'white' : 'black'}; display: flex; align-items: center; justify-content: center; gap: 10px;">
         🖼️ Выбрать обои для чата
     </button>
