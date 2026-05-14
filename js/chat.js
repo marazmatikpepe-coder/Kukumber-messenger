@@ -547,6 +547,17 @@ function openChannelOrGroupProfile() {
         return;
     }
     
+    // ЛИЧНЫЙ ЧАТ
+    if (currentChatUser.type === 'private' && currentChatUser.otherUserId) {
+        if (typeof openUserProfile === 'function') {
+            openUserProfile(currentChatUser.otherUserId);
+        } else {
+            showNotification('Функция профиля не загружена', 'error');
+        }
+        return;
+    }
+    
+    // КАНАЛ
     if (currentChatUser.type === 'channel') {
         // Загружаем свежие данные канала
         database.ref('chats/' + currentChatId).once('value').then(snapshot => {
@@ -645,18 +656,15 @@ function openChannelOrGroupProfile() {
             const modal = document.getElementById('beauty-channel-profile-modal');
             modal.classList.remove('hidden');
             
-            // Сохраняем данные для других функций
             window.currentChannelProfileId = currentChatId;
             window.currentChannelProfileData = chat;
             
-            // Обновляем количество подписчиков в реальном времени
             database.ref('chats/' + currentChatId + '/subscribers').on('value', (snap) => {
                 const count = Object.keys(snap.val() || {}).length;
                 const countEl = document.getElementById('channel-members-count');
                 if (countEl) countEl.textContent = count;
             });
             
-            // Обработчики вкладок
             document.querySelectorAll('.channel-tab-btn-ui').forEach(btn => {
                 btn.onclick = () => {
                     document.querySelectorAll('.channel-tab-btn-ui').forEach(b => b.classList.remove('active'));
@@ -668,29 +676,33 @@ function openChannelOrGroupProfile() {
                 };
             });
             
-            // Кнопка подписки/отписки
             const actionBtn = document.getElementById('channel-action-btn');
             if (actionBtn) {
                 actionBtn.onclick = () => handleChannelSubscribeUI(currentChatId);
             }
             
-            // Загружаем посты по умолчанию
             loadChannelPostsTabUI(currentChatId);
             
         }).catch(err => {
             console.error('Ошибка:', err);
             showNotification('Ошибка загрузки профиля', 'error');
         });
-        
-    } else if (currentChatUser.type === 'group') {
-        showNotification('Профиль группы в разработке', 'info');
-    } else if (currentChatUser.type === 'private' && currentChatUser.otherUserId) {
-        if (typeof openUserProfile === 'function') {
-            openUserProfile(currentChatUser.otherUserId);
-        }
+        return;
     }
+    
+    // ГРУППА
+    if (currentChatUser.type === 'group') {
+        console.log('Открываем профиль ГРУППЫ');
+        if (typeof openGroupProfile === 'function') {
+            openGroupProfile(currentChatId);
+        } else {
+            showNotification('Функция профиля группы не загружена, обновите страницу', 'error');
+        }
+        return;
+    }
+    
+    showNotification('Неизвестный тип чата', 'error');
 }
-
 // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ПРОФИЛЯ КАНАЛА ==========
 
 function getCategoryNameUI(category) {
@@ -1963,3 +1975,492 @@ function closeSimpleChannelProfileModal() {
     const modal = document.getElementById('simple-channel-profile-modal');
     if (modal) modal.remove();
 }
+// ========== КРАСИВЫЙ ПРОФИЛЬ ГРУППЫ ==========
+
+let currentGroupProfileId = null;
+let currentGroupProfileData = null;
+
+function openGroupProfile(chatId) {
+    console.log('openGroupProfile вызван для:', chatId);
+    currentGroupProfileId = chatId;
+    
+    database.ref('chats/' + chatId).once('value').then(snapshot => {
+        const group = snapshot.val();
+        if (!group || group.type !== 'group') {
+            showNotification('Группа не найдена', 'error');
+            return;
+        }
+        currentGroupProfileData = group;
+        showBeautyGroupProfile(group);
+    }).catch(err => {
+        console.error('Ошибка:', err);
+        showNotification('Ошибка загрузки группы', 'error');
+    });
+}
+
+function showBeautyGroupProfile(group) {
+    const membersCount = Object.keys(group.members || {}).length;
+    const isMember = group.members && group.members[currentUser.uid];
+    const isAdmin = group.admins && group.admins[currentUser.uid];
+    const isOwner = group.createdBy === currentUser.uid;
+    const isSuperAdmin = window.isSuperAdmin === true;
+    const canEdit = isAdmin || isOwner || isSuperAdmin;
+    
+    const bannerStyle = group.banner ? 
+        (group.banner.startsWith('#') ? `background: ${group.banner};` : `background-image: url(${group.banner}); background-size: cover; background-position: center;`) :
+        'background: linear-gradient(135deg, #228B22, #556B2F);';
+    
+    const modalHtml = `
+        <div id="beauty-group-profile-modal" class="modal" style="z-index: 10001;">
+            <div style="background: white; width: 100%; max-width: 550px; border-radius: 24px; overflow: hidden; margin: auto; position: relative; max-height: 90vh; overflow-y: auto;">
+                <!-- Баннер -->
+                <div style="${bannerStyle} height: 140px; position: relative;">
+                    ${canEdit ? `<button class="group-banner-edit" onclick="editGroupBannerUI('${currentGroupProfileId}')" style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px;">✏️</button>` : ''}
+                    <button onclick="closeBeautyGroupProfileModal()" style="position: absolute; top: 10px; right: 15px; background: rgba(0,0,0,0.5); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 20px; cursor: pointer;">×</button>
+                </div>
+                
+                <!-- Аватарка (перекрывает баннер) -->
+                <div style="display: flex; justify-content: center; margin-top: -50px; position: relative; z-index: 2;">
+                    <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--sage); border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 50px; ${group.avatar ? `background-image: url(${group.avatar}); background-size: cover;` : ''}">
+                        ${group.avatar ? '' : '👥'}
+                        ${canEdit ? `<button class="group-avatar-edit" onclick="editGroupAvatarUI('${currentGroupProfileId}')" style="position: absolute; bottom: 5px; right: 5px; background: var(--forest); border: none; color: white; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px;">✏️</button>` : ''}
+                    </div>
+                </div>
+                
+                <!-- Информация -->
+                <div style="text-align: center; padding: 15px 20px;">
+                    <h2 style="font-size: 22px; margin: 0;">${escapeHtml(group.name || 'Группа')}</h2>
+                    ${group.kname ? `<div style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">@${escapeHtml(group.kname)}</div>` : ''}
+                    <div style="color: var(--text-muted); font-size: 14px; margin: 5px 0;">👥 ${membersCount} участников</div>
+                    <p style="color: var(--text-dark); font-size: 14px; margin-top: 10px;">${escapeHtml(group.description || 'Нет описания')}</p>
+                    
+                    <div style="margin-top: 15px; padding: 10px 0; border-top: 1px solid var(--border);">
+                        <button id="group-action-btn" style="padding: 8px 24px; border: none; border-radius: 30px; background: ${isMember ? '#dc3545' : 'var(--forest)'}; color: white; font-size: 14px; cursor: pointer;">
+                            ${isMember ? 'Покинуть группу' : 'Вступить в группу'}
+                        </button>
+                    </div>
+                    
+                    <div style="font-size: 13px; color: var(--text-muted); margin-top: 10px;">
+                        ${group.isPublic ? '🌍 Публичная группа' : '🔒 Приватная группа'}
+                    </div>
+                </div>
+                
+                <!-- Вкладки -->
+                <div style="display: flex; border-top: 1px solid var(--border); background: white;">
+                    <button class="group-tab-btn-ui active" data-tab="members" style="flex: 1; padding: 14px; background: none; border: none; cursor: pointer; font-size: 14px;">👥 Участники</button>
+                    <button class="group-tab-btn-ui" data-tab="info" style="flex: 1; padding: 14px; background: none; border: none; cursor: pointer; font-size: 14px;">ℹ️ Инфо группы</button>
+                </div>
+                
+                <!-- Контент -->
+                <div id="group-tab-content-ui" style="padding: 15px; min-height: 300px; max-height: 400px; overflow-y: auto;">
+                    <div class="profile-loading">Загрузка...</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const oldModal = document.getElementById('beauty-group-profile-modal');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('beauty-group-profile-modal');
+    modal.classList.remove('hidden');
+    
+    // Обновляем количество участников в реальном времени
+    database.ref('chats/' + currentGroupProfileId + '/members').on('value', (snap) => {
+        const count = Object.keys(snap.val() || {}).length;
+        const countEl = document.getElementById('group-members-count');
+        if (countEl) countEl.textContent = count;
+    });
+    
+    // Обработчики вкладок
+    document.querySelectorAll('.group-tab-btn-ui').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.group-tab-btn-ui').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const tab = btn.dataset.tab;
+            if (tab === 'members') loadGroupMembersTabUI();
+            else if (tab === 'info') loadGroupInfoTabUI();
+        };
+    });
+    
+    // Кнопка вступления/выхода
+    const actionBtn = document.getElementById('group-action-btn');
+    if (actionBtn) {
+        actionBtn.onclick = () => handleGroupActionUI();
+    }
+    
+    // Загружаем участников по умолчанию
+    loadGroupMembersTabUI();
+}
+
+function closeBeautyGroupProfileModal() {
+    const modal = document.getElementById('beauty-group-profile-modal');
+    if (modal) modal.remove();
+    if (currentGroupProfileId) {
+        database.ref('chats/' + currentGroupProfileId + '/members').off();
+    }
+    currentGroupProfileId = null;
+    currentGroupProfileData = null;
+}
+
+function handleGroupActionUI() {
+    const isMember = currentGroupProfileData.members && currentGroupProfileData.members[currentUser.uid];
+    
+    if (isMember) {
+        if (!confirm('Покинуть группу?')) return;
+        database.ref('chats/' + currentGroupProfileId + '/members/' + currentUser.uid).remove()
+            .then(() => database.ref('userChats/' + currentUser.uid + '/' + currentGroupProfileId).remove())
+            .then(() => {
+                showNotification('Вы покинули группу', 'info');
+                closeBeautyGroupProfileModal();
+                closeChat();
+                loadChats();
+            });
+    } else {
+        database.ref('chats/' + currentGroupProfileId + '/members/' + currentUser.uid).set(true)
+            .then(() => database.ref('userChats/' + currentUser.uid + '/' + currentGroupProfileId).set(true))
+            .then(() => {
+                showNotification('Вы вступили в группу!', 'success');
+                // Отправляем системное сообщение
+                const systemMessage = {
+                    type: 'system',
+                    text: `${currentUserData?.username || 'Пользователь'} вступил(а) в группу`,
+                    senderId: 'system',
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                };
+                database.ref('messages/' + currentGroupProfileId).push(systemMessage);
+                closeBeautyGroupProfileModal();
+                openChat(currentGroupProfileId, currentGroupProfileData);
+            });
+    }
+}
+
+function loadGroupMembersTabUI() {
+    const container = document.getElementById('group-tab-content-ui');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="profile-loading">Загрузка участников...</div>';
+    
+    const members = currentGroupProfileData.members || {};
+    const memberIds = Object.keys(members);
+    const admins = currentGroupProfileData.admins || {};
+    const ownerId = currentGroupProfileData.createdBy;
+    
+    if (memberIds.length === 0) {
+        container.innerHTML = '<div class="profile-empty">Нет участников</div>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <div style="margin-bottom: 12px;">
+            <button onclick="shareGroupInviteUI()" style="width: 100%; padding: 10px; background: var(--forest); color: white; border: none; border-radius: 12px; cursor: pointer; font-size: 14px;">🔗 Поделиться группой</button>
+        </div>
+        <div id="group-members-list-ui"></div>
+    `;
+    
+    const membersContainer = document.getElementById('group-members-list-ui');
+    
+    memberIds.forEach(uid => {
+        database.ref('users/' + uid).once('value', userSnap => {
+            const user = userSnap.val();
+            if (!user) return;
+            
+            let role = 'участник';
+            let roleColor = '#666';
+            if (uid === ownerId) {
+                role = 'владелец';
+                roleColor = '#ff9800';
+            } else if (admins[uid]) {
+                role = 'админ';
+                roleColor = '#228B22';
+            }
+            
+            const div = document.createElement('div');
+            div.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border); cursor: pointer;';
+            div.onclick = () => openUserProfile(uid);
+            div.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--sage); display: flex; align-items: center; justify-content: center; ${user.avatar ? `background-image: url(${user.avatar}); background-size: cover;` : ''}">${!user.avatar ? '👤' : ''}</div>
+                    <div>
+                        <div style="font-weight: 500;">${escapeHtml(user.username)}</div>
+                        <div style="font-size: 11px; color: ${roleColor};">${role}</div>
+                    </div>
+                </div>
+            `;
+            membersContainer.appendChild(div);
+        });
+    });
+}
+
+function loadGroupInfoTabUI() {
+    const container = document.getElementById('group-tab-content-ui');
+    if (!container) return;
+    
+    const group = currentGroupProfileData;
+    const isAdmin = group.admins && group.admins[currentUser.uid];
+    const isOwner = group.createdBy === currentUser.uid;
+    const isSuperAdmin = window.isSuperAdmin === true;
+    const canEdit = isAdmin || isOwner || isSuperAdmin;
+    
+    // Загружаем права администраторов
+    const adminPermissions = group.adminPermissions || {
+        canDeleteMessages: true,
+        canEditSettings: false,
+        canManageMembers: false,
+        canPinMessages: false
+    };
+    
+    database.ref('users/' + group.createdBy).once('value', ownerSnap => {
+        const owner = ownerSnap.val();
+        
+        let permissionsHtml = '';
+        if (canEdit) {
+            permissionsHtml = `
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border);">
+                    <strong>⚙️ Права администраторов</strong>
+                    <div style="margin-top: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                            <div>🗑️ Удалять сообщения</div>
+                            <label class="switch">
+                                <input type="checkbox" id="group-perm-delete-ui" ${adminPermissions.canDeleteMessages ? 'checked' : ''} onchange="saveGroupPermissionsUI()">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                            <div>✏️ Изменять настройки группы</div>
+                            <label class="switch">
+                                <input type="checkbox" id="group-perm-edit-ui" ${adminPermissions.canEditSettings ? 'checked' : ''} onchange="saveGroupPermissionsUI()">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                            <div>👥 Добавлять/удалять участников</div>
+                            <label class="switch">
+                                <input type="checkbox" id="group-perm-members-ui" ${adminPermissions.canManageMembers ? 'checked' : ''} onchange="saveGroupPermissionsUI()">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                            <div>📌 Закреплять сообщения</div>
+                            <label class="switch">
+                                <input type="checkbox" id="group-perm-pin-ui" ${adminPermissions.canPinMessages ? 'checked' : ''} onchange="saveGroupPermissionsUI()">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        container.innerHTML = `
+            <div style="padding: 5px;">
+                <div style="margin-bottom: 15px;">
+                    <strong>📅 Дата создания</strong><br>
+                    <span style="color: var(--text-muted);">${group.createdAt ? new Date(group.createdAt).toLocaleDateString() : 'Неизвестно'}</span>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>🌍 Тип группы</strong><br>
+                    <span style="color: var(--text-muted);">${group.isPublic ? 'Публичная' : 'Приватная'}</span>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>👑 Создатель</strong><br>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px; cursor: pointer;" onclick="openUserProfile('${group.createdBy}')">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--sage); display: flex; align-items: center; justify-content: center; ${owner?.avatar ? `background-image: url(${owner.avatar}); background-size: cover;` : ''}">${!owner?.avatar ? '👤' : ''}</div>
+                        <span>${owner ? escapeHtml(owner.username) : 'Неизвестен'}</span>
+                    </div>
+                </div>
+                ${canEdit ? `
+                <div style="margin-top: 15px;">
+                    <button onclick="editGroupSettingsUI()" style="width: 100%; padding: 12px; background: var(--background); border: none; border-radius: 12px; cursor: pointer; text-align: left;">
+                        ⚙️ Изменить настройки группы
+                    </button>
+                </div>
+                ` : ''}
+                ${permissionsHtml}
+            </div>
+        `;
+    });
+}
+
+function saveGroupPermissionsUI() {
+    const permissions = {
+        canDeleteMessages: document.getElementById('group-perm-delete-ui')?.checked || false,
+        canEditSettings: document.getElementById('group-perm-edit-ui')?.checked || false,
+        canManageMembers: document.getElementById('group-perm-members-ui')?.checked || false,
+        canPinMessages: document.getElementById('group-perm-pin-ui')?.checked || false
+    };
+    database.ref('chats/' + currentGroupProfileId + '/adminPermissions').set(permissions);
+    showNotification('Права сохранены', 'success');
+}
+
+function editGroupSettingsUI() {
+    const newName = prompt('Новое название группы:', currentGroupProfileData.name);
+    const newDesc = prompt('Новое описание:', currentGroupProfileData.description || '');
+    const newType = confirm('Сделать группу публичной? (OK - публичная, Отмена - приватная)');
+    
+    if (newName && newName.trim()) {
+        database.ref('chats/' + currentGroupProfileId).update({
+            name: newName.trim(),
+            description: newDesc?.trim() || '',
+            isPublic: newType
+        }).then(() => {
+            showNotification('Настройки обновлены!', 'success');
+            closeBeautyGroupProfileModal();
+            setTimeout(() => openGroupProfile(currentGroupProfileId), 300);
+        });
+    }
+}
+
+function editGroupBannerUI(chatId) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,image/gif';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        showNotification('Загрузка баннера...', 'info');
+        try {
+            const url = await uploadToImgBB(file);
+            await database.ref('chats/' + chatId).update({ banner: url });
+            showNotification('Баннер обновлён!', 'success');
+            closeBeautyGroupProfileModal();
+            setTimeout(() => openGroupProfile(chatId), 300);
+        } catch(err) {
+            showNotification('Ошибка загрузки', 'error');
+        }
+    };
+    input.click();
+}
+
+function editGroupAvatarUI(chatId) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        showNotification('Загрузка аватара...', 'info');
+        try {
+            const url = await uploadToImgBB(file);
+            await database.ref('chats/' + chatId).update({ avatar: url });
+            showNotification('Аватар обновлён!', 'success');
+            closeBeautyGroupProfileModal();
+            setTimeout(() => openGroupProfile(chatId), 300);
+        } catch(err) {
+            showNotification('Ошибка загрузки', 'error');
+        }
+    };
+    input.click();
+}
+
+function shareGroupInviteUI() {
+    const group = currentGroupProfileData;
+    const inviteLink = `${window.location.origin}${window.location.pathname}?joinGroup=${group.kname || currentGroupProfileId}`;
+    
+    const modalHtml = `
+        <div id="group-invite-modal-ui" class="modal" style="z-index: 10002;">
+            <div style="background: white; width: 350px; border-radius: 20px; padding: 20px; margin: auto;">
+                <h3 style="margin: 0 0 15px 0;">Поделиться группой</h3>
+                <div style="margin-bottom: 15px;">
+                    <button onclick="forwardGroupInviteUI('${inviteLink}')" style="width: 100%; padding: 12px; background: var(--background); border: none; border-radius: 12px; margin-bottom: 10px; cursor: pointer;">📨 Переслать в чат</button>
+                    <button onclick="copyGroupInviteLinkUI('${inviteLink}')" style="width: 100%; padding: 12px; background: var(--forest); color: white; border: none; border-radius: 12px; cursor: pointer;">🔗 Копировать ссылку</button>
+                </div>
+                <button onclick="closeGroupInviteModalUI()" style="width: 100%; padding: 10px; background: none; border: none; cursor: pointer;">Отмена</button>
+            </div>
+        </div>
+    `;
+    
+    const oldModal = document.getElementById('group-invite-modal-ui');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('group-invite-modal-ui').classList.remove('hidden');
+}
+
+function forwardGroupInviteUI(link) {
+    closeGroupInviteModalUI();
+    // Открываем диалог пересылки с приглашением
+    if (typeof openForwardDialog === 'function') {
+        openForwardDialog(null, `Приглашение в группу "${currentGroupProfileData.name}": ${link}`, 'text', '');
+    } else {
+        copyGroupInviteLinkUI(link);
+    }
+}
+
+function copyGroupInviteLinkUI(link) {
+    navigator.clipboard.writeText(link);
+    showNotification('Ссылка скопирована!', 'success');
+    closeGroupInviteModalUI();
+}
+
+function closeGroupInviteModalUI() {
+    const modal = document.getElementById('group-invite-modal-ui');
+    if (modal) modal.remove();
+}
+
+// Обработка приглашения по ссылке
+function checkGroupInviteUI() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const joinGroupId = urlParams.get('joinGroup');
+    if (joinGroupId && currentUser) {
+        database.ref('chats').orderByChild('kname').equalTo(joinGroupId).once('value', snapshot => {
+            let groupId = null;
+            snapshot.forEach(child => {
+                if (child.val().type === 'group') groupId = child.key;
+            });
+            if (!groupId) groupId = joinGroupId;
+            
+            database.ref('chats/' + groupId).once('value', snap => {
+                const group = snap.val();
+                if (group && group.type === 'group') {
+                    const isMember = group.members && group.members[currentUser.uid];
+                    if (!isMember) {
+                        // Показываем кнопку вступления
+                        showJoinGroupButtonUI(groupId, group);
+                    }
+                }
+            });
+        });
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}
+
+function showJoinGroupButtonUI(groupId, group) {
+    // Создаем плавающую кнопку
+    const existingBtn = document.getElementById('join-group-float-btn');
+    if (existingBtn) existingBtn.remove();
+    
+    const btn = document.createElement('button');
+    btn.id = 'join-group-float-btn';
+    btn.textContent = `🔗 Вступить в группу "${group.name || 'Группа'}"`;
+    btn.style.cssText = 'position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--forest); color: white; border: none; padding: 12px 24px; border-radius: 30px; z-index: 1000; cursor: pointer; font-size: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.2);';
+    btn.onclick = () => {
+        database.ref('chats/' + groupId + '/members/' + currentUser.uid).set(true)
+            .then(() => database.ref('userChats/' + currentUser.uid + '/' + groupId).set(true))
+            .then(() => {
+                showNotification('Вы вступили в группу!', 'success');
+                btn.remove();
+                // Отправляем системное сообщение
+                const systemMessage = {
+                    type: 'system',
+                    text: `${currentUserData?.username || 'Пользователь'} вступил(а) в группу по приглашению`,
+                    senderId: 'system',
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                };
+                database.ref('messages/' + groupId).push(systemMessage);
+                openChat(groupId, group);
+            });
+    };
+    document.body.appendChild(btn);
+    
+    // Удаляем кнопку через 30 секунд
+    setTimeout(() => {
+        if (btn && btn.parentNode) btn.remove();
+    }, 30000);
+}
+
+// Обновляем функцию openChannelOrGroupProfile для поддержки групп
+// Найдите существующую функцию и замените её часть для групп
+// Запускаем проверку приглашений
+setTimeout(checkGroupInviteUI, 1500);
