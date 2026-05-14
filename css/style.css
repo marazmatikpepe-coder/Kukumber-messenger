@@ -2195,3 +2195,28 @@ input:checked + .slider:before {
     color: var(--text-muted);
     margin-top: 2px;
 }
+/* ===== ДЕФОЛТНЫЕ АВАТАРКИ ===== */
+.default-avatar-user {
+    background-image: url('https://i.ibb.co/W4xM0wf7/image.png');
+    background-size: cover;
+    background-position: center;
+}
+
+.default-avatar-group {
+    background-image: url('https://i.ibb.co/0RWPwqwQ/image.png');
+    background-size: cover;
+    background-position: center;
+}
+
+.default-avatar-channel {
+    background-image: url('https://i.ibb.co/3ydBsv59/image.png');
+    background-size: cover;
+    background-position: center;
+}
+
+/* Для случаев когда аватарка пустая, но текст не нужен */
+.avatar:empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
