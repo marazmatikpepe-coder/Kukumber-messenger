@@ -595,3 +595,425 @@ function loadNotificationSettings() {
 }
 
 loadNotificationSettings();
+// ========== НАСТРОЙКИ ОФОРМЛЕНИЯ ==========
+
+let currentTheme = localStorage.getItem('kukumber_theme') || 'light';
+let currentWallpaper = localStorage.getItem('kukumber_wallpaper') || null;
+let currentWallpaperType = localStorage.getItem('kukumber_wallpaper_type') || 'color'; // 'color' or 'image'
+let nightModeStatus = localStorage.getItem('kukumber_night_mode') || 'system'; // 'system', 'on', 'off'
+let fontSize = localStorage.getItem('kukumber_font_size') || '16';
+
+// ТЕМЫ для светлого режима
+const lightThemes = {
+    green: { name: 'Зеленый', primary: '#228B22', secondary: '#32CD32', bg: '#f5f7f5', text: '#2c3e2c', messageBg: '#ffffff', image: 'https://i.ibb.co/Lhc7Hx3G/image.jpg' },
+    turquoise: { name: 'Бирюзовый', primary: '#008080', secondary: '#20B2AA', bg: '#f0f8f7', text: '#004d4d', messageBg: '#ffffff', image: 'https://i.ibb.co/yFzv2rsk/image.jpg' },
+    yellow: { name: 'Желтый', primary: '#FFD700', secondary: '#FFA500', bg: '#fffdf5', text: '#663d00', messageBg: '#ffffff', image: 'https://i.ibb.co/wFTGr0jH/image.jpg' },
+    red: { name: 'Красный', primary: '#DC143C', secondary: '#FF6B6B', bg: '#fff5f5', text: '#8b0000', messageBg: '#ffffff', image: 'https://i.ibb.co/0p6vhFXP/image.jpg' },
+    orange: { name: 'Оранжевый', primary: '#FF8C00', secondary: '#FFB347', bg: '#fff8f0', text: '#663300', messageBg: '#ffffff', image: 'https://i.ibb.co/GQ73QY3x/image.jpg' },
+    pink: { name: 'Розовый', primary: '#FF69B4', secondary: '#FFB6C1', bg: '#fff5f8', text: '#8b0045', messageBg: '#ffffff', image: 'https://i.ibb.co/4cfcTDj/image.jpg' },
+    blue: { name: 'Синий', primary: '#1E90FF', secondary: '#63B8FF', bg: '#f0f8ff', text: '#003366', messageBg: '#ffffff', image: 'https://i.ibb.co/23F6YggW/image.jpg' },
+    purple: { name: 'Фиолетовый', primary: '#8A2BE2', secondary: '#BA55D3', bg: '#f9f0ff', text: '#4a0080', messageBg: '#ffffff', image: 'https://i.ibb.co/RGS27DCF/image.jpg' }
+};
+
+// ТЕМЫ для темного режима
+const darkThemes = {
+    black: { name: 'Черный', primary: '#2C2C2C', secondary: '#444444', bg: '#1a1a1a', text: '#ffffff', messageBg: '#2d2d2d', image: 'https://i.ibb.co/QF0kBQ5Z/image.jpg' },
+    turquoise: { name: 'Бирюзовый', primary: '#008080', secondary: '#20B2AA', bg: '#0a2a2a', text: '#e0ffff', messageBg: '#1a3a3a', image: 'https://i.ibb.co/xtLkWD5m/image.jpg' },
+    yellow: { name: 'Желтый', primary: '#FFD700', secondary: '#FFA500', bg: '#2a2a0a', text: '#ffffe0', messageBg: '#3a3a1a', image: 'https://i.ibb.co/TMZbytkg/image.jpg' },
+    green: { name: 'Зеленый', primary: '#228B22', secondary: '#32CD32', bg: '#0a2a0a', text: '#e0ffe0', messageBg: '#1a3a1a', image: 'https://i.ibb.co/0jjxkCJ0/image.jpg' },
+    red: { name: 'Красный', primary: '#DC143C', secondary: '#FF6B6B', bg: '#2a0a0a', text: '#ffe0e0', messageBg: '#3a1a1a', image: 'https://i.ibb.co/W441VxS2/image.jpg' },
+    orange: { name: 'Оранжевый', primary: '#FF8C00', secondary: '#FFB347', bg: '#2a1a0a', text: '#ffe0c0', messageBg: '#3a2a1a', image: 'https://i.ibb.co/hFVfx8RN/image.jpg' },
+    pink: { name: 'Розовый', primary: '#FF69B4', secondary: '#FFB6C1', bg: '#2a0a1a', text: '#ffe0f0', messageBg: '#3a1a2a', image: 'https://i.ibb.co/R12CFHd/image.jpg' },
+    purple: { name: 'Фиолетовый', primary: '#8A2BE2', secondary: '#BA55D3', bg: '#1a0a2a', text: '#f0e0ff', messageBg: '#2a1a3a', image: 'https://i.ibb.co/gbHMzK4P/image.jpg' },
+    blue: { name: 'Синий', primary: '#1E90FF', secondary: '#63B8FF', bg: '#0a1a2a', text: '#e0f0ff', messageBg: '#1a2a3a', image: 'https://i.ibb.co/F430m6Yd/image.jpg' }
+};
+
+// Обои мессенджера
+const wallpaperImages = [
+    'https://i.ibb.co/kVWvmFxR/image.png',
+    'https://i.ibb.co/v630bmZ2/image.png',
+    'https://i.ibb.co/PGSM9cB8/image.png',
+    'https://i.ibb.co/7JqZS86c/image.png',
+    'https://i.ibb.co/5Wdc7gk0/image.png',
+    'https://i.ibb.co/KxXwX6dj/image.png',
+    'https://i.ibb.co/YTNdVv9b/image.png',
+    'https://i.ibb.co/SzxWQBX/image.png',
+    'https://i.ibb.co/rR7pDfY4/image.png',
+    'https://i.ibb.co/k2ZfjCG0/image.png',
+    'https://i.ibb.co/k2bH8WN0/image.png'
+];
+
+function showThemeSettings() {
+    const modalHtml = `
+        <div id="theme-settings-modal" class="modal" style="z-index: 10002;">
+            <div style="background: white; width: 100%; max-width: 500px; border-radius: 28px; overflow: hidden; margin: auto; max-height: 90vh; overflow-y: auto;">
+                <!-- Шапка -->
+                <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: white; z-index: 10;">
+                    <button onclick="closeThemeSettings()" style="background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 15px;">←</button>
+                    <h3 style="margin: 0;">Оформление</h3>
+                </div>
+                
+                <div style="padding: 20px;">
+                    <!-- Ночной режим -->
+                    <div style="margin-bottom: 25px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 600;">🌙 Ночной режим</span>
+                            <div class="notification-switch ${nightModeStatus === 'on' ? 'active' : ''}" onclick="toggleNightModeQuick()"></div>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <select id="night-mode-select" onchange="setNightMode(this.value)" style="width: 100%; padding: 10px; border-radius: 12px; border: 1px solid var(--border);">
+                                <option value="system" ${nightModeStatus === 'system' ? 'selected' : ''}>Системная</option>
+                                <option value="off" ${nightModeStatus === 'off' ? 'selected' : ''}>Выключена</option>
+                                <option value="on" ${nightModeStatus === 'on' ? 'selected' : ''}>Включена</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Размер текста -->
+                    <div style="margin-bottom: 25px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 600;">🔤 Размер текста</span>
+                            <span id="font-size-value" style="color: var(--text-muted);">${fontSize}px</span>
+                        </div>
+                        <input type="range" id="font-size-slider" min="12" max="24" step="1" value="${fontSize}" 
+                               style="width: 100%; margin-top: 10px;" oninput="previewFontSize(this.value)">
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                            <span style="font-size: 12px;">A</span>
+                            <span style="font-size: 16px;">A</span>
+                            <span style="font-size: 20px;">A</span>
+                            <span style="font-size: 24px;">A</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Предпросмотр чата -->
+                    <div style="margin-bottom: 25px;">
+                        <div style="font-weight: 600; margin-bottom: 10px;">💬 Предпросмотр</div>
+                        <div id="chat-preview" style="background: var(--bg-color); border-radius: 16px; padding: 15px; min-height: 200px;">
+                            <div style="display: flex; justify-content: flex-start; margin-bottom: 12px;">
+                                <div style="max-width: 75%; background: var(--message-bg); border-radius: 16px; padding: 10px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                                    <div style="font-size: 14px;">Какой час в Токио?</div>
+                                    <div style="font-size: 10px; opacity: 0.6; margin-top: 4px;">10:42</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: flex-end;">
+                                <div style="max-width: 75%; background: var(--primary-color); color: white; border-radius: 16px; padding: 10px 14px;">
+                                    <div style="font-size: 14px;">В Токио утро 😎</div>
+                                    <div style="font-size: 10px; opacity: 0.6; margin-top: 4px;">10:43</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ТЕМЫ -->
+                    <div style="margin-bottom: 25px;">
+                        <div style="font-weight: 600; margin-bottom: 10px;">🎨 Темы</div>
+                        <div id="themes-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;"></div>
+                    </div>
+                    
+                    <!-- Обои -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span style="font-weight: 600;">🖼️ Обои для чатов</span>
+                            <button onclick="openWallpaperMenu()" style="background: none; border: none; color: var(--forest); cursor: pointer;">Выбрать →</button>
+                        </div>
+                        <div id="wallpaper-preview" style="width: 100%; height: 100px; border-radius: 16px; background: ${currentWallpaper ? `url(${currentWallpaper}) center/cover` : 'var(--bg-color)'}; border: 1px solid var(--border);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const oldModal = document.getElementById('theme-settings-modal');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('theme-settings-modal').classList.remove('hidden');
+    
+    renderThemesGrid();
+    applyThemeToPreview();
+}
+
+function closeThemeSettings() {
+    const modal = document.getElementById('theme-settings-modal');
+    if (modal) modal.remove();
+}
+
+function renderThemesGrid() {
+    const container = document.getElementById('themes-grid');
+    if (!container) return;
+    
+    const isDark = nightModeStatus === 'on' || (nightModeStatus === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const themes = isDark ? darkThemes : lightThemes;
+    
+    container.innerHTML = '';
+    
+    for (const [key, theme] of Object.entries(themes)) {
+        const isActive = currentTheme === key;
+        const div = document.createElement('div');
+        div.style.cssText = `
+            background: ${theme.primary};
+            border-radius: 16px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid ${isActive ? theme.primary : 'transparent'};
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        `;
+        div.onclick = () => setTheme(key);
+        div.innerHTML = `
+            <div style="width: 100%; height: 60px; background: ${theme.secondary}; border-radius: 12px; margin-bottom: 8px;"></div>
+            <span style="font-size: 12px; color: white; font-weight: 500;">${theme.name}</span>
+            ${isActive ? '<div style="color: white; font-size: 14px; margin-top: 4px;">✓</div>' : ''}
+        `;
+        container.appendChild(div);
+    }
+}
+
+function setTheme(themeKey) {
+    currentTheme = themeKey;
+    localStorage.setItem('kukumber_theme', themeKey);
+    applyTheme();
+    renderThemesGrid();
+    applyThemeToPreview();
+    showNotification('Тема применена', 'success');
+}
+
+function applyTheme() {
+    const isDark = nightModeStatus === 'on' || (nightModeStatus === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const themes = isDark ? darkThemes : lightThemes;
+    const theme = themes[currentTheme] || (isDark ? darkThemes.black : lightThemes.green);
+    
+    // Применяем CSS переменные
+    document.documentElement.style.setProperty('--forest', theme.primary);
+    document.documentElement.style.setProperty('--lime', theme.secondary);
+    document.documentElement.style.setProperty('--background', theme.bg);
+    document.documentElement.style.setProperty('--text-dark', theme.text);
+    document.documentElement.style.setProperty('--message-bg', theme.messageBg);
+    
+    // Применяем обои
+    if (currentWallpaper && currentWallpaperType === 'image') {
+        document.documentElement.style.setProperty('--chat-wallpaper', `url(${currentWallpaper})`);
+        document.querySelector('.chat-area')?.style.setProperty('background-image', `url(${currentWallpaper})`);
+        document.querySelector('.messages-container')?.style.setProperty('background-image', `url(${currentWallpaper})`);
+    } else {
+        document.documentElement.style.setProperty('--chat-wallpaper', 'none');
+        document.querySelector('.chat-area')?.style.setProperty('background-image', 'none');
+        document.querySelector('.messages-container')?.style.setProperty('background-image', 'none');
+    }
+    
+    // Применяем размер шрифта
+    document.documentElement.style.setProperty('--font-size', fontSize + 'px');
+    document.querySelector('.messages-container')?.style.setProperty('font-size', fontSize + 'px');
+}
+
+function applyThemeToPreview() {
+    const isDark = nightModeStatus === 'on' || (nightModeStatus === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const themes = isDark ? darkThemes : lightThemes;
+    const theme = themes[currentTheme] || (isDark ? darkThemes.black : lightThemes.green);
+    
+    const preview = document.getElementById('chat-preview');
+    if (preview) {
+        preview.style.setProperty('--bg-color', theme.bg);
+        preview.style.setProperty('--message-bg', theme.messageBg);
+        preview.style.setProperty('--primary-color', theme.primary);
+    }
+}
+
+function previewFontSize(value) {
+    document.getElementById('font-size-value').textContent = value + 'px';
+    document.documentElement.style.setProperty('--font-size', value + 'px');
+}
+
+function setFontSize() {
+    const slider = document.getElementById('font-size-slider');
+    if (slider) {
+        fontSize = slider.value;
+        localStorage.setItem('kukumber_font_size', fontSize);
+        applyTheme();
+        showNotification('Размер текста сохранён', 'success');
+    }
+}
+
+function toggleNightModeQuick() {
+    const select = document.getElementById('night-mode-select');
+    if (select) {
+        const newValue = select.value === 'on' ? 'off' : 'on';
+        select.value = newValue;
+        setNightMode(newValue);
+    }
+}
+
+function setNightMode(value) {
+    nightModeStatus = value;
+    localStorage.setItem('kukumber_night_mode', value);
+    
+    // Обновляем переключатель
+    const switchBtn = document.querySelector('#theme-settings-modal .notification-switch');
+    if (switchBtn) {
+        if (value === 'on') switchBtn.classList.add('active');
+        else switchBtn.classList.remove('active');
+    }
+    
+    applyTheme();
+    renderThemesGrid();
+    applyThemeToPreview();
+    showNotification('Ночной режим обновлён', 'success');
+}
+
+function openWallpaperMenu() {
+    const modalHtml = `
+        <div id="wallpaper-menu-modal" class="modal" style="z-index: 10003;">
+            <div style="background: white; width: 100%; max-width: 500px; border-radius: 28px; overflow: hidden; margin: auto; max-height: 90vh; overflow-y: auto;">
+                <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: white;">
+                    <button onclick="closeWallpaperMenu()" style="background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 15px;">←</button>
+                    <h3 style="margin: 0;">Обои для чатов</h3>
+                </div>
+                
+                <div style="padding: 20px;">
+                    <!-- Выбрать свои -->
+                    <div style="margin-bottom: 25px;">
+                        <div style="font-weight: 600; margin-bottom: 10px;">Мои обои</div>
+                        <div onclick="uploadCustomWallpaper()" style="width: 100px; height: 100px; background: #e0e0e0; border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid var(--forest);">
+                            <div style="width: 36px; height: 36px; background: var(--forest); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">+</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Обои мессенджера -->
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 10px;">Обои мессенджера</div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;" id="wallpaper-grid"></div>
+                    </div>
+                    
+                    <!-- Сброс обоев -->
+                    <div style="margin-top: 20px;">
+                        <button onclick="resetWallpaper()" style="width: 100%; padding: 12px; background: var(--background); border: 1px solid var(--border); border-radius: 12px; cursor: pointer;">Сбросить обои</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const oldModal = document.getElementById('wallpaper-menu-modal');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('wallpaper-menu-modal').classList.remove('hidden');
+    
+    renderWallpaperGrid();
+}
+
+function renderWallpaperGrid() {
+    const container = document.getElementById('wallpaper-grid');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    wallpaperImages.forEach((url, index) => {
+        const div = document.createElement('div');
+        div.style.cssText = `
+            aspect-ratio: 1;
+            background: url(${url}) center/cover;
+            border-radius: 16px;
+            cursor: pointer;
+            border: 2px solid ${currentWallpaper === url ? 'var(--forest)' : 'transparent'};
+            transition: transform 0.2s;
+        `;
+        div.onclick = () => setWallpaper(url, 'image');
+        container.appendChild(div);
+    });
+}
+
+function setWallpaper(url, type) {
+    currentWallpaper = url;
+    currentWallpaperType = type;
+    localStorage.setItem('kukumber_wallpaper', url);
+    localStorage.setItem('kukumber_wallpaper_type', type);
+    applyTheme();
+    
+    // Обновляем превью
+    const preview = document.getElementById('wallpaper-preview');
+    if (preview) preview.style.background = `url(${url}) center/cover`;
+    
+    showNotification('Обои применены', 'success');
+    closeWallpaperMenu();
+}
+
+function resetWallpaper() {
+    currentWallpaper = null;
+    currentWallpaperType = 'color';
+    localStorage.removeItem('kukumber_wallpaper');
+    localStorage.removeItem('kukumber_wallpaper_type');
+    applyTheme();
+    
+    const preview = document.getElementById('wallpaper-preview');
+    if (preview) preview.style.background = 'var(--bg-color)';
+    
+    showNotification('Обои сброшены', 'success');
+    closeWallpaperMenu();
+}
+
+function closeWallpaperMenu() {
+    const modal = document.getElementById('wallpaper-menu-modal');
+    if (modal) modal.remove();
+}
+
+async function uploadCustomWallpaper() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        showNotification('Загрузка обоев...', 'info');
+        try {
+            const url = await uploadToImgBB(file);
+            setWallpaper(url, 'image');
+        } catch(err) {
+            showNotification('Ошибка загрузки', 'error');
+        }
+    };
+    input.click();
+}
+
+// Инициализация темы при загрузке
+function initTheme() {
+    applyTheme();
+    
+    // Следим за системной темой
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if (nightModeStatus === 'system') {
+            applyTheme();
+            if (document.getElementById('theme-settings-modal')) {
+                renderThemesGrid();
+                applyThemeToPreview();
+            }
+        }
+    });
+}
+
+// Вызываем инициализацию
+initTheme();
+// Сохранение размера текста при отпускании слайдера
+document.addEventListener('mouseup', function() {
+    const slider = document.getElementById('font-size-slider');
+    if (slider && !slider.closest('.modal')) {
+        const newSize = slider.value;
+        fontSize = newSize;
+        localStorage.setItem('kukumber_font_size', fontSize);
+        applyTheme();
+        showNotification('Размер текста сохранён', 'success');
+    }
+});
+
+// Также для touch-устройств (мобильные)
+document.addEventListener('touchend', function() {
+    const slider = document.getElementById('font-size-slider');
+    if (slider && !slider.closest('.modal')) {
+        const newSize = slider.value;
+        fontSize = newSize;
+        localStorage.setItem('kukumber_font_size', fontSize);
+        applyTheme();
+        showNotification('Размер текста сохранён', 'success');
+    }
+});
