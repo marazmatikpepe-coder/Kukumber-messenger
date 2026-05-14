@@ -1342,3 +1342,144 @@ function updateThemeModalWithWallpaper() {
         };
     }
 }
+// ========== ТЁМНАЯ ТЕМА - ПРОСТАЯ ВЕРСИЯ ==========
+
+// Переменная для тёмной темы
+let darkModeEnabled = localStorage.getItem('kukumber_dark_mode') === 'true';
+
+// Функция применения тёмной темы
+function applyDarkMode() {
+    if (darkModeEnabled) {
+        document.body.style.backgroundColor = '#121212';
+        document.body.style.color = '#ffffff';
+        
+        // Фон чата
+        const chatArea = document.querySelector('.chat-area');
+        const messagesContainer = document.querySelector('.messages-container');
+        const sidebar = document.querySelector('.sidebar');
+        const bottomNav = document.querySelector('.bottom-nav');
+        const settingsContainer = document.querySelector('.settings-container');
+        
+        if (chatArea) chatArea.style.backgroundColor = '#121212';
+        if (messagesContainer) messagesContainer.style.backgroundColor = '#121212';
+        if (sidebar) sidebar.style.backgroundColor = '#1e1e1e';
+        if (bottomNav) bottomNav.style.backgroundColor = '#1e1e1e';
+        if (settingsContainer) settingsContainer.style.backgroundColor = '#121212';
+        
+        // Сообщения
+        document.querySelectorAll('.message.received').forEach(msg => {
+            msg.style.backgroundColor = '#2d2d2d';
+            msg.style.color = '#ffffff';
+        });
+        
+        // Поле ввода
+        const messageInput = document.querySelector('#message-input');
+        if (messageInput) {
+            messageInput.style.backgroundColor = '#2d2d2d';
+            messageInput.style.color = '#ffffff';
+        }
+        
+        // Печатная строка
+        const messageInputArea = document.querySelector('.message-input-area');
+        if (messageInputArea) {
+            messageInputArea.style.backgroundColor = '#1e1e1e';
+        }
+        
+        // Шапка чата
+        const chatHeader = document.querySelector('.chat-header');
+        if (chatHeader) {
+            chatHeader.style.backgroundColor = '#1e1e1e';
+        }
+        
+        // Карточки слайсов
+        document.querySelectorAll('.slice-card').forEach(card => {
+            card.style.backgroundColor = '#1e1e1e';
+        });
+        
+        document.querySelectorAll('.slice-text').forEach(text => {
+            text.style.color = '#e0e0e0';
+        });
+        
+        // Комментарии
+        document.querySelectorAll('.comment-item').forEach(comment => {
+            comment.style.backgroundColor = '#2d2d2d';
+        });
+        
+    } else {
+        document.body.style.backgroundColor = '';
+        document.body.style.color = '';
+        
+        // Сброс
+        const elements = ['.chat-area', '.messages-container', '.sidebar', '.bottom-nav', '.settings-container',
+            '.message-input-area', '.chat-header', '.slice-card', '.comment-item'];
+        
+        elements.forEach(selector => {
+            document.querySelectorAll(selector).forEach(el => {
+                el.style.backgroundColor = '';
+            });
+        });
+        
+        document.querySelectorAll('.message.received').forEach(msg => {
+            msg.style.backgroundColor = '';
+            msg.style.color = '';
+        });
+        
+        document.querySelectorAll('.slice-text').forEach(text => {
+            text.style.color = '';
+        });
+        
+        const messageInput = document.querySelector('#message-input');
+        if (messageInput) {
+            messageInput.style.backgroundColor = '';
+            messageInput.style.color = '';
+        }
+    }
+}
+
+// Переключение тёмной темы
+function toggleDarkMode() {
+    darkModeEnabled = !darkModeEnabled;
+    localStorage.setItem('kukumber_dark_mode', darkModeEnabled);
+    applyDarkMode();
+    showNotification(darkModeEnabled ? '🌙 Тёмная тема включена' : '☀️ Светлая тема включена', 'success');
+}
+
+// Обновляем функцию showThemeSettings (добавляем кнопку тёмной темы)
+// Сохраняем старую функцию, если она есть
+if (typeof window.originalShowThemeSettings === 'undefined') {
+    window.originalShowThemeSettings = window.showThemeSettings || function() {};
+}
+
+window.showThemeSettings = function() {
+    // Создаём модальное окно
+    const modalHtml = `
+        <div id="dark-theme-modal" class="modal" style="z-index: 10002;">
+            <div style="background: ${darkModeEnabled ? '#1e1e1e' : 'white'}; width: 100%; max-width: 350px; border-radius: 28px; overflow: hidden; margin: auto; position: fixed; bottom: 0; left: 0; right: 0;">
+                <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid ${darkModeEnabled ? '#333' : '#ddd'}; background: ${darkModeEnabled ? '#1e1e1e' : 'white'};">
+                    <button onclick="closeDarkThemeModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: ${darkModeEnabled ? 'white' : 'black'};">←</button>
+                    <h3 style="margin: 0; margin-left: 15px; color: ${darkModeEnabled ? 'white' : 'black'};">Оформление</h3>
+                </div>
+                <div style="padding: 20px;">
+                    <button onclick="toggleDarkMode(); closeDarkThemeModal();" 
+                        style="width: 100%; padding: 14px; background: ${darkModeEnabled ? '#2d2d2d' : '#f0f0f0'}; border: none; border-radius: 16px; font-size: 16px; cursor: pointer; color: ${darkModeEnabled ? 'white' : 'black'};">
+                        ${darkModeEnabled ? '🌙 Тёмная тема (вкл)' : '☀️ Светлая тема (выкл)'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const oldModal = document.getElementById('dark-theme-modal');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('dark-theme-modal').classList.remove('hidden');
+};
+
+function closeDarkThemeModal() {
+    const modal = document.getElementById('dark-theme-modal');
+    if (modal) modal.remove();
+}
+
+// Применяем тему при загрузке
+applyDarkMode();
