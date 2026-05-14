@@ -742,6 +742,76 @@ function applyNightMode() {
         const sidebar = document.querySelector('.sidebar');
         const bottomNav = document.querySelector('.bottom-nav');
         const settingsContainer = document.querySelector('.settings-container');
+        // Профили групп и каналов
+document.querySelectorAll('#beauty-channel-profile-modal > div, #beauty-group-profile-modal > div, #simple-channel-profile > div, #simple-group-profile > div').forEach(modal => {
+    modal.style.background = '#1e1e1e';
+});
+
+document.querySelectorAll('.profile-modal-content').forEach(content => {
+    content.style.background = '#1e1e1e';
+});
+
+document.querySelectorAll('.profile-info').forEach(info => {
+    info.style.background = '#1e1e1e';
+});
+
+document.querySelectorAll('.profile-name').forEach(name => {
+    name.style.color = '#ffffff';
+});
+
+document.querySelectorAll('.profile-username, .profile-status').forEach(el => {
+    el.style.color = '#a0a0a0';
+});
+
+document.querySelectorAll('.profile-bio').forEach(bio => {
+    bio.style.color = '#c0c0c0';
+});
+
+document.querySelectorAll('.profile-tabs').forEach(tabs => {
+    tabs.style.background = '#1e1e1e';
+    tabs.style.borderTopColor = '#2c2c2c';
+    tabs.style.borderBottomColor = '#2c2c2c';
+});
+
+document.querySelectorAll('.profile-tab-btn').forEach(btn => {
+    btn.style.background = '#1e1e1e';
+    btn.style.color = '#a0a0a0';
+});
+
+document.querySelectorAll('.profile-tab-btn.active').forEach(btn => {
+    btn.style.color = 'var(--forest)';
+});
+
+document.querySelectorAll('.profile-content').forEach(content => {
+    content.style.background = '#121212';
+});
+
+document.querySelectorAll('.member-item, .user-item').forEach(item => {
+    item.style.background = '#1e1e1e';
+    item.style.borderBottomColor = '#2c2c2c';
+});
+
+document.querySelectorAll('.member-item .member-name, .user-item .user-item-info h4').forEach(el => {
+    el.style.color = '#ffffff';
+});
+
+document.querySelectorAll('.setting-item').forEach(item => {
+    item.style.background = '#1e1e1e';
+    item.style.borderBottomColor = '#2c2c2c';
+});
+
+document.querySelectorAll('.setting-item span').forEach(span => {
+    span.style.color = '#ffffff';
+});
+
+document.querySelectorAll('.setting-item.danger span').forEach(span => {
+    span.style.color = '#ff6b6b';
+});
+
+// Кнопка удаления
+document.querySelectorAll('.btn-danger').forEach(btn => {
+    btn.style.background = '#dc3545';
+});
         
         if (chatArea) chatArea.style.background = '#121212';
         if (messagesContainer) messagesContainer.style.background = '#121212';
