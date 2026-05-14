@@ -3099,3 +3099,170 @@ body.night-mode .profile-close-btn:hover {
 .nav-label {
     color: inherit !important;
 }
+/* ===== ИСПРАВЛЕНИЕ БЕЛЫХ ЭЛЕМЕНТОВ (ТОЛЬКО СЕРЫЕ ТОНА) ===== */
+
+/* Пункты настроек (уведомления, конфиденциальность, оформление и т.д.) */
+.settings-item {
+    background: #2a2a2a !important;
+    border-bottom-color: #3a3a3a !important;
+}
+.settings-item span {
+    color: #e0e0e0 !important;
+}
+.settings-item .settings-icon {
+    color: #aaaaaa !important;
+}
+.settings-profile {
+    background: #2a2a2a !important;
+}
+.settings-profile-info h3 {
+    color: #ffffff !important;
+}
+.settings-profile-info p {
+    color: #aaaaaa !important;
+}
+.settings-section {
+    background: #1e1e1e !important;
+}
+.settings-header {
+    background: #1e1e1e !important;
+    border-bottom-color: #3a3a3a !important;
+}
+.settings-header h2 {
+    color: #ffffff !important;
+}
+.settings-footer p {
+    color: #888888 !important;
+}
+
+/* Шапка чата */
+.chat-header {
+    background: #2a2a2a !important;
+    border-bottom-color: #3a3a3a !important;
+}
+.chat-user-info h3 {
+    color: #ffffff !important;
+}
+#chat-status {
+    color: #aaaaaa !important;
+}
+.back-btn, .call-btn {
+    color: #dddddd !important;
+    background: #3a3a3a !important;
+}
+
+/* Шапка канала/группы (профиль) */
+.profile-modal-content {
+    background: #1e1e1e !important;
+}
+.profile-banner {
+    background: #2a2a2a !important;
+}
+.profile-name {
+    color: #ffffff !important;
+}
+.profile-username, .profile-status {
+    color: #aaaaaa !important;
+}
+.profile-bio {
+    color: #cccccc !important;
+}
+.profile-tab-btn {
+    background: #1e1e1e !important;
+    color: #aaaaaa !important;
+}
+.profile-tab-btn.active {
+    color: var(--forest) !important;
+    border-bottom-color: var(--forest) !important;
+}
+.profile-content {
+    background: #121212 !important;
+}
+
+/* Глобальный поиск */
+.global-search-results {
+    background: #1e1e1e !important;
+}
+.search-results-header {
+    background: #2a2a2a !important;
+    border-bottom-color: #3a3a3a !important;
+    color: #ffffff !important;
+}
+.search-results-header button {
+    color: #ffffff !important;
+    background: none !important;
+}
+.search-result-item {
+    background: #2a2a2a !important;
+    border-bottom-color: #3a3a3a !important;
+}
+.search-result-name {
+    color: #ffffff !important;
+}
+.search-result-username, .search-result-desc {
+    color: #aaaaaa !important;
+}
+.search-result-badge {
+    background: #3a3a3a !important;
+    color: #dddddd !important;
+}
+.search-bar-new input {
+    background: #2a2a2a !important;
+    border-color: #3a3a3a !important;
+    color: #ffffff !important;
+}
+.search-bar-new input::placeholder {
+    color: #888888 !important;
+}
+
+/* Боковая панель */
+.sidebar {
+    background: #1e1e1e !important;
+    border-right-color: #3a3a3a !important;
+}
+.sidebar-header {
+    background: #2a2a2a !important;
+}
+.user-details h3 {
+    color: #ffffff !important;
+}
+.status {
+    background: #3a3a3a !important;
+    color: #dddddd !important;
+}
+
+/* Чат-лист */
+.chat-item {
+    background: #1e1e1e !important;
+    border-bottom-color: #3a3a3a !important;
+}
+.chat-item:hover {
+    background: #2a2a2a !important;
+}
+.chat-item.active {
+    background: #3a3a3a !important;
+}
+.chat-item-name {
+    color: #ffffff !important;
+}
+.chat-item-preview {
+    color: #aaaaaa !important;
+}
+.chat-item-time {
+    color: #777777 !important;
+}
+
+/* Нижняя навигация */
+.bottom-nav {
+    background: #1e1e1e !important;
+    border-top-color: #3a3a3a !important;
+}
+.nav-item {
+    color: #888888 !important;
+}
+.nav-item.active {
+    color: var(--forest) !important;
+}
+.nav-label {
+    color: inherit !important;
+}
