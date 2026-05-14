@@ -706,7 +706,12 @@ function setSimpleTheme(colorKey) {
     renderSimpleThemesGrid();
     showNotification(`Тема "${theme.name}" применена`, 'success');
 }
-
+<!-- Кнопка выбора обоев -->
+<div style="margin-top: 20px;">
+    <button id="wallpaper-select-btn" onclick="openWallpaperMenu()" style="width: 100%; padding: 14px; background: ${nightModeEnabled ? '#2d2d2d' : '#f0f0f0'}; border: none; border-radius: 16px; font-size: 16px; cursor: pointer; color: ${nightModeEnabled ? 'white' : 'black'}; display: flex; align-items: center; justify-content: center; gap: 10px;">
+        🖼️ Выбрать обои для чата
+    </button>
+</div>
 // Заменяем старую функцию showThemeSettings на новую
 window.showThemeSettings = showThemeSettings;
 // ========== НОЧНОЙ РЕЖИМ ==========
@@ -1181,3 +1186,161 @@ function updateThemeModalWithNightMode() {
 }
 // Применяем ночной режим при загрузке
 applyNightMode();
+// ========== ОБОИ ДЛЯ ЧАТОВ ==========
+
+let currentWallpaper = localStorage.getItem('kukumber_wallpaper') || null;
+let currentWallpaperType = localStorage.getItem('kukumber_wallpaper_type') || 'color';
+
+// Обои мессенджера
+const wallpaperImages = [
+    'https://i.ibb.co/kVWvmFxR/image.png',
+    'https://i.ibb.co/v630bmZ2/image.png',
+    'https://i.ibb.co/PGSM9cB8/image.png',
+    'https://i.ibb.co/7JqZS86c/image.png',
+    'https://i.ibb.co/5Wdc7gk0/image.png',
+    'https://i.ibb.co/KxXwX6dj/image.png',
+    'https://i.ibb.co/YTNdVv9b/image.png',
+    'https://i.ibb.co/SzxWQBX/image.png',
+    'https://i.ibb.co/rR7pDfY4/image.png',
+    'https://i.ibb.co/k2ZfjCG0/image.png',
+    'https://i.ibb.co/k2bH8WN0/image.png'
+];
+
+function openWallpaperMenu() {
+    const isDark = nightModeEnabled;
+    const modalHtml = `
+        <div id="wallpaper-menu-modal" class="modal" style="z-index: 10003;">
+            <div style="background: ${isDark ? '#1a1a1a' : 'white'}; width: 100%; max-width: 500px; border-radius: 28px 28px 0 0; overflow: hidden; margin: auto; position: fixed; bottom: 0; left: 0; right: 0; max-height: 85vh; overflow-y: auto;">
+                <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid ${isDark ? '#333' : '#ddd'}; position: sticky; top: 0; background: ${isDark ? '#1a1a1a' : 'white'};">
+                    <button onclick="closeWallpaperMenu()" style="background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 15px; color: ${isDark ? 'white' : 'black'};">←</button>
+                    <h3 style="margin: 0; color: ${isDark ? 'white' : 'black'};">Обои для чатов</h3>
+                </div>
+                
+                <div style="padding: 20px;">
+                    <!-- Выбрать свои -->
+                    <div style="margin-bottom: 25px;">
+                        <div style="font-weight: 600; margin-bottom: 10px; color: ${isDark ? 'white' : 'black'};">Мои обои</div>
+                        <div onclick="uploadCustomWallpaper()" style="width: 100px; height: 100px; background: ${isDark ? '#2d2d2d' : '#e0e0e0'}; border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid var(--forest);">
+                            <div style="width: 36px; height: 36px; background: var(--forest); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px;">+</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Обои мессенджера -->
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 10px; color: ${isDark ? 'white' : 'black'};">Обои мессенджера</div>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;" id="wallpaper-grid"></div>
+                    </div>
+                    
+                    <!-- Сброс обоев -->
+                    <div style="margin-top: 20px;">
+                        <button onclick="resetWallpaper()" style="width: 100%; padding: 12px; background: ${isDark ? '#2d2d2d' : '#f0f0f0'}; border: 1px solid ${isDark ? '#3d3d3d' : '#ddd'}; border-radius: 12px; cursor: pointer; color: ${isDark ? 'white' : 'black'};">Сбросить обои</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const oldModal = document.getElementById('wallpaper-menu-modal');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('wallpaper-menu-modal').classList.remove('hidden');
+    
+    renderWallpaperGrid();
+}
+
+function renderWallpaperGrid() {
+    const container = document.getElementById('wallpaper-grid');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    wallpaperImages.forEach((url) => {
+        const div = document.createElement('div');
+        div.style.cssText = `
+            aspect-ratio: 1;
+            background: url(${url}) center/cover no-repeat;
+            border-radius: 16px;
+            cursor: pointer;
+            border: 2px solid ${currentWallpaper === url ? 'var(--forest)' : 'transparent'};
+            transition: transform 0.2s;
+            background-size: cover;
+        `;
+        div.onclick = () => setWallpaper(url);
+        container.appendChild(div);
+    });
+}
+
+function setWallpaper(url) {
+    currentWallpaper = url;
+    currentWallpaperType = 'image';
+    localStorage.setItem('kukumber_wallpaper', url);
+    localStorage.setItem('kukumber_wallpaper_type', 'image');
+    
+    // Применяем обои к чату
+    const chatArea = document.querySelector('.chat-area');
+    const messagesContainer = document.querySelector('.messages-container');
+    
+    if (chatArea) chatArea.style.backgroundImage = `url(${url})`;
+    if (messagesContainer) messagesContainer.style.backgroundImage = `url(${url})`;
+    if (chatArea) chatArea.style.backgroundSize = 'cover';
+    if (messagesContainer) messagesContainer.style.backgroundSize = 'cover';
+    if (chatArea) chatArea.style.backgroundPosition = 'center';
+    if (messagesContainer) messagesContainer.style.backgroundPosition = 'center';
+    
+    showNotification('Обои применены', 'success');
+    closeWallpaperMenu();
+}
+
+function resetWallpaper() {
+    currentWallpaper = null;
+    currentWallpaperType = 'color';
+    localStorage.removeItem('kukumber_wallpaper');
+    localStorage.removeItem('kukumber_wallpaper_type');
+    
+    // Убираем обои
+    const chatArea = document.querySelector('.chat-area');
+    const messagesContainer = document.querySelector('.messages-container');
+    
+    if (chatArea) chatArea.style.backgroundImage = '';
+    if (messagesContainer) messagesContainer.style.backgroundImage = '';
+    if (chatArea) chatArea.style.backgroundSize = '';
+    if (messagesContainer) messagesContainer.style.backgroundSize = '';
+    
+    showNotification('Обои сброшены', 'success');
+    closeWallpaperMenu();
+}
+
+function closeWallpaperMenu() {
+    const modal = document.getElementById('wallpaper-menu-modal');
+    if (modal) modal.remove();
+}
+
+async function uploadCustomWallpaper() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        showNotification('Загрузка обоев...', 'info');
+        try {
+            const url = await uploadToImgBB(file);
+            setWallpaper(url);
+        } catch(err) {
+            showNotification('Ошибка загрузки', 'error');
+        }
+    };
+    input.click();
+}
+
+// Добавляем кнопку выбора обоев в меню оформления
+function updateThemeModalWithWallpaper() {
+    const wallpaperBtn = document.getElementById('wallpaper-select-btn');
+    if (wallpaperBtn) {
+        wallpaperBtn.onclick = () => {
+            closeThemeSettings();
+            setTimeout(() => openWallpaperMenu(), 200);
+        };
+    }
+}
