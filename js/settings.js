@@ -336,7 +336,6 @@ function showNotificationSettings() {
     document.getElementById('notifications-menu').classList.remove('hidden');
 }
 function showPrivacySettings() { var t = translations[currentLanguage]; showNotification(t.privacy + ': ' + t.in_development, 'info'); }
-function showThemeSettings() { var t = translations[currentLanguage]; showNotification(t.theme + ': ' + t.in_development, 'info'); }
 function showStorageSettings() { var t = translations[currentLanguage]; showNotification(t.storage + ': ' + t.in_development, 'info'); }
 function showAbout() { var t = translations[currentLanguage]; alert(t.app_name + ' ' + (t.version || 'v1.0') + '\n\n' + (t.tagline || 'Свежее общение каждый день 🥒')); }
 function showHelp() { var t = translations[currentLanguage]; showNotification(t.help + ': ' + t.in_development, 'info'); }
