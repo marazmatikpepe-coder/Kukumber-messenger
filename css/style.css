@@ -2750,3 +2750,185 @@ body.night-mode .btn-create-slice {
     background: linear-gradient(135deg, var(--forest), var(--lime));
     color: white;
 }
+/* ===== ПРОФИЛИ ГРУПП И КАНАЛОВ В ТЁМНОЙ ТЕМЕ ===== */
+body.night-mode #beauty-channel-profile-modal > div,
+body.night-mode #beauty-group-profile-modal > div,
+body.night-mode #simple-channel-profile > div,
+body.night-mode #simple-group-profile > div {
+    background: #1e1e1e !important;
+}
+
+body.night-mode .profile-modal-content {
+    background: #1e1e1e !important;
+}
+
+/* Баннер в профиле */
+body.night-mode .profile-banner {
+    background: linear-gradient(135deg, #2a4a2a, #3a5a3a) !important;
+}
+
+/* Аватарка */
+body.night-mode .profile-avatar {
+    background: #2a4a2a !important;
+    border-color: #1e1e1e !important;
+}
+
+/* Информация профиля */
+body.night-mode .profile-info {
+    background: #1e1e1e !important;
+}
+
+body.night-mode .profile-name {
+    color: #ffffff !important;
+}
+
+body.night-mode .profile-username {
+    color: #a0a0a0 !important;
+}
+
+body.night-mode .profile-subscribers {
+    color: #808080 !important;
+}
+
+body.night-mode .profile-status {
+    color: #a0a0a0 !important;
+}
+
+body.night-mode .profile-bio {
+    color: #c0c0c0 !important;
+}
+
+/* Вкладки профиля */
+body.night-mode .profile-tabs {
+    background: #1e1e1e !important;
+    border-top-color: #2c2c2c !important;
+    border-bottom-color: #2c2c2c !important;
+}
+
+body.night-mode .profile-tab-btn {
+    background: #1e1e1e !important;
+    color: #a0a0a0 !important;
+}
+
+body.night-mode .profile-tab-btn.active {
+    color: var(--forest) !important;
+    border-bottom-color: var(--forest) !important;
+}
+
+/* Контент вкладок */
+body.night-mode .profile-content {
+    background: #121212 !important;
+}
+
+/* Список участников/подписчиков */
+body.night-mode .member-item,
+body.night-mode .user-item {
+    background: #1e1e1e !important;
+    border-bottom-color: #2c2c2c !important;
+}
+
+body.night-mode .member-item .member-name,
+body.night-mode .user-item .user-item-info h4 {
+    color: #ffffff !important;
+}
+
+body.night-mode .member-role {
+    background: #2a4a2a !important;
+    color: #ffffff !important;
+}
+
+/* Кнопки в профиле */
+body.night-mode .profile-subscribe-btn,
+body.night-mode .profile-notify-btn {
+    background: #2d2d2d !important;
+    color: #ffffff !important;
+}
+
+body.night-mode .profile-subscribe-btn:hover {
+    background: #3d3d3d !important;
+}
+
+/* Панель администратора */
+body.night-mode .admin-panel {
+    background: #1e1e1e !important;
+}
+
+body.night-mode .setting-item {
+    background: #1e1e1e !important;
+    border-bottom-color: #2c2c2c !important;
+    color: #ffffff !important;
+}
+
+body.night-mode .setting-item span {
+    color: #ffffff !important;
+}
+
+body.night-mode .setting-item.danger span {
+    color: #ff6b6b !important;
+}
+
+/* Переключатели */
+body.night-mode .switch .slider {
+    background-color: #3d3d3d !important;
+}
+
+body.night-mode .switch input:checked + .slider {
+    background-color: var(--forest) !important;
+}
+
+/* Кнопка удаления */
+body.night-mode .btn-danger {
+    background: #dc3545 !important;
+    color: white !important;
+}
+
+/* Кнопка подписаться/вступить */
+body.night-mode .btn-primary {
+    background: linear-gradient(135deg, var(--forest), var(--lime)) !important;
+    color: white !important;
+}
+
+/* Модальное окно профиля */
+body.night-mode .modal {
+    background: rgba(0,0,0,0.85) !important;
+}
+
+/* Список выбора администраторов */
+body.night-mode .users-list {
+    background: #1e1e1e !important;
+}
+
+body.night-mode .user-item.selected {
+    background: #2a4a2a !important;
+}
+
+/* Простой профиль (альтернативная версия) */
+body.night-mode #simple-channel-profile > div,
+body.night-mode #simple-group-profile > div {
+    background: #1e1e1e !important;
+}
+
+body.night-mode #simple-channel-profile h2,
+body.night-mode #simple-group-profile h2 {
+    color: #ffffff !important;
+}
+
+body.night-mode #simple-channel-profile p,
+body.night-mode #simple-group-profile p {
+    color: #c0c0c0 !important;
+}
+
+body.night-mode #simple-channel-profile .avatar,
+body.night-mode #simple-group-profile .avatar {
+    background: #2a4a2a !important;
+}
+
+/* Крестик закрытия */
+body.night-mode .profile-close-btn {
+    background: rgba(0,0,0,0.5) !important;
+    color: white !important;
+}
+
+body.night-mode .profile-close-btn:hover {
+    background: rgba(0,0,0,0.7) !important;
+}
