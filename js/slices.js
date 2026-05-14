@@ -95,10 +95,10 @@ function createSliceCard(sliceId, sliceData) {
     div.addEventListener('touchend', function() { if (touchTimer) clearTimeout(touchTimer); });
     div.addEventListener('touchmove', function() { if (touchTimer) clearTimeout(touchTimer); });
     
-    // Шапка с кликабельной аватаркой
-   var avatarStyle = sliceData.authorAvatar ? 'background-image:url('+sliceData.authorAvatar+');background-size:cover;' : '';
+   // Шапка с кликабельной аватаркой
+var avatarStyle = sliceData.authorAvatar ? 'background-image:url('+sliceData.authorAvatar+');background-size:cover;' : '';
 var avatarClass = (!sliceData.authorAvatar) ? 'default-avatar-user' : '';
-var avatarContent = ''; // убираем эмодзи
+var avatarContent = '';
     // Медиа контент
     var mediaHtml = '';
     if (sliceData.mediaType === 'multiple' && sliceData.mediaUrls && sliceData.mediaUrls.length > 0) {
@@ -166,7 +166,7 @@ var avatarContent = ''; // убираем эмодзи
     div.innerHTML = `
         <div class="slice-header">
             <div class="slice-author" onclick="openUserProfile('${sliceData.authorId}')" style="cursor:pointer;">
-                <div class="avatar" style="${avatarStyle}">${avatarContent}</div>
+                <div class="avatar ${avatarClass}" style="${avatarStyle}">${avatarContent}</div>
                 <div class="slice-author-info">
                     <div style="display:flex; align-items:center; gap:5px;">
                         <span class="slice-author-name">${escapeHtml(sliceData.authorName)}</span>
@@ -474,7 +474,7 @@ function loadReplies(sliceId, parentId) {
             repliesHtml += `
                 <div class="comment-item reply-item">
                     <div class="comment-header">
-                        <div class="comment-author-avatar" style="${avatarStyle}">${avatarContent}</div>
+                      <div class="comment-author-avatar ${avatarClass}" style="${avatarStyle}">${avatarContent}</div>
                         <div class="comment-author-info">
                             <span class="comment-author-name">${escapeHtml(reply.data.authorName)}</span>
                             <span class="comment-date">${formatSliceDate(reply.data.createdAt)}</span>
@@ -733,7 +733,7 @@ function createProfileSliceCard(sliceId, sliceData) {
     div.className = 'slice-card profile-slice-card';
     div.setAttribute('data-slice-id', sliceId);
     
-  var avatarStyle = sliceData.authorAvatar ? 'background-image:url('+sliceData.authorAvatar+');background-size:cover;' : '';
+ var avatarStyle = sliceData.authorAvatar ? 'background-image:url('+sliceData.authorAvatar+');background-size:cover;' : '';
 var avatarClass = (!sliceData.authorAvatar) ? 'default-avatar-user' : '';
 var avatarContent = '';
     
@@ -750,7 +750,7 @@ var avatarContent = '';
     div.innerHTML = `
         <div class="slice-header">
             <div class="slice-author">
-                <div class="avatar" style="${avatarStyle}">${avatarContent}</div>
+               <div class="avatar ${avatarClass}" style="${avatarStyle}">${avatarContent}</div>
                 <div class="slice-author-info">
                     <span class="slice-author-name">${escapeHtml(sliceData.authorName)}</span>
                     <span class="slice-date">${formatSliceDate(sliceData.createdAt)}</span>
