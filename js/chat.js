@@ -1523,14 +1523,173 @@ function openNewChatFromMenu() {
 }
 
 function showNewChatDialog() {
+    // Создаём модальное окно с поиском
+    const modalHtml = `
+        <div id="new-chat-modal" class="modal" style="z-index: 10002;">
+            <div class="modal-content" style="max-width: 400px; border-radius: 20px;">
+                <div class="modal-header" style="padding: 15px 20px;">
+                    <h3 style="margin: 0;">💬 Новый чат</h3>
+                    <button onclick="closeNewChatDialog()" class="btn-close">×</button>
+                </div>
+                <div style="padding: 15px;">
+                    <div style="position: relative;">
+                        <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--forest); font-size: 16px;">🔍</span>
+                        <input type="text" id="new-chat-search-input" placeholder="Введите @username или имя пользователя..." 
+                               style="width: 100%; padding: 12px 12px 12px 40px; border: 2px solid var(--border); border-radius: 30px; font-size: 14px; outline: none;"
+                               oninput="searchUsersForNewChat()">
+                    </div>
+                    <div id="new-chat-users-list" style="margin-top: 15px; max-height: 400px; overflow-y: auto;">
+                        <div class="loading-spinner" style="text-align: center; padding: 20px;">🔍 Введите имя пользователя для поиска</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const oldModal = document.getElementById('new-chat-modal');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
     document.getElementById('new-chat-modal').classList.remove('hidden');
-    loadContacts();
+    
+    // Фокус на поле поиска
+    setTimeout(() => {
+        const searchInput = document.getElementById('new-chat-search-input');
+        if (searchInput) searchInput.focus();
+    }, 100);
 }
 
-function closeNewChatDialog() { 
-    document.getElementById('new-chat-modal').classList.add('hidden'); 
+function closeNewChatDialog() {
+    const modal = document.getElementById('new-chat-modal');
+    if (modal) modal.remove();
 }
 
+let searchTimeoutNewChat = null;
+
+function searchUsersForNewChat() {
+    const query = document.getElementById('new-chat-search-input').value.trim().toLowerCase();
+    const container = document.getElementById('new-chat-users-list');
+    
+    if (searchTimeoutNewChat) clearTimeout(searchTimeoutNewChat);
+    
+    if (!query || query.length < 2) {
+        container.innerHTML = '<div class="loading-spinner" style="text-align: center; padding: 20px;">🔍 Введите минимум 2 символа для поиска</div>';
+        return;
+    }
+    
+    container.innerHTML = '<div class="loading-spinner" style="text-align: center; padding: 20px;">🔍 Поиск...</div>';
+    
+    searchTimeoutNewChat = setTimeout(async () => {
+        const results = await searchUsersForChat(query);
+        renderUsersForNewChat(results, container);
+    }, 300);
+}
+
+async function searchUsersForChat(query) {
+    const snapshot = await database.ref('users').once('value');
+    const users = snapshot.val();
+    const results = [];
+    
+    for (let uid in users) {
+        if (uid === currentUser.uid) continue;
+        const user = users[uid];
+        const username = (user.username || '').toLowerCase();
+        const userTag = (user.userTag || '').toLowerCase().replace('@', '');
+        
+        // Поиск по username, userTag и по вводу с @
+        const searchQuery = query.replace('@', '');
+        
+        if (username.includes(searchQuery) || userTag.includes(searchQuery)) {
+            results.push({ uid, ...user });
+        }
+        if (results.length >= 20) break;
+    }
+    return results;
+}
+
+function renderUsersForNewChat(users, container) {
+    container.innerHTML = '';
+    
+    if (users.length === 0) {
+        container.innerHTML = '<div class="empty-search" style="text-align: center; padding: 20px; color: var(--text-muted);">👤 Пользователи не найдены</div>';
+        return;
+    }
+    
+    users.forEach(user => {
+        const div = document.createElement('div');
+        div.className = 'user-item';
+        div.style.cssText = 'display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s;';
+        div.onmouseenter = () => div.style.background = 'var(--background)';
+        div.onmouseleave = () => div.style.background = 'white';
+        
+        const avatarStyle = user.avatar ? `background-image: url(${user.avatar}); background-size: cover;` : '';
+        const avatarContent = user.avatar ? '' : '👤';
+        
+        div.innerHTML = `
+            <div class="avatar" style="width: 50px; height: 50px; ${avatarStyle} display: flex; align-items: center; justify-content: center; background: var(--sage); border-radius: 50%;">${avatarContent}</div>
+            <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 16px;">${escapeHtml(user.username)}</div>
+                <div style="font-size: 12px; color: var(--text-muted);">${user.userTag ? '@' + user.userTag : '@' + user.username.toLowerCase().replace(/\s/g, '')}</div>
+            </div>
+            <div style="color: var(--forest); font-size: 20px;">➤</div>
+        `;
+        
+        div.onclick = () => createNewChatAndOpen(user.uid, user);
+        container.appendChild(div);
+    });
+}
+
+async function createNewChatAndOpen(otherUserId, otherUser) {
+    showNotification('Создание чата...', 'info');
+    
+    const chatId = generateChatId(currentUser.uid, otherUserId);
+    
+    // Проверяем, существует ли уже чат
+    const chatSnapshot = await database.ref('chats/' + chatId).once('value');
+    
+    if (!chatSnapshot.exists()) {
+        // Создаём новый чат
+        await database.ref('chats/' + chatId).set({
+            type: 'private',
+            participants: [currentUser.uid, otherUserId],
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            lastMessage: 'Чат создан',
+            lastMessageTime: firebase.database.ServerValue.TIMESTAMP
+        });
+        
+        await Promise.all([
+            database.ref('userChats/' + currentUser.uid + '/' + chatId).set(true),
+            database.ref('userChats/' + otherUserId + '/' + chatId).set(true)
+        ]);
+        
+        // Отправляем приветственное сообщение
+        const welcomeMessage = {
+            type: 'text',
+            text: `🍃 Добро пожаловать в чат с ${otherUser.username}! Здесь вы можете общаться, делиться фото и файлами.`,
+            senderId: 'system',
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            isSystem: true
+        };
+        await database.ref('messages/' + chatId).push(welcomeMessage);
+        
+        showNotification('Чат создан!', 'success');
+    } else {
+        showNotification('Чат уже существует', 'info');
+    }
+    
+    // Закрываем модальное окно и открываем чат
+    closeNewChatDialog();
+    closeSearchResults();
+    
+    // Загружаем актуальные данные чата
+    const chatData = await database.ref('chats/' + chatId).once('value');
+    const chat = chatData.val();
+    chat.otherUserId = otherUserId;
+    chat.otherUser = otherUser;
+    
+    openChat(chatId, chat);
+    loadChats();
+}
 function loadContacts() {
     var list = document.getElementById('users-list');
     list.innerHTML = '<div class="loading-spinner">🔄 Загрузка...</div>';
