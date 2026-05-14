@@ -1198,13 +1198,14 @@ function openSliceLightbox(url) {
         lightbox.classList.remove('hidden');
     }
 }
-// ========== ПОИСК ==========
+// ========== ПОИСК (РАСШИРЕННЫЙ) ==========
+
 function searchGlobalNew() {
     const query = document.getElementById('global-search-input').value.trim().toLowerCase();
     const resultsContainer = document.getElementById('global-search-results');
     const resultsList = document.getElementById('search-results-list');
     
-    if (!query) {
+    if (!query || query.length < 2) {
         resultsContainer.style.display = 'none';
         return;
     }
@@ -1212,8 +1213,16 @@ function searchGlobalNew() {
     resultsContainer.style.display = 'flex';
     resultsList.innerHTML = '<div class="loading-spinner">🔍 Поиск...</div>';
     
-    Promise.all([searchUsersGlobal(query), searchChatsGlobal(query)]).then(([users, chats]) => {
-        renderSearchResults(users, chats);
+    Promise.all([
+        searchUsersGlobal(query),
+        searchMyChatsGlobal(query),
+        searchPublicChannelsGlobal(query),
+        searchPublicGroupsGlobal(query)
+    ]).then(([users, myChats, publicChannels, publicGroups]) => {
+        renderSearchResultsEnhanced(users, myChats, publicChannels, publicGroups, query);
+    }).catch(err => {
+        console.error('Ошибка поиска:', err);
+        resultsList.innerHTML = '<div class="empty-search">Ошибка поиска</div>';
     });
 }
 
@@ -1231,11 +1240,12 @@ async function searchUsersGlobal(query) {
         if (username.includes(query) || userTag.includes(query.replace('@', ''))) {
             results.push({ type: 'user', uid, ...user });
         }
+        if (results.length >= 15) break;
     }
-    return results.slice(0, 20);
+    return results;
 }
 
-async function searchChatsGlobal(query) {
+async function searchMyChatsGlobal(query) {
     const userChats = await database.ref('userChats/' + currentUser.uid).once('value');
     const chatIds = Object.keys(userChats.val() || {});
     const results = [];
@@ -1246,78 +1256,224 @@ async function searchChatsGlobal(query) {
         if (!chatData) continue;
         
         let name = '';
-        if (chatData.type === 'group') name = (chatData.name || '').toLowerCase();
-        else if (chatData.type === 'channel') name = (chatData.name || '').toLowerCase();
-        else {
+        let avatar = '';
+        let type = '';
+        
+        if (chatData.type === 'group') {
+            name = (chatData.name || '').toLowerCase();
+            avatar = chatData.avatar || '';
+            type = 'group';
+        } else if (chatData.type === 'channel') {
+            name = (chatData.name || '').toLowerCase();
+            avatar = chatData.avatar || '';
+            type = 'channel';
+        } else {
             const otherId = chatData.participants?.find(id => id !== currentUser.uid);
             if (otherId) {
                 const otherUser = await database.ref('users/' + otherId).once('value');
                 name = (otherUser.val()?.username || '').toLowerCase();
+                avatar = otherUser.val()?.avatar || '';
+                type = 'private';
             }
         }
         
         if (name.includes(query)) {
-            results.push({ type: 'chat', chatId, data: chatData });
+            results.push({ type: 'myChat', chatId, data: chatData, displayType: type, name: name, avatar: avatar });
         }
+        if (results.length >= 15) break;
     }
-    return results.slice(0, 20);
+    return results;
 }
 
-function renderSearchResults(users, chats) {
+async function searchPublicChannelsGlobal(query) {
+    const snapshot = await database.ref('chats').once('value');
+    const chats = snapshot.val();
+    const results = [];
+    
+    for (let chatId in chats) {
+        const chat = chats[chatId];
+        // Только публичные каналы, на которые пользователь не подписан
+        if (chat.type !== 'channel') continue;
+        if (!chat.isPublic) continue;
+        if (chat.subscribers && chat.subscribers[currentUser.uid]) continue;
+        
+        const name = (chat.name || '').toLowerCase();
+        const kname = (chat.kname || '').toLowerCase();
+        
+        if (name.includes(query) || kname.includes(query)) {
+            results.push({ type: 'publicChannel', chatId, data: chat });
+        }
+        if (results.length >= 15) break;
+    }
+    return results;
+}
+
+async function searchPublicGroupsGlobal(query) {
+    const snapshot = await database.ref('chats').once('value');
+    const chats = snapshot.val();
+    const results = [];
+    
+    for (let chatId in chats) {
+        const chat = chats[chatId];
+        // Только публичные группы, в которых пользователь не состоит
+        if (chat.type !== 'group') continue;
+        if (!chat.isPublic) continue;
+        if (chat.members && chat.members[currentUser.uid]) continue;
+        
+        const name = (chat.name || '').toLowerCase();
+        const kname = (chat.kname || '').toLowerCase();
+        
+        if (name.includes(query) || kname.includes(query)) {
+            results.push({ type: 'publicGroup', chatId, data: chat });
+        }
+        if (results.length >= 15) break;
+    }
+    return results;
+}
+
+function renderSearchResultsEnhanced(users, myChats, publicChannels, publicGroups, query) {
     const container = document.getElementById('search-results-list');
     container.innerHTML = '';
     
-    if (!users.length && !chats.length) {
+    if (!users.length && !myChats.length && !publicChannels.length && !publicGroups.length) {
         container.innerHTML = '<div class="empty-search">Ничего не найдено</div>';
         return;
     }
     
-    users.forEach(user => {
-        const div = document.createElement('div');
-        div.className = 'search-result-item';
-        div.innerHTML = `
-            <div class="search-result-avatar" style="background-image: url(${user.avatar || ''}); background-size: cover;">${!user.avatar ? '👤' : ''}</div>
-            <div class="search-result-info">
-                <div class="search-result-name">${escapeHtml(user.username)}</div>
-                <div class="search-result-username">${user.userTag ? '@' + user.userTag : '@' + user.username.toLowerCase().replace(/\s/g, '')}</div>
-            </div>
-            <div class="search-result-badge">👤 Пользователь</div>
-        `;
-        div.onclick = () => startPrivateChat(user.uid, user);
-        container.appendChild(div);
-    });
+    // Секция: Люди
+    if (users.length > 0) {
+        const section = document.createElement('div');
+        section.innerHTML = '<div style="padding: 8px 12px; background: var(--background); font-weight: bold; border-radius: 12px; margin-bottom: 8px;">👤 ЛЮДИ</div>';
+        container.appendChild(section);
+        
+        users.forEach(user => {
+            const div = document.createElement('div');
+            div.className = 'search-result-item';
+            div.innerHTML = `
+                <div class="search-result-avatar" style="background-image: url(${user.avatar || ''}); background-size: cover;">${!user.avatar ? '👤' : ''}</div>
+                <div class="search-result-info">
+                    <div class="search-result-name">${escapeHtml(user.username)}</div>
+                    <div class="search-result-username">${user.userTag ? '@' + user.userTag : '@' + user.username.toLowerCase().replace(/\s/g, '')}</div>
+                </div>
+                <div class="search-result-badge" style="background: var(--forest); color: white;">👤</div>
+            `;
+            div.onclick = () => startPrivateChat(user.uid, user);
+            container.appendChild(div);
+        });
+    }
     
-    chats.forEach(chat => {
-        const div = document.createElement('div');
-        div.className = 'search-result-item';
-        let name = '', avatar = '', type = '';
-        if (chat.data.type === 'group') {
-            name = chat.data.name;
-            avatar = chat.data.avatar;
-            type = '👥 Группа';
-        } else if (chat.data.type === 'channel') {
-            name = chat.data.name;
-            avatar = chat.data.avatar;
-            type = '📢 Канал';
-        } else {
-            name = 'Личный чат';
-            type = '💬 Чат';
-        }
-        div.innerHTML = `
-            <div class="search-result-avatar" style="background-image: url(${avatar || ''}); background-size: cover;">${!avatar ? (chat.data.type === 'group' ? '👥' : '📢') : ''}</div>
-            <div class="search-result-info">
-                <div class="search-result-name">${escapeHtml(name)}</div>
-            </div>
-            <div class="search-result-badge">${type}</div>
-        `;
-        div.onclick = () => openChat(chat.chatId, chat.data);
-        container.appendChild(div);
-    });
+    // Секция: Мои чаты
+    if (myChats.length > 0) {
+        const section = document.createElement('div');
+        section.innerHTML = '<div style="padding: 8px 12px; background: var(--background); font-weight: bold; border-radius: 12px; margin: 8px 0;">💬 МОИ ЧАТЫ</div>';
+        container.appendChild(section);
+        
+        myChats.forEach(chat => {
+            const div = document.createElement('div');
+            div.className = 'search-result-item';
+            let icon = chat.displayType === 'group' ? '👥' : (chat.displayType === 'channel' ? '📢' : '💬');
+            let badgeText = chat.displayType === 'group' ? 'Группа' : (chat.displayType === 'channel' ? 'Канал' : 'Чат');
+            
+            div.innerHTML = `
+                <div class="search-result-avatar" style="background-image: url(${chat.avatar || ''}); background-size: cover;">${!chat.avatar ? icon : ''}</div>
+                <div class="search-result-info">
+                    <div class="search-result-name">${escapeHtml(chat.name)}</div>
+                </div>
+                <div class="search-result-badge">${badgeText}</div>
+            `;
+            div.onclick = () => openChat(chat.chatId, chat.data);
+            container.appendChild(div);
+        });
+    }
+    
+    // Секция: Публичные каналы
+    if (publicChannels.length > 0) {
+        const section = document.createElement('div');
+        section.innerHTML = '<div style="padding: 8px 12px; background: var(--background); font-weight: bold; border-radius: 12px; margin: 8px 0;">📢 ПУБЛИЧНЫЕ КАНАЛЫ</div>';
+        container.appendChild(section);
+        
+        publicChannels.forEach(channel => {
+            const div = document.createElement('div');
+            div.className = 'search-result-item';
+            const subsCount = Object.keys(channel.data.subscribers || {}).length;
+            
+            div.innerHTML = `
+                <div class="search-result-avatar" style="background-image: url(${channel.data.avatar || ''}); background-size: cover;">${!channel.data.avatar ? '📢' : ''}</div>
+                <div class="search-result-info">
+                    <div class="search-result-name">${escapeHtml(channel.data.name)}</div>
+                    <div class="search-result-username">${channel.data.kname ? '@' + channel.data.kname : ''}</div>
+                    <div class="search-result-desc" style="font-size: 11px; color: var(--text-muted);">👥 ${subsCount} подписчиков</div>
+                </div>
+                <div class="search-result-badge" style="background: #228B22; color: white;">Подписаться</div>
+            `;
+            div.onclick = () => subscribeToPublicChannelUI(channel.chatId, channel.data);
+            container.appendChild(div);
+        });
+    }
+    
+    // Секция: Публичные группы
+    if (publicGroups.length > 0) {
+        const section = document.createElement('div');
+        section.innerHTML = '<div style="padding: 8px 12px; background: var(--background); font-weight: bold; border-radius: 12px; margin: 8px 0;">👥 ПУБЛИЧНЫЕ ГРУППЫ</div>';
+        container.appendChild(section);
+        
+        publicGroups.forEach(group => {
+            const div = document.createElement('div');
+            div.className = 'search-result-item';
+            const membersCount = Object.keys(group.data.members || {}).length;
+            
+            div.innerHTML = `
+                <div class="search-result-avatar" style="background-image: url(${group.data.avatar || ''}); background-size: cover;">${!group.data.avatar ? '👥' : ''}</div>
+                <div class="search-result-info">
+                    <div class="search-result-name">${escapeHtml(group.data.name)}</div>
+                    <div class="search-result-username">${group.data.kname ? '@' + group.data.kname : ''}</div>
+                    <div class="search-result-desc" style="font-size: 11px; color: var(--text-muted);">👥 ${membersCount} участников</div>
+                </div>
+                <div class="search-result-badge" style="background: #228B22; color: white;">Вступить</div>
+            `;
+            div.onclick = () => joinPublicGroupUI(group.chatId, group.data);
+            container.appendChild(div);
+        });
+    }
+}
+
+function subscribeToPublicChannelUI(chatId, channel) {
+    database.ref('chats/' + chatId + '/subscribers/' + currentUser.uid).set(true)
+        .then(() => database.ref('userChats/' + currentUser.uid + '/' + chatId).set(true))
+        .then(() => {
+            showNotification('Вы подписались на канал "' + channel.name + '"', 'success');
+            closeSearchResults();
+            loadChats();
+            openChat(chatId, channel);
+        })
+        .catch(err => showNotification('Ошибка', 'error'));
+}
+
+function joinPublicGroupUI(chatId, group) {
+    database.ref('chats/' + chatId + '/members/' + currentUser.uid).set(true)
+        .then(() => database.ref('userChats/' + currentUser.uid + '/' + chatId).set(true))
+        .then(() => {
+            showNotification('Вы вступили в группу "' + group.name + '"', 'success');
+            // Отправляем системное сообщение
+            const systemMessage = {
+                type: 'system',
+                text: `${currentUserData?.username || 'Пользователь'} вступил(а) в группу`,
+                senderId: 'system',
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            database.ref('messages/' + chatId).push(systemMessage);
+            closeSearchResults();
+            loadChats();
+            openChat(chatId, group);
+        })
+        .catch(err => showNotification('Ошибка', 'error'));
 }
 
 function closeSearchResults() {
-    document.getElementById('global-search-results').style.display = 'none';
-    document.getElementById('global-search-input').value = '';
+    const resultsContainer = document.getElementById('global-search-results');
+    if (resultsContainer) resultsContainer.style.display = 'none';
+    const searchInput = document.getElementById('global-search-input');
+    if (searchInput) searchInput.value = '';
 }
 
 function startPrivateChat(otherUserId, otherUser) {
