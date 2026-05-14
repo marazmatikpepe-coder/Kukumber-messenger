@@ -1551,3 +1551,7 @@ window.showCreateSliceModal = showCreateSliceModal;
 window.publishSlice = publishSlice;
 // slices.js - в самый конец файла
 window.openChannelProfile = openChannelProfile;
+function openChannelProfile(chatId) {
+    console.log('openChannelProfile вызван для:', chatId);
+}
+window.openChannelProfile = openChannelProfile;
