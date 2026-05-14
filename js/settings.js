@@ -756,40 +756,27 @@ function resetCategorySettings(category) {
     showNotification('Настройки сброшены', 'success');
 }
 
-// ========== ОФОРМЛЕНИЕ ==========
-var currentThemeColor = localStorage.getItem('kukumber_theme_color') || 'green';
-var nightModeEnabled = localStorage.getItem('kukumber_night_mode') === 'true';
+// ========== ОФОРМЛЕНИЕ (МОНОХРОМНОЕ) ==========
+var currentThemeColor = localStorage.getItem('kukumber_theme_color') || 'dark';
+var nightModeEnabled = localStorage.getItem('kukumber_night_mode') !== 'false';
 
 var colorThemes = {
-    green: { primary: '#228B22', secondary: '#32CD32', name: 'Зеленый' },
-    blue: { primary: '#1E90FF', secondary: '#63B8FF', name: 'Синий' },
-    red: { primary: '#DC143C', secondary: '#FF6B6B', name: 'Красный' },
-    purple: { primary: '#8A2BE2', secondary: '#BA55D3', name: 'Фиолетовый' },
-    orange: { primary: '#FF8C00', secondary: '#FFB347', name: 'Оранжевый' },
-    pink: { primary: '#FF69B4', secondary: '#FFB6C1', name: 'Розовый' },
-    turquoise: { primary: '#008080', secondary: '#20B2AA', name: 'Бирюзовый' },
-    yellow: { primary: '#FFD700', secondary: '#FFA500', name: 'Желтый' }
+    dark: { primary: '#3a3a3a', secondary: '#5a5a5a', name: 'Тёмная' },
+    light: { primary: '#d0d0d0', secondary: '#b0b0b0', name: 'Светлая' },
+    amoled: { primary: '#1a1a1a', secondary: '#2a2a2a', name: 'AMOLED' },
+    graphite: { primary: '#4a4a4a', secondary: '#6a6a6a', name: 'Графит' }
 };
 
 function showThemeSettings() {
-    var isMobile = window.innerWidth <= 768;
-    
     var modalHtml = `
         <div id="theme-settings-modal" class="modal" style="z-index: 10002;">
-            <div class="modal-content" style="max-width: 500px; border-radius: 20px; overflow: hidden;">
+            <div class="modal-content" style="max-width: 400px; border-radius: 20px; overflow: hidden;">
                 <div class="modal-header">
                     <h3>🎨 Оформление</h3>
                     <button onclick="closeThemeSettings()" class="btn-close">×</button>
                 </div>
                 <div style="padding: 15px;">
-                    <div style="margin-bottom: 20px;">
-                        <button id="night-mode-toggle-btn" onclick="toggleNightModeUI()" style="width: 100%; padding: 14px; background: ${nightModeEnabled ? '#2d2d2d' : 'var(--background)'}; border: 2px solid var(--border); border-radius: 16px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
-                            ${nightModeEnabled ? '🌙 Ночной режим (вкл)' : '☀️ Ночной режим (выкл)'}
-                        </button>
-                    </div>
-                    
-                    <div style="font-weight: 600; margin-bottom: 15px;">🎨 Цвет темы</div>
-                    <div id="themes-grid" style="display: grid; grid-template-columns: repeat(${isMobile ? '3' : '4'}, 1fr); gap: 15px;"></div>
+                    <div id="themes-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;"></div>
                 </div>
             </div>
         </div>
@@ -799,8 +786,7 @@ function showThemeSettings() {
     if (oldModal) oldModal.remove();
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     document.getElementById('theme-settings-modal').classList.remove('hidden');
-    
-    renderThemesGrid();
+    renderMonochromeThemesGrid();
 }
 
 function closeThemeSettings() {
@@ -808,52 +794,53 @@ function closeThemeSettings() {
     if (modal) modal.remove();
 }
 
-function renderThemesGrid() {
+function renderMonochromeThemesGrid() {
     var container = document.getElementById('themes-grid');
     if (!container) return;
-    
-    var isMobile = window.innerWidth <= 768;
-    container.style.gridTemplateColumns = 'repeat(' + (isMobile ? '3' : '4') + ', 1fr)';
     container.innerHTML = '';
     
     for (var key in colorThemes) {
         var theme = colorThemes[key];
         var isActive = currentThemeColor === key;
         var div = document.createElement('div');
-        div.style.cssText = 'background: ' + theme.primary + '; border-radius: 16px; padding: 12px 8px; text-align: center; cursor: pointer; border: 2px solid ' + (isActive ? theme.primary : 'transparent') + '; transition: transform 0.2s;';
-        div.onclick = (function(k) { return function() { setSimpleTheme(k); }; })(key);
-        div.innerHTML = '<div style="width: 100%; height: 50px; background: ' + theme.secondary + '; border-radius: 10px; margin-bottom: 8px;"></div><span style="font-size: 12px; color: white; font-weight: 500;">' + theme.name + '</span>' + (isActive ? '<div style="color: white; font-size: 14px; margin-top: 4px;">✓</div>' : '');
+        div.style.cssText = 'background: ' + theme.primary + '; border-radius: 16px; padding: 16px 8px; text-align: center; cursor: pointer; border: 2px solid ' + (isActive ? '#ffffff' : 'transparent') + '; transition: transform 0.2s;';
+        div.onclick = (function(k) { return function() { setMonochromeTheme(k); }; })(key);
+        div.innerHTML = '<div style="width: 100%; height: 40px; background: ' + theme.secondary + '; border-radius: 8px; margin-bottom: 10px;"></div><span style="font-size: 14px; color: white; font-weight: 500;">' + theme.name + '</span>';
+        if (isActive) div.innerHTML += '<div style="color: white; font-size: 16px; margin-top: 6px;">✓</div>';
         container.appendChild(div);
     }
 }
 
-function setSimpleTheme(colorKey) {
+function setMonochromeTheme(colorKey) {
     currentThemeColor = colorKey;
     localStorage.setItem('kukumber_theme_color', colorKey);
     
     var theme = colorThemes[colorKey];
+    
+    // Меняем переменные CSS
     document.documentElement.style.setProperty('--forest', theme.primary);
     document.documentElement.style.setProperty('--lime', theme.secondary);
+    document.documentElement.style.setProperty('--background', colorKey === 'amoled' ? '#000000' : (colorKey === 'light' ? '#f0f0f0' : '#1a1a1a'));
+    document.documentElement.style.setProperty('--text-dark', colorKey === 'light' ? '#1a1a1a' : '#e0e0e0');
+    document.documentElement.style.setProperty('--border', colorKey === 'light' ? '#cccccc' : '#333333');
     
-    var gradient = 'linear-gradient(135deg, ' + theme.primary + ', ' + theme.secondary + ')';
-    document.querySelectorAll('.btn-primary, .send-btn, .btn-create-slice, .wizard-next-btn, .wizard-create-btn').forEach(function(btn) {
-        btn.style.background = gradient;
-    });
-    
-    renderThemesGrid();
+    renderMonochromeThemesGrid();
     showNotification('Тема "' + theme.name + '" применена', 'success');
 }
 
+// Простой переключатель ночного режима (без лишних цветов)
 function toggleNightModeUI() {
-    nightModeEnabled = !nightModeEnabled;
-    localStorage.setItem('kukumber_night_mode', nightModeEnabled);
-    applyNightModeToBody();
-    
-    var btn = document.getElementById('night-mode-toggle-btn');
-    if (btn) {
-        btn.innerHTML = nightModeEnabled ? '🌙 Ночной режим (вкл)' : '☀️ Ночной режим (выкл)';
+    if (document.body.classList.contains('night-mode')) {
+        document.body.classList.remove('night-mode');
+        setMonochromeTheme('light');
+        localStorage.setItem('kukumber_night_mode', 'false');
+        showNotification('Светлая тема включена ☀️', 'success');
+    } else {
+        document.body.classList.add('night-mode');
+        setMonochromeTheme('dark');
+        localStorage.setItem('kukumber_night_mode', 'true');
+        showNotification('Тёмная тема включена 🌙', 'success');
     }
-    showNotification(nightModeEnabled ? 'Ночной режим включён 🌙' : 'Ночной режим выключен ☀️', 'success');
 }
 
 function applyNightModeToBody() {
