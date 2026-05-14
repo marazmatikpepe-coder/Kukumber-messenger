@@ -687,3 +687,77 @@ if (typeof window.voiceRecorderLoaded === 'undefined') {
     document.addEventListener('DOMContentLoaded', initVoiceBtn);
     setTimeout(initVoiceBtn, 1000);
 }
+// ========== ЗАГРУЗКА ВИДЕО ЧЕРЕЗ PIXELDRAIN ==========
+var PIXELDRAIN_API_KEY = 'fb14ed75-4352-4e78-804c-a797b3131456';
+
+async function uploadVideoToPixelDrain(file) {
+    if (!file.type.startsWith('video/')) {
+        throw new Error('Файл не является видео');
+    }
+    
+    if (file.size > 100 * 1024 * 1024) {
+        throw new Error('Видео не должно превышать 100MB');
+    }
+    
+    showNotification('📤 Загрузка видео...', 'info');
+    
+    var formData = new FormData();
+    formData.append('file', file);
+    
+    var response = await fetch('https://pixeldrain.com/api/file/', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Basic ' + btoa(PIXELDRAIN_API_KEY + ':')
+        },
+        body: formData
+    });
+    
+    var data = await response.json();
+    
+    if (!response.ok || !data.id) {
+        throw new Error(data.message || 'Ошибка загрузки');
+    }
+    
+    var videoUrl = 'https://pixeldrain.com/api/file/' + data.id;
+    return videoUrl;
+}
+
+// Отправка видео в чат
+async function sendVideoMessage(file) {
+    if (!currentChatId) {
+        showNotification('Выберите чат', 'error');
+        return;
+    }
+    
+    try {
+        var videoUrl = await uploadVideoToPixelDrain(file);
+        
+        var message = {
+            type: 'video',
+            videoUrl: videoUrl,
+            fileName: file.name,
+            senderId: currentUser.uid,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        await database.ref('messages/' + currentChatId).push(message);
+        await database.ref('chats/' + currentChatId).update({
+            lastMessage: '🎬 Видео: ' + file.name,
+            lastMessageTime: firebase.database.ServerValue.TIMESTAMP
+        });
+        
+        showNotification('✅ Видео отправлено!', 'success');
+    } catch (error) {
+        console.error(error);
+        showNotification('Ошибка: ' + error.message, 'error');
+    }
+}
+
+// Обработчик выбора видео (добавь в attach-btn)
+function handleVideoSelect(event) {
+    var file = event.target.files[0];
+    if (file && file.type.startsWith('video/')) {
+        sendVideoMessage(file);
+    }
+    event.target.value = '';
+}
