@@ -2566,3 +2566,187 @@ body.night-mode .default-avatar-group {
 body.night-mode .default-avatar-channel {
     background-image: url('https://i.ibb.co/3ydBsv59/image.png') !important;
 }
+/* ===== СЛАЙСЫ В ТЁМНОЙ ТЕМЕ ===== */
+body.night-mode .slices-container {
+    background: #121212;
+}
+
+body.night-mode .slices-header {
+    background: #1e1e1e;
+    border-bottom-color: #2c2c2c;
+}
+
+body.night-mode .slices-header h2 {
+    color: #ffffff;
+}
+
+body.night-mode .slices-search-bar {
+    background: #1e1e1e;
+    border-bottom-color: #2c2c2c;
+}
+
+body.night-mode .slices-search-bar input {
+    background: #2d2d2d;
+    color: #ffffff;
+    border-color: #3d3d3d;
+}
+
+body.night-mode .slices-search-bar input::placeholder {
+    color: #808080;
+}
+
+/* Карточка поста */
+body.night-mode .slice-card {
+    background: #1e1e1e !important;
+    border-radius: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Шапка поста */
+body.night-mode .slice-header {
+    background: #1e1e1e !important;
+    padding: 12px 16px;
+}
+
+body.night-mode .slice-author-name {
+    color: #ffffff !important;
+}
+
+body.night-mode .slice-date {
+    color: #808080 !important;
+}
+
+body.night-mode .slice-views {
+    color: #808080 !important;
+}
+
+/* Текст поста */
+body.night-mode .slice-text {
+    color: #e0e0e0 !important;
+    background: #1e1e1e !important;
+    padding: 12px 16px;
+}
+
+body.night-mode .slice-text a {
+    color: var(--forest) !important;
+}
+
+body.night-mode .slice-mention {
+    color: var(--forest) !important;
+}
+
+/* Хэштеги */
+body.night-mode .slice-hashtags {
+    background: #1e1e1e !important;
+    padding: 0 16px 12px 16px;
+}
+
+body.night-mode .slice-hashtag {
+    background: #2d2d2d !important;
+    color: #e0e0e0 !important;
+}
+
+body.night-mode .slice-hashtag:hover {
+    background: #3d3d3d !important;
+}
+
+/* Кнопки действий (лайк, комментарий, репост) */
+body.night-mode .slice-actions {
+    background: #1e1e1e !important;
+    border-top-color: #2c2c2c !important;
+    padding: 10px 16px;
+}
+
+body.night-mode .slice-action-btn {
+    color: #a0a0a0 !important;
+}
+
+body.night-mode .slice-action-btn:hover {
+    background: #2d2d2d !important;
+}
+
+body.night-mode .slice-action-btn.liked {
+    color: #ff4757 !important;
+}
+
+/* Медиа контент */
+body.night-mode .slice-media {
+    background: #0d0d0d !important;
+}
+
+body.night-mode .slice-image,
+body.night-mode .slice-gif {
+    background: #0d0d0d;
+}
+
+/* Слайдер */
+body.night-mode .slice-slider-prev,
+body.night-mode .slice-slider-next {
+    background: rgba(0,0,0,0.6);
+    color: white;
+}
+
+body.night-mode .slice-slider-prev:hover,
+body.night-mode .slice-slider-next:hover {
+    background: rgba(0,0,0,0.8);
+}
+
+/* Закреплённый пост */
+body.night-mode .slice-pinned-badge {
+    background: #2a4a2a;
+    color: #ffffff;
+}
+
+/* Репост бейдж */
+body.night-mode .repost-badge {
+    background: #2d2d2d;
+    color: #a0a0a0;
+}
+
+/* Пустое состояние */
+body.night-mode .empty-slices {
+    color: #808080;
+}
+
+body.night-mode .empty-slices span {
+    opacity: 0.5;
+}
+
+/* Модальное окно создания слайса */
+body.night-mode #create-slice-modal .modal-content {
+    background: #1e1e1e !important;
+}
+
+body.night-mode .slice-text-input,
+body.night-mode .slice-hashtags-input {
+    background: #2d2d2d !important;
+    color: #ffffff !important;
+    border-color: #3d3d3d !important;
+}
+
+body.night-mode .slice-text-input::placeholder,
+body.night-mode .slice-hashtags-input::placeholder {
+    color: #808080 !important;
+}
+
+body.night-mode .slice-upload-area {
+    background: #2d2d2d !important;
+    border-color: #3d3d3d !important;
+    color: #a0a0a0 !important;
+}
+
+body.night-mode .slice-preview-item {
+    background: #2d2d2d;
+}
+
+body.night-mode .slice-preview-remove {
+    background: rgba(0,0,0,0.6);
+    color: white;
+}
+
+/* Кнопка создания слайса */
+body.night-mode .btn-create-slice {
+    background: linear-gradient(135deg, var(--forest), var(--lime));
+    color: white;
+}
