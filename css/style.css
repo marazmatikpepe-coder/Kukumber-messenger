@@ -3099,3 +3099,66 @@ body.night-mode .profile-close-btn:hover {
 .nav-label {
     color: inherit !important;
 }
+/* ===== ВОССТАНОВЛЕНИЕ ОРИГИНАЛЬНЫХ ЗЕЛЕНЫХ ЦВЕТОВ ===== */
+:root {
+    --forest: #228B22;
+    --lime: #32CD32;
+    --sage: #9DC183;
+    --dark-green: #1a5c1a;
+    --cucumber: #71BC78;
+    --olive: #556B2F;
+    --white: #fff;
+    --background: #f5f7f5;
+    --text-dark: #2c3e2c;
+    --text-light: #6b8e6b;
+    --text-muted: #94a894;
+    --border: #d4e4d4;
+    --shadow: rgba(47,79,47,0.15);
+    --error: #dc3545;
+    --success: #28a745;
+}
+
+/* Градиенты на кнопках */
+.btn-primary, .send-btn, .btn-create-slice, .wizard-next-btn, 
+.wizard-create-btn, .profile-subscribe-btn {
+    background: linear-gradient(135deg, var(--forest), var(--lime)) !important;
+    color: white !important;
+}
+
+/* Активные вкладки */
+.nav-item.active, .profile-tab-btn.active, .channel-tab-btn-ui.active {
+    color: var(--forest) !important;
+}
+
+/* Зеленые акценты */
+.slice-mention, .comment-reply-btn, .search-result-badge {
+    color: var(--forest) !important;
+}
+
+/* Хэштеги */
+.slice-hashtag {
+    background: var(--background);
+    color: var(--forest);
+}
+
+/* Сообщения отправленные */
+.message.sent {
+    background: linear-gradient(135deg, var(--forest), var(--cucumber)) !important;
+    color: white !important;
+}
+
+/* Сообщения полученные */
+.message.received {
+    background: white !important;
+    color: var(--text-dark) !important;
+}
+
+/* Кнопка подписки */
+.profile-subscribe-btn {
+    background: linear-gradient(135deg, var(--forest), var(--lime)) !important;
+}
+
+/* Зеленые ссылки и упоминания */
+a, .slice-mention, .message-text a {
+    color: var(--forest) !important;
+}
