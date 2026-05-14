@@ -86,19 +86,39 @@ function updateUserDisplay() {
     var avatar = currentUserData.avatar || '';
     document.getElementById('current-username').textContent = username;
     document.getElementById('settings-username').textContent = username;
-    ['user-avatar', 'settings-avatar'].forEach(function(id) {
-        var el = document.getElementById(id);
-        if (el) {
-            if (avatar) {
-                el.style.backgroundImage = 'url(' + avatar + ')';
-                el.style.backgroundSize = 'cover';
-                el.textContent = '';
-            } else {
-                el.style.backgroundImage = '';
-                el.textContent = '🥒';
-            }
+    
+    // Функция для установки аватарки с дефолтом
+    function setAvatar(element, avatarUrl, type) {
+        if (!element) return;
+        if (avatarUrl) {
+            element.style.backgroundImage = 'url(' + avatarUrl + ')';
+            element.style.backgroundSize = 'cover';
+            element.textContent = '';
+            element.classList.remove('default-avatar-user', 'default-avatar-group', 'default-avatar-channel');
+        } else {
+            element.style.backgroundImage = '';
+            element.classList.add('default-avatar-' + type);
+            element.textContent = '';
         }
-    });
+    }
+    
+    setAvatar(document.getElementById('user-avatar'), avatar, 'user');
+    setAvatar(document.getElementById('settings-avatar'), avatar, 'user');
+    
+    // Для Slices аватарки
+    var slicesAvatar = document.getElementById('slices-user-avatar');
+    if (slicesAvatar) {
+        if (avatar) {
+            slicesAvatar.style.backgroundImage = 'url(' + avatar + ')';
+            slicesAvatar.style.backgroundSize = 'cover';
+            slicesAvatar.textContent = '';
+            slicesAvatar.classList.remove('default-avatar-user');
+        } else {
+            slicesAvatar.style.backgroundImage = '';
+            slicesAvatar.classList.add('default-avatar-user');
+            slicesAvatar.textContent = '';
+        }
+    }
 }
 
 function showAuthScreen() {
