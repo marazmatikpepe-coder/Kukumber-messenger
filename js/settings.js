@@ -595,6 +595,100 @@ function loadNotificationSettings() {
 }
 
 loadNotificationSettings();
+// ========== ПРОСТЫЕ НАСТРОЙКИ ОФОРМЛЕНИЯ (БЕЗ ОБОЕВ) ==========
 
+let currentThemeColor = localStorage.getItem('kukumber_theme_color') || 'green';
 
+// Цветовые схемы
+const colorThemes = {
+    green: { primary: '#228B22', secondary: '#32CD32', name: 'Зеленый' },
+    blue: { primary: '#1E90FF', secondary: '#63B8FF', name: 'Синий' },
+    red: { primary: '#DC143C', secondary: '#FF6B6B', name: 'Красный' },
+    purple: { primary: '#8A2BE2', secondary: '#BA55D3', name: 'Фиолетовый' },
+    orange: { primary: '#FF8C00', secondary: '#FFB347', name: 'Оранжевый' },
+    pink: { primary: '#FF69B4', secondary: '#FFB6C1', name: 'Розовый' },
+    turquoise: { primary: '#008080', secondary: '#20B2AA', name: 'Бирюзовый' },
+    yellow: { primary: '#FFD700', secondary: '#FFA500', name: 'Желтый' }
+};
 
+function showThemeSettings() {
+    const modalHtml = `
+        <div id="theme-settings-modal" class="modal" style="z-index: 10002;">
+            <div style="background: white; width: 100%; max-width: 400px; border-radius: 28px; overflow: hidden; margin: auto;">
+                <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid #ddd;">
+                    <button onclick="closeThemeSettings()" style="background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 15px;">←</button>
+                    <h3 style="margin: 0;">Оформление</h3>
+                </div>
+                
+                <div style="padding: 20px;">
+                    <div style="font-weight: 600; margin-bottom: 10px;">🎨 Цвет темы</div>
+                    <div id="themes-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const oldModal = document.getElementById('theme-settings-modal');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('theme-settings-modal').classList.remove('hidden');
+    
+    renderSimpleThemesGrid();
+}
+
+function closeThemeSettings() {
+    const modal = document.getElementById('theme-settings-modal');
+    if (modal) modal.remove();
+}
+
+function renderSimpleThemesGrid() {
+    const container = document.getElementById('themes-grid');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    for (const [key, theme] of Object.entries(colorThemes)) {
+        const isActive = currentThemeColor === key;
+        const div = document.createElement('div');
+        div.style.cssText = `
+            background: ${theme.primary};
+            border-radius: 16px;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid ${isActive ? theme.primary : 'transparent'};
+            transition: transform 0.2s;
+        `;
+        div.onclick = () => setSimpleTheme(key);
+        div.innerHTML = `
+            <div style="width: 100%; height: 50px; background: ${theme.secondary}; border-radius: 10px; margin-bottom: 8px;"></div>
+            <span style="font-size: 12px; color: white; font-weight: 500;">${theme.name}</span>
+            ${isActive ? '<div style="color: white; font-size: 14px;">✓</div>' : ''}
+        `;
+        container.appendChild(div);
+    }
+}
+
+function setSimpleTheme(colorKey) {
+    currentThemeColor = colorKey;
+    localStorage.setItem('kukumber_theme_color', colorKey);
+    
+    const theme = colorThemes[colorKey];
+    
+    // Меняем основные цвета
+    document.documentElement.style.setProperty('--forest', theme.primary);
+    document.documentElement.style.setProperty('--lime', theme.secondary);
+    
+    // Меняем градиент у кнопок
+    const gradient = `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`;
+    document.querySelectorAll('.btn-primary, .send-btn, .btn-create-slice, .wizard-next-btn, .wizard-create-btn, .profile-subscribe-btn').forEach(btn => {
+        btn.style.background = gradient;
+    });
+    
+    renderSimpleThemesGrid();
+    showNotification(`Тема "${theme.name}" применена`, 'success');
+}
+
+// Заменяем старую функцию showThemeSettings на новую
+window.showThemeSettings = showThemeSettings;
