@@ -2267,3 +2267,133 @@ input:checked + .slider:before {
         padding: 0 5px 10px 5px !important;
     }
 }
+/* ===== НОЧНОЙ РЕЖИМ ===== */
+body.night-mode {
+    background: #121212;
+}
+
+body.night-mode .chat-item {
+    background: #1e1e1e;
+    border-bottom-color: #2c2c2c;
+}
+
+body.night-mode .chat-item:hover {
+    background: #2a2a2a;
+}
+
+body.night-mode .chat-item.active {
+    background: #2a4a2a;
+}
+
+body.night-mode .chat-item-name,
+body.night-mode .chat-item-preview {
+    color: #e0e0e0;
+}
+
+body.night-mode .chat-item-time {
+    color: #808080;
+}
+
+body.night-mode .settings-header {
+    background: #1e1e1e;
+    border-bottom-color: #2c2c2c;
+}
+
+body.night-mode .settings-header h2 {
+    color: #ffffff;
+}
+
+body.night-mode .settings-footer {
+    color: #808080;
+}
+
+body.night-mode .slice-header {
+    background: #1e1e1e;
+}
+
+body.night-mode .slice-actions {
+    border-top-color: #2c2c2c;
+    background: #1e1e1e;
+}
+
+body.night-mode .slice-hashtag {
+    background: #2d2d2d;
+    color: #ffffff;
+}
+
+body.night-mode .comments-block {
+    background: #121212;
+    border-top-color: #2c2c2c;
+}
+
+body.night-mode .add-comment textarea,
+body.night-mode .reply-form textarea {
+    background: #2d2d2d;
+    color: #ffffff;
+    border-color: #3d3d3d;
+}
+
+body.night-mode .search-result-item {
+    background: #1e1e1e;
+    border-bottom-color: #2c2c2c;
+}
+
+body.night-mode .search-result-name {
+    color: #ffffff;
+}
+
+body.night-mode .user-item {
+    background: #1e1e1e;
+    border-bottom-color: #2c2c2c;
+}
+
+body.night-mode .user-item:hover {
+    background: #2a2a2a;
+}
+
+body.night-mode .user-item-info h4 {
+    color: #ffffff;
+}
+
+body.night-mode .wizard-header {
+    background: #1e1e1e;
+    border-bottom-color: #2c2c2c;
+}
+
+body.night-mode .wizard-header h3 {
+    color: #ffffff;
+}
+
+body.night-mode .wizard-input,
+body.night-mode .wizard-select {
+    background: #2d2d2d;
+    color: #ffffff;
+    border-color: #3d3d3d;
+}
+
+body.night-mode .wizard-input::placeholder {
+    color: #808080;
+}
+
+body.night-mode .channel-type-option {
+    background: #2d2d2d;
+    border-color: #3d3d3d;
+    color: #ffffff;
+}
+
+body.night-mode .selected-member-chip {
+    background: #2a4a2a;
+    color: #ffffff;
+}
+
+body.night-mode .modal {
+    background: rgba(0,0,0,0.8);
+}
+
+body.night-mode .call-container {
+    background: #1a1a1a;
+}
+
+body.night-mode .call-controls-bar {
+    background: rgba(30,30,30,0.9);
+}
