@@ -1051,6 +1051,57 @@ if (sidebar) sidebar.style.background = '#1e1e1e';
 // Нижняя навигация
 const bottomNav = document.querySelector('.bottom-nav');
 if (bottomNav) bottomNav.style.background = '#1e1e1e';
+// Слайсы - карточки постов
+document.querySelectorAll('.slice-card').forEach(card => {
+    card.style.background = '#1e1e1e';
+    card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+});
+
+document.querySelectorAll('.slice-header').forEach(header => {
+    header.style.background = '#1e1e1e';
+});
+
+document.querySelectorAll('.slice-author-name').forEach(name => {
+    name.style.color = '#ffffff';
+});
+
+document.querySelectorAll('.slice-date, .slice-views').forEach(el => {
+    el.style.color = '#808080';
+});
+
+document.querySelectorAll('.slice-text').forEach(text => {
+    text.style.color = '#e0e0e0';
+    text.style.background = '#1e1e1e';
+});
+
+document.querySelectorAll('.slice-hashtag').forEach(tag => {
+    tag.style.background = '#2d2d2d';
+    tag.style.color = '#e0e0e0';
+});
+
+document.querySelectorAll('.slice-actions').forEach(actions => {
+    actions.style.background = '#1e1e1e';
+    actions.style.borderTopColor = '#2c2c2c';
+});
+
+document.querySelectorAll('.slice-action-btn').forEach(btn => {
+    btn.style.color = '#a0a0a0';
+});
+
+document.querySelectorAll('.slice-action-btn.liked').forEach(btn => {
+    btn.style.color = '#ff4757';
+});
+
+// Медиа контент
+document.querySelectorAll('.slice-media').forEach(media => {
+    media.style.background = '#0d0d0d';
+});
+
+// Пустое состояние
+const emptySlices = document.querySelector('.empty-slices');
+if (emptySlices) {
+    emptySlices.style.color = '#808080';
+}
 // Добавляем кнопку ночного режима в меню оформления
 function updateThemeModalWithNightMode() {
     const nightModeBtn = document.getElementById('night-mode-toggle');
