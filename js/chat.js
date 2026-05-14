@@ -626,24 +626,19 @@ function createChatItem(chatId, chatData) {
     }
     
     function finishCreate() {
-        var avatarStyle = '';
-        var avatarClass = '';
-        
+        var avatarStyle = '', avatarContent = '';
         if (avatar && avatar.indexOf('http') === 0) { 
             avatarStyle = 'background-image:url('+avatar+');background-size:cover;'; 
-            avatarClass = '';
+            avatarContent = ''; 
         } else { 
             avatarStyle = '';
-            if (chatData.type === 'group') avatarClass = 'default-avatar-group';
-            else if (chatData.type === 'channel') avatarClass = 'default-avatar-channel';
-            else avatarClass = 'default-avatar-user';
+            avatarContent = chatData.type === 'group' ? '👥' : (chatData.type === 'channel' ? '📢' : '👤'); 
         }
-        
         var time = chatData.lastMessageTime ? formatTime(chatData.lastMessageTime) : '';
         var preview = chatData.lastMessage || 'Нет сообщений';
         if (preview.length > 50) preview = preview.substring(0, 47) + '...';
         
-        div.innerHTML = '<div class="chat-item-avatar"><div class="avatar ' + avatarClass + '" style="'+avatarStyle+'"></div>'+(isOnline?'<div class="online-indicator"></div>':'')+badge+'</div><div class="chat-item-info"><div class="chat-item-header"><span class="chat-item-name">'+escapeHtml(name)+'</span><span class="chat-item-time">'+time+'</span></div><div class="chat-item-preview">'+escapeHtml(preview)+'</div></div>';
+        div.innerHTML = '<div class="chat-item-avatar"><div class="avatar" style="'+avatarStyle+'">'+avatarContent+'</div>'+(isOnline?'<div class="online-indicator"></div>':'')+badge+'</div><div class="chat-item-info"><div class="chat-item-header"><span class="chat-item-name">'+escapeHtml(name)+'</span><span class="chat-item-time">'+time+'</span></div><div class="chat-item-preview">'+escapeHtml(preview)+'</div></div>';
         div.onclick = function() { openChat(chatId, chatData); };
         var chatsList = document.getElementById('chats-list');
         if (chatsList) chatsList.appendChild(div);
