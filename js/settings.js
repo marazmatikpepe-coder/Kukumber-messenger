@@ -616,15 +616,23 @@ function showThemeSettings() {
     
     const modalHtml = `
         <div id="theme-settings-modal" class="modal" style="z-index: 10002;">
-            <div style="background: white; width: 100%; ${isMobile ? 'max-width: 100%' : 'max-width: 500px'}; border-radius: 28px 28px 0 0; overflow: hidden; margin: auto; position: fixed; bottom: 0; left: 0; right: 0; max-height: 85vh; overflow-y: auto;">
-                <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid #ddd; position: sticky; top: 0; background: white; z-index: 10;">
-                    <button onclick="closeThemeSettings()" style="background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 15px;">←</button>
-                    <h3 style="margin: 0;">Оформление</h3>
+            <div style="background: ${nightModeEnabled ? '#1a1a1a' : 'white'}; width: 100%; ${isMobile ? 'max-width: 100%' : 'max-width: 500px'}; border-radius: 28px 28px 0 0; overflow: hidden; margin: auto; position: fixed; bottom: 0; left: 0; right: 0; max-height: 85vh; overflow-y: auto;">
+                <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid ${nightModeEnabled ? '#333' : '#ddd'}; position: sticky; top: 0; background: ${nightModeEnabled ? '#1a1a1a' : 'white'}; z-index: 10;">
+                    <button onclick="closeThemeSettings()" style="background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 15px; color: ${nightModeEnabled ? 'white' : 'black'};">←</button>
+                    <h3 style="margin: 0; color: ${nightModeEnabled ? 'white' : 'black'};">Оформление</h3>
                 </div>
                 
                 <div style="padding: 20px;">
-                    <div style="font-weight: 600; margin-bottom: 15px;">🎨 Цвет темы</div>
-                    <div id="themes-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: ${isMobile ? '10px' : '15px'};"></div>
+                    <!-- Кнопка ночного режима -->
+                    <div style="margin-bottom: 25px;">
+                        <button id="night-mode-toggle" onclick="toggleNightMode(); closeThemeSettings(); setTimeout(() => showThemeSettings(), 100);" 
+                            style="width: 100%; padding: 14px; background: ${nightModeEnabled ? '#333' : '#f0f0f0'}; border: none; border-radius: 16px; font-size: 16px; cursor: pointer; color: ${nightModeEnabled ? 'white' : 'black'}; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                            ${nightModeEnabled ? '🌙 Ночной режим (вкл)' : '☀️ Ночной режим (выкл)'}
+                        </button>
+                    </div>
+                    
+                    <div style="font-weight: 600; margin-bottom: 15px; color: ${nightModeEnabled ? 'white' : 'black'};">🎨 Цвет темы</div>
+                    <div id="themes-grid" style="display: grid; grid-template-columns: repeat(${isMobile ? '3' : '4'}, 1fr); gap: ${isMobile ? '12px' : '15px'};"></div>
                 </div>
             </div>
         </div>
@@ -701,3 +709,64 @@ function setSimpleTheme(colorKey) {
 
 // Заменяем старую функцию showThemeSettings на новую
 window.showThemeSettings = showThemeSettings;
+// ========== НОЧНОЙ РЕЖИМ ==========
+
+let nightModeEnabled = localStorage.getItem('kukumber_night_mode') === 'true' ? true : false;
+
+function toggleNightMode() {
+    nightModeEnabled = !nightModeEnabled;
+    localStorage.setItem('kukumber_night_mode', nightModeEnabled);
+    applyNightMode();
+    showNotification(nightModeEnabled ? 'Ночной режим включён 🌙' : 'Ночной режим выключен ☀️', 'success');
+}
+
+function applyNightMode() {
+    if (nightModeEnabled) {
+        document.body.classList.add('night-mode');
+        document.documentElement.style.setProperty('--bg-dark', '#1a1a1a');
+        document.documentElement.style.setProperty('--text-dark', '#ffffff');
+        document.documentElement.style.setProperty('--border', '#333333');
+        document.documentElement.style.setProperty('--background', '#121212');
+        document.documentElement.style.setProperty('--message-bg', '#2d2d2d');
+        
+        // Меняем фон чата
+        document.querySelector('.chat-area')?.style.setProperty('background', '#121212');
+        document.querySelector('.messages-container')?.style.setProperty('background', '#121212');
+        document.querySelector('.sidebar')?.style.setProperty('background', '#1a1a1a');
+        document.querySelector('.bottom-nav')?.style.setProperty('background', '#1a1a1a');
+        
+        // Меняем цвет текста в настройках
+        document.querySelectorAll('.settings-item span').forEach(el => {
+            el.style.color = '#ffffff';
+        });
+    } else {
+        document.body.classList.remove('night-mode');
+        document.documentElement.style.setProperty('--bg-dark', '#f5f7f5');
+        document.documentElement.style.setProperty('--text-dark', '#2c3e2c');
+        document.documentElement.style.setProperty('--border', '#d4e4d4');
+        document.documentElement.style.setProperty('--background', '#f5f7f5');
+        document.documentElement.style.setProperty('--message-bg', '#ffffff');
+        
+        // Восстанавливаем фон чата
+        const theme = colorThemes[currentThemeColor];
+        document.querySelector('.chat-area')?.style.setProperty('background', theme?.bg || '#f5f7f5');
+        document.querySelector('.messages-container')?.style.setProperty('background', theme?.bg || '#f5f7f5');
+        document.querySelector('.sidebar')?.style.setProperty('background', 'white');
+        document.querySelector('.bottom-nav')?.style.setProperty('background', 'white');
+        
+        // Восстанавливаем цвет текста
+        document.querySelectorAll('.settings-item span').forEach(el => {
+            el.style.color = '';
+        });
+    }
+}
+
+// Добавляем кнопку ночного режима в меню оформления
+function updateThemeModalWithNightMode() {
+    const nightModeBtn = document.getElementById('night-mode-toggle');
+    if (nightModeBtn) {
+        nightModeBtn.textContent = nightModeEnabled ? '🌙 Ночной режим (вкл)' : '☀️ Ночной режим (выкл)';
+    }
+}
+// Применяем ночной режим при загрузке
+applyNightMode();
