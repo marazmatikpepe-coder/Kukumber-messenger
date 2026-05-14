@@ -1590,21 +1590,29 @@ async function searchUsersForChat(query) {
     const users = snapshot.val();
     const results = [];
     
+    const searchQuery = query.replace('@', '');
+    
     for (let uid in users) {
         if (uid === currentUser.uid) continue;
         const user = users[uid];
         const username = (user.username || '').toLowerCase();
         const userTag = (user.userTag || '').toLowerCase().replace('@', '');
         
-        // Поиск по username, userTag и по вводу с @
-        const searchQuery = query.replace('@', '');
-        
         if (username.includes(searchQuery) || userTag.includes(searchQuery)) {
+            // Получаем полную ссылку на аватар
+            let avatarUrl = user.avatar || '';
+            
+            // Если аватар есть, но это не полная ссылка - пробуем восстановить
+            if (avatarUrl && !avatarUrl.startsWith('http')) {
+                avatarUrl = '';
+            }
+            
             results.push({ 
-                uid, 
-                username: user.username,
-                userTag: user.userTag,
-                avatar: user.avatar || ''  // Убедимся что avatar есть
+                uid: uid,
+                username: user.username || 'Пользователь',
+                userTag: user.userTag || '',
+                avatar: avatarUrl,
+                bio: user.bio || ''
             });
         }
         if (results.length >= 20) break;
@@ -1622,32 +1630,47 @@ function renderUsersForNewChat(users, container) {
     
     users.forEach(user => {
         const div = document.createElement('div');
-        div.className = 'user-item';
         div.style.cssText = 'display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s;';
         div.onmouseenter = () => div.style.background = 'var(--background)';
         div.onmouseleave = () => div.style.background = 'white';
         
-        // Правильное отображение аватарки
-        let avatarHtml = '';
+        // СОЗДАЁМ АВАТАРКУ ПРАВИЛЬНО
+        const avatarDiv = document.createElement('div');
+        avatarDiv.style.cssText = 'width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--sage); font-size: 24px; flex-shrink: 0;';
+        
         if (user.avatar && user.avatar.startsWith('http')) {
-            avatarHtml = `<div class="avatar" style="width: 50px; height: 50px; background-image: url(${user.avatar}); background-size: cover; background-position: center; border-radius: 50%;"></div>`;
+            // Если есть аватарка - ставим картинку
+            avatarDiv.style.backgroundImage = `url(${user.avatar})`;
+            avatarDiv.style.backgroundSize = 'cover';
+            avatarDiv.style.backgroundPosition = 'center';
+            avatarDiv.textContent = '';
         } else {
-            avatarHtml = `<div class="avatar" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: var(--sage); border-radius: 50%; font-size: 24px;">👤</div>`;
+            // Если нет аватарки - ставим эмодзи
+            avatarDiv.textContent = '👤';
         }
         
-        div.innerHTML = `
-            ${avatarHtml}
-            <div style="flex: 1;">
-                <div style="font-weight: 600; font-size: 16px;">${escapeHtml(user.username)}</div>
-                <div style="font-size: 12px; color: var(--text-muted);">${user.userTag ? '@' + user.userTag : '@' + user.username.toLowerCase().replace(/\s/g, '')}</div>
-            </div>
-            <div style="color: var(--forest); font-size: 20px;">➤</div>
+        // Информация о пользователе
+        const infoDiv = document.createElement('div');
+        infoDiv.style.flex = '1';
+        infoDiv.innerHTML = `
+            <div style="font-weight: 600; font-size: 16px;">${escapeHtml(user.username)}</div>
+            <div style="font-size: 12px; color: var(--text-muted);">${user.userTag ? '@' + user.userTag : '@' + user.username.toLowerCase().replace(/\s/g, '')}</div>
         `;
+        
+        // Стрелочка
+        const arrowDiv = document.createElement('div');
+        arrowDiv.style.cssText = 'color: var(--forest); font-size: 20px;';
+        arrowDiv.textContent = '➤';
+        
+        div.appendChild(avatarDiv);
+        div.appendChild(infoDiv);
+        div.appendChild(arrowDiv);
         
         div.onclick = () => createNewChatAndOpen(user.uid, user);
         container.appendChild(div);
     });
 }
+
 async function createNewChatAndOpen(otherUserId, otherUser) {
     showNotification('Создание чата...', 'info');
     
