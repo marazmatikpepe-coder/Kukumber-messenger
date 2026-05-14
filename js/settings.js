@@ -647,6 +647,12 @@ function renderSimpleThemesGrid() {
     const container = document.getElementById('themes-grid');
     if (!container) return;
     
+    const isMobile = window.innerWidth <= 768;
+    // На телефоне 3 колонки, на ПК 4
+    container.style.gridTemplateColumns = isMobile ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)';
+    container.style.gap = isMobile ? '12px' : '15px';
+    container.style.padding = isMobile ? '0' : '0';
+    
     container.innerHTML = '';
     
     for (const [key, theme] of Object.entries(colorThemes)) {
@@ -655,17 +661,19 @@ function renderSimpleThemesGrid() {
         div.style.cssText = `
             background: ${theme.primary};
             border-radius: 16px;
-            padding: 12px 8px;
+            padding: ${isMobile ? '10px 6px' : '12px 8px'};
             text-align: center;
             cursor: pointer;
             border: 2px solid ${isActive ? theme.primary : 'transparent'};
             transition: transform 0.2s;
             box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
         `;
         div.onclick = () => setSimpleTheme(key);
         div.innerHTML = `
-            <div style="width: 100%; height: 50px; background: ${theme.secondary}; border-radius: 10px; margin-bottom: 8px;"></div>
-            <span style="font-size: 12px; color: white; font-weight: 500; display: block;">${theme.name}</span>
+            <div style="width: 100%; height: ${isMobile ? '45px' : '50px'}; background: ${theme.secondary}; border-radius: 10px; margin-bottom: 8px;"></div>
+            <span style="font-size: ${isMobile ? '11px' : '12px'}; color: white; font-weight: 500; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${theme.name}</span>
             ${isActive ? '<div style="color: white; font-size: 14px; margin-top: 4px;">✓</div>' : ''}
         `;
         container.appendChild(div);
