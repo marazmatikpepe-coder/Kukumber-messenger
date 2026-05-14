@@ -612,9 +612,11 @@ const colorThemes = {
 };
 
 function showThemeSettings() {
+    const isMobile = window.innerWidth <= 768;
+    
     const modalHtml = `
         <div id="theme-settings-modal" class="modal" style="z-index: 10002;">
-            <div style="background: white; width: 100%; max-width: 500px; border-radius: 28px 28px 0 0; overflow: hidden; margin: auto; position: fixed; bottom: 0; left: 0; right: 0; max-height: 85vh; overflow-y: auto;">
+            <div style="background: white; width: 100%; ${isMobile ? 'max-width: 100%' : 'max-width: 500px'}; border-radius: 28px 28px 0 0; overflow: hidden; margin: auto; position: fixed; bottom: 0; left: 0; right: 0; max-height: 85vh; overflow-y: auto;">
                 <div style="display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid #ddd; position: sticky; top: 0; background: white; z-index: 10;">
                     <button onclick="closeThemeSettings()" style="background: none; border: none; font-size: 24px; cursor: pointer; margin-right: 15px;">←</button>
                     <h3 style="margin: 0;">Оформление</h3>
@@ -622,7 +624,7 @@ function showThemeSettings() {
                 
                 <div style="padding: 20px;">
                     <div style="font-weight: 600; margin-bottom: 15px;">🎨 Цвет темы</div>
-                    <div id="themes-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;"></div>
+                    <div id="themes-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: ${isMobile ? '10px' : '15px'};"></div>
                 </div>
             </div>
         </div>
@@ -636,7 +638,6 @@ function showThemeSettings() {
     
     renderSimpleThemesGrid();
 }
-
 function closeThemeSettings() {
     const modal = document.getElementById('theme-settings-modal');
     if (modal) modal.remove();
