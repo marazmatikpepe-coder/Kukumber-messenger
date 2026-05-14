@@ -776,3 +776,486 @@ function loadContacts() {
 
 // Инициализация
 initChatSounds();
+// ========== КРАСИВЫЙ ПРОФИЛЬ КАНАЛА ==========
+let currentChannelProfileId = null;
+let currentChannelProfileData = null;
+
+function openChannelProfile(chatId) {
+    console.log('openChannelProfile вызван для:', chatId);
+    currentChannelProfileId = chatId;
+    
+    database.ref('chats/' + chatId).once('value').then(snapshot => {
+        const chat = snapshot.val();
+        if (!chat || chat.type !== 'channel') {
+            console.error('Это не канал или чат не найден');
+            return;
+        }
+        currentChannelProfileData = chat;
+        showBeautyChannelProfile(chat);
+    }).catch(err => {
+        console.error('Ошибка загрузки канала:', err);
+        showNotification('Ошибка загрузки профиля канала', 'error');
+    });
+}
+
+function showBeautyChannelProfile(chat) {
+    const membersCount = Object.keys(chat.subscribers || {}).length;
+    const isSubscribed = chat.subscribers ? chat.subscribers[currentUser.uid] : false;
+    const isAdmin = chat.admins ? chat.admins[currentUser.uid] : false;
+    const isOwner = chat.createdBy === currentUser.uid;
+    const isSuperAdmin = window.isSuperAdmin === true;
+    const canEdit = isAdmin || isOwner || isSuperAdmin;
+    const isVerified = chat.verified === true;
+    
+    const bannerStyle = chat.banner ? 
+        (chat.banner.startsWith('#') ? `background: ${chat.banner};` : `background-image: url(${chat.banner}); background-size: cover; background-position: center;`) :
+        'background: linear-gradient(135deg, #228B22, #556B2F);';
+    
+    const modalHtml = `
+        <div id="beauty-channel-profile" class="modal" style="z-index: 10001;">
+            <div style="background: white; width: 100%; max-width: 500px; border-radius: 24px; overflow: hidden; margin: auto; position: relative; max-height: 90vh; overflow-y: auto;">
+                <!-- Баннер -->
+                <div style="${bannerStyle} height: 140px; position: relative;">
+                    ${canEdit ? `<button class="channel-banner-edit-btn" onclick="editChannelBanner()" style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 16px;">✏️</button>` : ''}
+                    <button onclick="closeBeautyChannelProfile()" style="position: absolute; top: 10px; right: 15px; background: rgba(0,0,0,0.5); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 20px; cursor: pointer;">×</button>
+                </div>
+                
+                <!-- Аватарка -->
+                <div style="display: flex; justify-content: center; margin-top: -50px; position: relative; z-index: 2;">
+                    <div style="width: 100px; height: 100px; border-radius: 50%; background: var(--sage); border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 50px; ${chat.avatar ? `background-image: url(${chat.avatar}); background-size: cover;` : ''}">
+                        ${chat.avatar ? '' : '📢'}
+                        ${canEdit ? `<button class="channel-avatar-edit-btn" onclick="editChannelAvatar()" style="position: absolute; bottom: 5px; right: 5px; background: var(--forest); border: none; color: white; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px;">✏️</button>` : ''}
+                    </div>
+                </div>
+                
+                <!-- Информация -->
+                <div style="text-align: center; padding: 15px 20px;">
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                        <h2 style="font-size: 22px; margin: 0;">${escapeHtml(chat.name || 'Канал')}</h2>
+                        ${isVerified ? '<img src="https://i.ibb.co/YTRCNHkq/4e9cba55-b083-46d3-8a30-bff7b1be94c7-1.png" style="width: 20px; height: 20px;" onclick="showVerifiedInfo()">' : ''}
+                    </div>
+                    ${chat.kname ? `<div style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">@${escapeHtml(chat.kname)}</div>` : ''}
+                    <p style="color: var(--text-dark); font-size: 14px; margin-top: 10px;">${escapeHtml(chat.description || 'Нет описания')}</p>
+                    
+                    <div style="margin-top: 15px; padding: 10px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+                        <div style="display: flex; gap: 15px; justify-content: center; align-items: center;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 18px; font-weight: bold;" id="channel-members-count">${membersCount}</div>
+                                <div style="font-size: 12px; color: var(--text-muted);">подписчиков</div>
+                            </div>
+                            <button id="channel-action-btn" style="padding: 8px 24px; border: none; border-radius: 30px; background: ${isSubscribed ? '#dc3545' : 'var(--forest)'}; color: white; font-size: 14px; cursor: pointer;">
+                                ${isSubscribed ? 'Отписаться' : 'Подписаться'}
+                            </button>
+                            <button id="channel-notify-btn" onclick="toggleChannelNotification()" style="width: 40px; height: 40px; border-radius: 50%; border: none; background: var(--background); cursor: pointer; font-size: 20px;">
+                                🔔
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div style="font-size: 13px; color: var(--text-muted); margin-top: 10px;">
+                        ${chat.isPublic ? '🌍 Публичный канал' : '🔒 Приватный канал'}
+                    </div>
+                </div>
+                
+                <!-- Вкладки -->
+                <div style="display: flex; border-top: 1px solid var(--border); background: white;">
+                    <button class="channel-tab-btn active" data-tab="posts" style="flex: 1; padding: 14px; background: none; border: none; cursor: pointer; font-size: 14px;">📷 Посты</button>
+                    <button class="channel-tab-btn" data-tab="info" style="flex: 1; padding: 14px; background: none; border: none; cursor: pointer; font-size: 14px;">ℹ️ Информация</button>
+                    ${canEdit ? `<button class="channel-tab-btn" data-tab="admin" style="flex: 1; padding: 14px; background: none; border: none; cursor: pointer; font-size: 14px;">⚙️ Управление</button>` : ''}
+                </div>
+                
+                <!-- Контент -->
+                <div id="channel-tab-content" style="padding: 15px; min-height: 300px; max-height: 400px; overflow-y: auto;">
+                    <div class="profile-loading">Загрузка...</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const oldModal = document.getElementById('beauty-channel-profile');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('beauty-channel-profile');
+    modal.classList.remove('hidden');
+    
+    // Обновляем количество подписчиков в реальном времени
+    database.ref('chats/' + currentChannelProfileId + '/subscribers').on('value', (snap) => {
+        const count = Object.keys(snap.val() || {}).length;
+        const countEl = document.getElementById('channel-members-count');
+        if (countEl) countEl.textContent = count;
+    });
+    
+    // Обработчики вкладок
+    document.querySelectorAll('.channel-tab-btn').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('.channel-tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const tab = btn.dataset.tab;
+            if (tab === 'posts') loadChannelPostsTab();
+            else if (tab === 'info') loadChannelInfoTab();
+            else if (tab === 'admin') loadChannelAdminTab();
+        };
+    });
+    
+    // Кнопка подписки/отписки
+    const actionBtn = document.getElementById('channel-action-btn');
+    if (actionBtn) {
+        actionBtn.onclick = () => handleChannelSubscribe();
+    }
+    
+    // Загружаем посты по умолчанию
+    loadChannelPostsTab();
+}
+
+function handleChannelSubscribe() {
+    const isSubscribed = currentChannelProfileData.subscribers ? currentChannelProfileData.subscribers[currentUser.uid] : false;
+    
+    if (isSubscribed) {
+        database.ref('chats/' + currentChannelProfileId + '/subscribers/' + currentUser.uid).remove()
+            .then(() => database.ref('userChats/' + currentUser.uid + '/' + currentChannelProfileId).remove())
+            .then(() => {
+                showNotification('Вы отписались от канала', 'info');
+                const btn = document.getElementById('channel-action-btn');
+                if (btn) {
+                    btn.textContent = 'Подписаться';
+                    btn.style.background = 'var(--forest)';
+                }
+            });
+    } else {
+        database.ref('chats/' + currentChannelProfileId + '/subscribers/' + currentUser.uid).set(true)
+            .then(() => database.ref('userChats/' + currentUser.uid + '/' + currentChannelProfileId).set(true))
+            .then(() => {
+                showNotification('Вы подписались на канал!', 'success');
+                const btn = document.getElementById('channel-action-btn');
+                if (btn) {
+                    btn.textContent = 'Отписаться';
+                    btn.style.background = '#dc3545';
+                }
+            });
+    }
+}
+
+function toggleChannelNotification() {
+    const ref = database.ref('channelNotifications/' + currentUser.uid + '/' + currentChannelProfileId);
+    ref.once('value').then(snap => {
+        if (snap.val()) {
+            ref.remove();
+            showNotification('Уведомления выключены', 'info');
+            document.getElementById('channel-notify-btn').style.opacity = '0.5';
+        } else {
+            ref.set(true);
+            showNotification('Уведомления включены', 'success');
+            document.getElementById('channel-notify-btn').style.opacity = '1';
+        }
+    });
+}
+
+function loadChannelPostsTab() {
+    const container = document.getElementById('channel-tab-content');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="profile-loading">Загрузка постов...</div>';
+    
+    database.ref('slices').orderByChild('channelId').equalTo(currentChannelProfileId).once('value', snapshot => {
+        const slices = snapshot.val();
+        container.innerHTML = '';
+        
+        if (!slices || Object.keys(slices).length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-muted);">Нет постов</div>';
+            return;
+        }
+        
+        const posts = Object.entries(slices).map(([id, data]) => ({id, data}));
+        posts.sort((a,b) => (b.data.createdAt||0) - (a.data.createdAt||0));
+        
+        posts.forEach(post => {
+            container.appendChild(createChannelPostCard(post.id, post.data));
+        });
+    });
+}
+
+function createChannelPostCard(sliceId, sliceData) {
+    const div = document.createElement('div');
+    div.className = 'slice-card';
+    div.style.marginBottom = '15px';
+    div.style.borderRadius = '16px';
+    div.style.overflow = 'hidden';
+    div.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+    
+    let mediaHtml = '';
+    if (sliceData.mediaUrl) {
+        mediaHtml = `<div><img src="${sliceData.mediaUrl}" style="width: 100%; max-height: 200px; object-fit: cover; cursor: pointer;" onclick="openSliceLightbox('${sliceData.mediaUrl}')"></div>`;
+    }
+    
+    div.innerHTML = `
+        <div style="padding: 12px;">
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">${formatSliceDateNew(sliceData.createdAt)}</div>
+            <div style="font-size: 14px; line-height: 1.4;">${escapeHtml(sliceData.text || '')}</div>
+            ${mediaHtml}
+            <div style="display: flex; gap: 15px; margin-top: 10px; font-size: 13px; color: var(--text-muted);">
+                <span>❤️ ${sliceData.likesCount || 0}</span>
+                <span>💬 ${sliceData.commentsCount || 0}</span>
+                <span>🔄 ${sliceData.repostsCount || 0}</span>
+            </div>
+        </div>
+    `;
+    return div;
+}
+
+function loadChannelInfoTab() {
+    const container = document.getElementById('channel-tab-content');
+    if (!container) return;
+    
+    const chat = currentChannelProfileData;
+    
+    database.ref('users/' + chat.createdBy).once('value', ownerSnap => {
+        const owner = ownerSnap.val();
+        
+        container.innerHTML = `
+            <div style="padding: 5px;">
+                <div style="margin-bottom: 15px;">
+                    <strong>📅 Дата создания</strong><br>
+                    <span style="color: var(--text-muted);">${chat.createdAt ? new Date(chat.createdAt).toLocaleDateString() : 'Неизвестно'}</span>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>👑 Владелец</strong><br>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px; cursor: pointer;" onclick="openUserProfile('${chat.createdBy}')">
+                        <div style="width: 36px; height: 36px; border-radius: 50%; background: var(--sage); display: flex; align-items: center; justify-content: center; ${owner?.avatar ? `background-image: url(${owner.avatar}); background-size: cover;` : ''}">${!owner?.avatar ? '👤' : ''}</div>
+                        <span>${owner ? escapeHtml(owner.username) : 'Неизвестен'}</span>
+                    </div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>👥 Подписчики</strong>
+                    <div id="channel-subscribers-list" style="margin-top: 8px; max-height: 250px; overflow-y: auto;"></div>
+                </div>
+            </div>
+        `;
+        
+        // Загружаем подписчиков
+        const subscribers = chat.subscribers || {};
+        const subscriberIds = Object.keys(subscribers);
+        const subscribersContainer = document.getElementById('channel-subscribers-list');
+        if (subscribersContainer) {
+            if (subscriberIds.length === 0) {
+                subscribersContainer.innerHTML = '<div style="color: var(--text-muted);">Нет подписчиков</div>';
+            } else {
+                subscriberIds.forEach(uid => {
+                    database.ref('users/' + uid).once('value', userSnap => {
+                        const user = userSnap.val();
+                        if (!user) return;
+                        const div = document.createElement('div');
+                        div.style.cssText = 'display: flex; align-items: center; gap: 10px; padding: 8px; border-bottom: 1px solid var(--border); cursor: pointer;';
+                        div.onclick = () => openUserProfile(uid);
+                        div.innerHTML = `
+                            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--sage); display: flex; align-items: center; justify-content: center; ${user.avatar ? `background-image: url(${user.avatar}); background-size: cover;` : ''}">${!user.avatar ? '👤' : ''}</div>
+                            <div>
+                                <div style="font-weight: 500;">${escapeHtml(user.username)}</div>
+                                <div style="font-size: 11px; color: var(--text-muted);">${user.userTag ? '@' + user.userTag : ''}</div>
+                            </div>
+                        `;
+                        subscribersContainer.appendChild(div);
+                    });
+                });
+            }
+        }
+    });
+}
+
+function loadChannelAdminTab() {
+    const container = document.getElementById('channel-tab-content');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div style="padding: 10px;">
+            <div class="setting-item" onclick="editChannelInfo()" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer;">
+                <span>✏️ Редактировать название и описание</span>
+                <span>›</span>
+            </div>
+            <div class="setting-item" onclick="editChannelBanner()" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer;">
+                <span>🎨 Изменить баннер</span>
+                <span>›</span>
+            </div>
+            <div class="setting-item" onclick="editChannelAvatar()" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer;">
+                <span>🖼️ Изменить аватарку</span>
+                <span>›</span>
+            </div>
+            <div class="setting-item">
+                <span>💬 Комментарии</span>
+                <label class="switch">
+                    <input type="checkbox" id="channel-comments-toggle" ${currentChannelProfileData.commentsEnabled !== false ? 'checked' : ''} onchange="toggleChannelComments(this.checked)">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="setting-item" onclick="generateChannelInviteLink()" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer;">
+                <span>🔗 Ссылка-приглашение</span>
+                <span>›</span>
+            </div>
+            <div class="setting-item" onclick="deleteChannel()" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); cursor: pointer;">
+                <span style="color: #dc3545;">🗑️ Удалить канал</span>
+                <span>›</span>
+            </div>
+        </div>
+    `;
+}
+
+function editChannelInfo() {
+    const newName = prompt('Новое название канала:', currentChannelProfileData.name);
+    const newDesc = prompt('Новое описание:', currentChannelProfileData.description || '');
+    if (newName && newName.trim()) {
+        database.ref('chats/' + currentChannelProfileId).update({
+            name: newName.trim(),
+            description: newDesc?.trim() || ''
+        }).then(() => {
+            showNotification('Информация канала обновлена!', 'success');
+            openChannelProfile(currentChannelProfileId);
+        });
+    }
+}
+
+function editChannelBanner() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,image/gif';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        showNotification('Загрузка баннера...', 'info');
+        try {
+            const url = await uploadToImgBB(file);
+            await database.ref('chats/' + currentChannelProfileId).update({ banner: url });
+            showNotification('Баннер обновлён!', 'success');
+            openChannelProfile(currentChannelProfileId);
+        } catch(err) {
+            showNotification('Ошибка загрузки', 'error');
+        }
+    };
+    input.click();
+}
+
+function editChannelAvatar() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        showNotification('Загрузка аватара...', 'info');
+        try {
+            const url = await uploadToImgBB(file);
+            await database.ref('chats/' + currentChannelProfileId).update({ avatar: url });
+            showNotification('Аватар обновлён!', 'success');
+            openChannelProfile(currentChannelProfileId);
+        } catch(err) {
+            showNotification('Ошибка загрузки', 'error');
+        }
+    };
+    input.click();
+}
+
+function toggleChannelComments(enabled) {
+    database.ref('chats/' + currentChannelProfileId).update({ commentsEnabled: enabled }).then(() => {
+        showNotification(enabled ? 'Комментарии включены' : 'Комментарии выключены', 'success');
+    });
+}
+
+function generateChannelInviteLink() {
+    const link = `${window.location.origin}${window.location.pathname}?joinChannel=${currentChannelProfileData.kname || currentChannelProfileId}`;
+    const modalHtml = `
+        <div id="invite-link-modal" class="modal" style="z-index: 10002;">
+            <div style="background: white; width: 350px; border-radius: 20px; padding: 20px; margin: auto;">
+                <h3 style="margin: 0 0 15px 0;">Ссылка-приглашение</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <input type="text" value="${link}" readonly style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 10px;">
+                    <button onclick="copyInviteLink('${link}')" style="padding: 10px 20px; background: var(--forest); color: white; border: none; border-radius: 10px; cursor: pointer;">Копировать</button>
+                </div>
+                <button onclick="closeInviteModal()" class="btn-secondary" style="width: 100%;">Закрыть</button>
+            </div>
+        </div>
+    `;
+    const old = document.getElementById('invite-link-modal');
+    if (old) old.remove();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('invite-link-modal').classList.remove('hidden');
+}
+
+function copyInviteLink(link) {
+    navigator.clipboard.writeText(link);
+    showNotification('Ссылка скопирована!', 'success');
+}
+
+function closeInviteModal() {
+    const modal = document.getElementById('invite-link-modal');
+    if (modal) modal.remove();
+}
+
+function deleteChannel() {
+    if (!confirm('Удалить канал навсегда? Это действие необратимо!')) return;
+    database.ref('chats/' + currentChannelProfileId).remove().then(() => {
+        database.ref('messages/' + currentChannelProfileId).remove();
+        showNotification('Канал удалён', 'info');
+        closeBeautyChannelProfile();
+        closeChat();
+        loadChats();
+    });
+}
+
+function closeBeautyChannelProfile() {
+    const modal = document.getElementById('beauty-channel-profile');
+    if (modal) modal.remove();
+    if (currentChannelProfileId) {
+        database.ref('chats/' + currentChannelProfileId + '/subscribers').off();
+    }
+    currentChannelProfileId = null;
+    currentChannelProfileData = null;
+}
+
+function formatSliceDateNew(timestamp) {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
+    if (diff < 60) return 'только что';
+    if (diff < 3600) return Math.floor(diff/60) + ' мин назад';
+    if (diff < 86400) return 'сегодня';
+    return date.toLocaleDateString('ru-RU');
+}
+
+function openSliceLightbox(url) {
+    const lightbox = document.getElementById('image-lightbox');
+    const lightboxImg = document.getElementById('lightbox-image');
+    if (lightbox && lightboxImg) {
+        lightboxImg.src = url;
+        lightbox.classList.remove('hidden');
+    }
+}
+
+function showVerifiedInfo() {
+    alert('Этот канал имеет подтверждённый статус верификации ✅');
+}
+
+// ========== ПЕРЕХВАТ ПРИГЛАШЕНИЙ ==========
+function checkChannelInvite() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const joinChannelId = urlParams.get('joinChannel');
+    if (joinChannelId && currentUser) {
+        database.ref('chats').orderByChild('kname').equalTo(joinChannelId).once('value', snapshot => {
+            let channelId = null;
+            snapshot.forEach(child => {
+                if (child.val().type === 'channel') channelId = child.key;
+            });
+            if (!channelId) channelId = joinChannelId;
+            
+            database.ref('chats/' + channelId).once('value', snap => {
+                const channel = snap.val();
+                if (channel && channel.type === 'channel') {
+                    showNotification('Вас пригласили в канал!', 'info');
+                    setTimeout(() => openChannelProfile(channelId), 500);
+                }
+            });
+        });
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}
+
+setTimeout(checkChannelInvite, 1500);
