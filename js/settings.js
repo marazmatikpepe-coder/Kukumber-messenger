@@ -723,44 +723,261 @@ function toggleNightMode() {
 function applyNightMode() {
     if (nightModeEnabled) {
         document.body.classList.add('night-mode');
-        document.documentElement.style.setProperty('--bg-dark', '#1a1a1a');
-        document.documentElement.style.setProperty('--text-dark', '#ffffff');
-        document.documentElement.style.setProperty('--border', '#333333');
+        
+        // Основные цвета
         document.documentElement.style.setProperty('--background', '#121212');
+        document.documentElement.style.setProperty('--bg-dark', '#1e1e1e');
+        document.documentElement.style.setProperty('--text-dark', '#ffffff');
+        document.documentElement.style.setProperty('--text-light', '#a0a0a0');
+        document.documentElement.style.setProperty('--text-muted', '#808080');
+        document.documentElement.style.setProperty('--border', '#2c2c2c');
+        document.documentElement.style.setProperty('--shadow', 'rgba(0,0,0,0.3)');
         document.documentElement.style.setProperty('--message-bg', '#2d2d2d');
+        document.documentElement.style.setProperty('--sage', '#2a4a2a');
+        document.documentElement.style.setProperty('--olive', '#3a5a3a');
         
-        // Меняем фон чата
-        document.querySelector('.chat-area')?.style.setProperty('background', '#121212');
-        document.querySelector('.messages-container')?.style.setProperty('background', '#121212');
-        document.querySelector('.sidebar')?.style.setProperty('background', '#1a1a1a');
-        document.querySelector('.bottom-nav')?.style.setProperty('background', '#1a1a1a');
+        // Фон чата
+        const chatArea = document.querySelector('.chat-area');
+        const messagesContainer = document.querySelector('.messages-container');
+        const sidebar = document.querySelector('.sidebar');
+        const bottomNav = document.querySelector('.bottom-nav');
+        const settingsContainer = document.querySelector('.settings-container');
         
-        // Меняем цвет текста в настройках
-        document.querySelectorAll('.settings-item span').forEach(el => {
-            el.style.color = '#ffffff';
+        if (chatArea) chatArea.style.background = '#121212';
+        if (messagesContainer) messagesContainer.style.background = '#121212';
+        if (sidebar) sidebar.style.background = '#1e1e1e';
+        if (bottomNav) bottomNav.style.background = '#1e1e1e';
+        if (settingsContainer) settingsContainer.style.background = '#121212';
+        
+        // Шапка чата
+        const chatHeader = document.querySelector('.chat-header');
+        if (chatHeader) {
+            chatHeader.style.background = '#1e1e1e';
+            chatHeader.style.borderBottomColor = '#2c2c2c';
+        }
+        
+        // Сообщения
+        document.querySelectorAll('.message.received').forEach(msg => {
+            msg.style.background = '#2d2d2d';
+            msg.style.color = '#ffffff';
         });
+        
+        document.querySelectorAll('.message.sent').forEach(msg => {
+            const theme = colorThemes[currentThemeColor];
+            msg.style.background = `linear-gradient(135deg, ${theme?.primary || '#228B22'}, ${theme?.secondary || '#32CD32'})`;
+        });
+        
+        // Поля ввода
+        const messageInput = document.querySelector('#message-input');
+        if (messageInput) {
+            messageInput.style.background = '#2d2d2d';
+            messageInput.style.color = '#ffffff';
+            messageInput.style.borderColor = '#3d3d3d';
+        }
+        
+        // Настройки - секции и пункты
+        document.querySelectorAll('.settings-section').forEach(section => {
+            section.style.background = '#1e1e1e';
+        });
+        
+        document.querySelectorAll('.settings-item').forEach(item => {
+            item.style.background = '#1e1e1e';
+            item.style.borderBottomColor = '#2c2c2c';
+        });
+        
+        document.querySelectorAll('.settings-item span').forEach(span => {
+            if (!span.classList.contains('settings-icon')) {
+                span.style.color = '#ffffff';
+            }
+        });
+        
+        document.querySelectorAll('.settings-value').forEach(val => {
+            val.style.color = '#a0a0a0';
+        });
+        
+        // Профиль в настройках
+        const settingsProfile = document.querySelector('.settings-profile');
+        if (settingsProfile) {
+            settingsProfile.style.background = '#1e1e1e';
+        }
+        
+        // Карточки слайсов
+        document.querySelectorAll('.slice-card').forEach(card => {
+            card.style.background = '#1e1e1e';
+            card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3)';
+        });
+        
+        document.querySelectorAll('.slice-text').forEach(text => {
+            text.style.color = '#e0e0e0';
+        });
+        
+        document.querySelectorAll('.slice-author-name').forEach(name => {
+            name.style.color = '#ffffff';
+        });
+        
+        document.querySelectorAll('.slice-date, .slice-views').forEach(date => {
+            date.style.color = '#808080';
+        });
+        
+        // Комментарии
+        document.querySelectorAll('.comment-item').forEach(comment => {
+            comment.style.background = '#2d2d2d';
+        });
+        
+        document.querySelectorAll('.comment-author-name').forEach(name => {
+            name.style.color = '#ffffff';
+        });
+        
+        document.querySelectorAll('.comment-text').forEach(text => {
+            text.style.color = '#e0e0e0';
+        });
+        
+        // Модальные окна
+        document.querySelectorAll('.modal-content, .profile-modal-content').forEach(modal => {
+            modal.style.background = '#1e1e1e';
+        });
+        
+        document.querySelectorAll('.modal-header').forEach(header => {
+            header.style.background = '#1e1e1e';
+            header.style.borderBottomColor = '#2c2c2c';
+        });
+        
+        // Поиск
+        const searchInput = document.querySelector('#global-search-input');
+        if (searchInput) {
+            searchInput.style.background = '#2d2d2d';
+            searchInput.style.color = '#ffffff';
+            searchInput.style.borderColor = '#3d3d3d';
+        }
+        
+        // Вкладки
+        document.querySelectorAll('.profile-tab-btn, .channel-tab-btn-ui, .group-tab-btn-ui').forEach(tab => {
+            tab.style.background = '#1e1e1e';
+            tab.style.color = '#a0a0a0';
+        });
+        
+        document.querySelectorAll('.profile-tab-btn.active, .channel-tab-btn-ui.active, .group-tab-btn-ui.active').forEach(tab => {
+            tab.style.color = 'var(--forest)';
+            tab.style.borderBottomColor = 'var(--forest)';
+        });
+        
+        // Баннер в профиле
+        document.querySelectorAll('.profile-banner').forEach(banner => {
+            if (!banner.style.backgroundImage || banner.style.backgroundImage === 'none') {
+                banner.style.background = 'linear-gradient(135deg, #2a4a2a, #3a5a3a)';
+            }
+        });
+        
+        // Кнопки
+        document.querySelectorAll('.btn-secondary').forEach(btn => {
+            btn.style.background = '#2d2d2d';
+            btn.style.borderColor = '#3d3d3d';
+            btn.style.color = '#ffffff';
+        });
+        
+        document.querySelectorAll('.btn-danger').forEach(btn => {
+            btn.style.background = '#dc3545';
+        });
+        
     } else {
         document.body.classList.remove('night-mode');
-        document.documentElement.style.setProperty('--bg-dark', '#f5f7f5');
-        document.documentElement.style.setProperty('--text-dark', '#2c3e2c');
-        document.documentElement.style.setProperty('--border', '#d4e4d4');
-        document.documentElement.style.setProperty('--background', '#f5f7f5');
-        document.documentElement.style.setProperty('--message-bg', '#ffffff');
         
-        // Восстанавливаем фон чата
+        // Сбрасываем цвета на светлые
         const theme = colorThemes[currentThemeColor];
-        document.querySelector('.chat-area')?.style.setProperty('background', theme?.bg || '#f5f7f5');
-        document.querySelector('.messages-container')?.style.setProperty('background', theme?.bg || '#f5f7f5');
-        document.querySelector('.sidebar')?.style.setProperty('background', 'white');
-        document.querySelector('.bottom-nav')?.style.setProperty('background', 'white');
         
-        // Восстанавливаем цвет текста
-        document.querySelectorAll('.settings-item span').forEach(el => {
-            el.style.color = '';
+        document.documentElement.style.setProperty('--background', '#f5f7f5');
+        document.documentElement.style.setProperty('--bg-dark', '#ffffff');
+        document.documentElement.style.setProperty('--text-dark', '#2c3e2c');
+        document.documentElement.style.setProperty('--text-light', '#6b8e6b');
+        document.documentElement.style.setProperty('--text-muted', '#94a894');
+        document.documentElement.style.setProperty('--border', '#d4e4d4');
+        document.documentElement.style.setProperty('--shadow', 'rgba(47,79,47,0.15)');
+        document.documentElement.style.setProperty('--message-bg', '#ffffff');
+        document.documentElement.style.setProperty('--sage', '#9DC183');
+        document.documentElement.style.setProperty('--olive', '#556B2F');
+        
+        // Восстанавливаем фон
+        const chatArea = document.querySelector('.chat-area');
+        const messagesContainer = document.querySelector('.messages-container');
+        const sidebar = document.querySelector('.sidebar');
+        const bottomNav = document.querySelector('.bottom-nav');
+        
+        if (chatArea) chatArea.style.background = '';
+        if (messagesContainer) messagesContainer.style.background = '';
+        if (sidebar) sidebar.style.background = '';
+        if (bottomNav) bottomNav.style.background = '';
+        
+        // Шапка чата
+        const chatHeader = document.querySelector('.chat-header');
+        if (chatHeader) {
+            chatHeader.style.background = '';
+            chatHeader.style.borderBottomColor = '';
+        }
+        
+        // Сообщения
+        document.querySelectorAll('.message.received').forEach(msg => {
+            msg.style.background = '';
+            msg.style.color = '';
+        });
+        
+        // Поля ввода
+        const messageInput = document.querySelector('#message-input');
+        if (messageInput) {
+            messageInput.style.background = '';
+            messageInput.style.color = '';
+            messageInput.style.borderColor = '';
+        }
+        
+        // Настройки
+        document.querySelectorAll('.settings-section').forEach(section => {
+            section.style.background = '';
+        });
+        
+        document.querySelectorAll('.settings-item').forEach(item => {
+            item.style.background = '';
+            item.style.borderBottomColor = '';
+        });
+        
+        document.querySelectorAll('.settings-item span').forEach(span => {
+            if (!span.classList.contains('settings-icon')) {
+                span.style.color = '';
+            }
+        });
+        
+        // Карточки слайсов
+        document.querySelectorAll('.slice-card').forEach(card => {
+            card.style.background = '';
+            card.style.boxShadow = '';
+        });
+        
+        document.querySelectorAll('.slice-text').forEach(text => {
+            text.style.color = '';
+        });
+        
+        // Комментарии
+        document.querySelectorAll('.comment-item').forEach(comment => {
+            comment.style.background = '';
+        });
+        
+        // Модальные окна
+        document.querySelectorAll('.modal-content, .profile-modal-content').forEach(modal => {
+            modal.style.background = '';
+        });
+        
+        // Вкладки
+        document.querySelectorAll('.profile-tab-btn, .channel-tab-btn-ui, .group-tab-btn-ui').forEach(tab => {
+            tab.style.background = '';
+            tab.style.color = '';
+        });
+        
+        // Кнопки
+        document.querySelectorAll('.btn-secondary').forEach(btn => {
+            btn.style.background = '';
+            btn.style.borderColor = '';
+            btn.style.color = '';
         });
     }
 }
-
 // Добавляем кнопку ночного режима в меню оформления
 function updateThemeModalWithNightMode() {
     const nightModeBtn = document.getElementById('night-mode-toggle');
