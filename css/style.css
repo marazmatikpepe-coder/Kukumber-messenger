@@ -900,3 +900,63 @@ body.night-mode .btn-secondary {
     border-color: #3a3a3a !important;
     color: #e0e0e0 !important;
 }
+/* ===== НИЖНЯЯ НАВИГАЦИЯ (ТЁМНЫЙ РЕЖИМ) ===== */
+.bottom-nav {
+    height: 60px;
+    background: white;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+}
+
+.nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-light);
+    transition: color 0.2s;
+}
+
+.nav-item.active {
+    color: var(--forest);
+}
+
+.nav-icon {
+    font-size: 24px;
+}
+
+.nav-icon img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
+.nav-label {
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+/* Тёмный режим для нижней навигации */
+body.night-mode .bottom-nav {
+    background: #1e1e1e !important;
+    border-top-color: #3a3a3a !important;
+}
+
+body.night-mode .nav-item {
+    color: #888888 !important;
+}
+
+body.night-mode .nav-item.active {
+    color: var(--forest) !important;
+}
+
+body.night-mode .nav-label {
+    color: inherit !important;
+}
