@@ -60,9 +60,6 @@ function loadUserData() {
             }
             
             // ... остальной код
-        }
-    });
-}
             // Обновляем аватарку в Slices
             var slicesAvatar = document.getElementById('slices-user-avatar');
             if (slicesAvatar) {
