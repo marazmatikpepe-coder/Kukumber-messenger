@@ -1605,3 +1605,32 @@ html {
     cursor: pointer;
     flex: 1;
 }
+/* ФИКС: СООБЩЕНИЯ НЕ СПЛЮЩИВАЮТСЯ */
+.messages-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto !important;
+    padding: 15px;
+}
+
+.message {
+    max-width: 80%;
+    width: auto;
+    padding: 10px 14px;
+    border-radius: 16px;
+    display: block;
+    flex-shrink: 0;
+}
+
+.message-text {
+    word-break: break-word !important;
+    white-space: normal !important;
+    overflow-wrap: break-word;
+}
+
+.message .message-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
