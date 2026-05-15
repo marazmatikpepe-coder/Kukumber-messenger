@@ -346,56 +346,25 @@ var currentImageIndex = 0;
 var pendingGifs = [];
 
 function handleFileSelect(event) {
-    var originalFiles = Array.from(event.target.files);
-    if (!originalFiles.length) return;
+    var files = Array.from(event.target.files);
+    if (!files.length) return;
     
-    // ФИКС ДЛЯ SAMSUNG: конвертируем файлы из галереи
-    var files = [];
-    for (var i = 0; i < originalFiles.length; i++) {
-        var file = originalFiles[i];
-        // Если файл не имеет типа, но имеет имя — это файл из галереи Samsung
-        if (!file.type && file.name && (file.name.match(/\.(jpg|jpeg|png|gif)$/i))) {
-            console.log('Samsung: конвертируем файл', file.name);
-            var newFile = new File([file], file.name, { type: 'image/jpeg' });
-            files.push(newFile);
-        } else {
-            files.push(file);
-        }
-    }
-    
-    console.log('Выбрано файлов:', files.length);
-    
-    files.forEach(file => {
+    files.forEach(function(file) {
         var isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+        var isVideo = file.type.startsWith('video/');
+        var isImage = file.type.startsWith('image/') && !isGif;
         
-        if (!file.type.startsWith('image/') && !isGif) {
-            showNotification('⚠️ ' + file.name + ' — не изображение и не GIF', 'error');
-            return;
-        }
-        
-        if (file.size > 15 * 1024 * 1024) {
-            showNotification('⚠️ ' + file.name + ' — слишком большой (макс. 15MB)', 'error');
-            return;
-        }
-        
-        if (isGif) {
+        if (isVideo) {
+            sendVideoMessage(file);
+        } else if (isGif) {
             pendingGifs.push(file);
-        } else if (file.type.startsWith('image/')) {
-            pendingImages.push({
-                file: file,
-                caption: ''
-            });
+        } else if (isImage) {
+            pendingImages.push({ file: file, caption: '' });
         }
     });
     
-    if (pendingGifs.length > 0) {
-        sendAllGifs();
-    }
-    
-    if (pendingImages.length > 0) {
-        currentImageIndex = 0;
-        showImagePreview();
-    }
+    if (pendingGifs.length) sendAllGifs();
+    if (pendingImages.length) showImagePreview();
     
     event.target.value = '';
 }
