@@ -139,41 +139,37 @@
                         </div>
                         <h2>Выберите чат</h2>
                     </div>
-                    
                     <div id="active-chat" class="active-chat hidden">
-                        <div class="chat-header">
-                            <button class="back-btn" onclick="closeChat()">←</button>
-                            <div class="chat-user-info" onclick="showChatInfo()">
-                                <div class="avatar" id="chat-avatar">👤</div>
-                                <div>
-                                    <h3 id="chat-username">Пользователь</h3>
-                                    <span id="chat-status">был(а) недавно</span>
-                                </div>
-                            </div>
-                            <div class="chat-actions">
-                                <button onclick="startVoiceCall()" class="call-btn">📞</button>
-                                <button onclick="startVideoCall()" class="call-btn">📹</button>
-                            </div>
-                        </div>
-                        
-                        <div class="messages-container" id="messages-container"></div>
-                        
-                        <div class="message-input-area" id="message-input-area">
-                            <button id="attach-file-btn" class="attach-btn">
-                                <img src="https://i.ibb.co/bRjHz7T5/Picsart-26-04-10-15-45-03-668.png" alt="Файл" style="width: 50px; height: 50px;">
-                            </button>
-                            <input type="file" id="file-input" accept="image/*,image/gif,video/*" multiple style="display:none;">
-                            
-                            <input type="text" id="message-input" placeholder="Сообщение..." onkeypress="handleMessageKeyPress(event)" oninput="onTyping()">
-                            
-                            <button id="sticker-btn" class="emoji-btn" onclick="toggleEmojiPicker()">😊</button>
-                            <button id="voice-record-btn" class="voice-btn" ontouchstart="startRecording()" ontouchend="stopRecording()" onmousedown="startRecording()" onmouseup="stopRecording()">🎤</button>
-                            <button id="send-btn" class="send-btn" onclick="sendMessage()">➤</button>
-                        </div>
-                    </div>
-                </main>
+    <div class="chat-header">
+        <button class="back-btn" onclick="closeChat()">←</button>
+        <div class="chat-user-info" onclick="showChatInfo()">
+            <div class="avatar" id="chat-avatar">👤</div>
+            <div>
+                <h3 id="chat-username">Пользователь</h3>
+                <span id="chat-status">был(а) недавно</span>
             </div>
         </div>
+        <div class="chat-actions">
+            <button onclick="startVoiceCall()" class="call-btn">📞</button>
+            <button onclick="startVideoCall()" class="call-btn">📹</button>
+        </div>
+    </div>
+    
+    <div class="messages-container" id="messages-container"></div>
+    
+    <div class="message-input-area" id="message-input-area">
+        <button id="attach-file-btn" class="attach-btn">
+            <img src="https://i.ibb.co/bRjHz7T5/Picsart-26-04-10-15-45-03-668.png" alt="Файл" style="width: 50px; height: 50px;">
+        </button>
+        <input type="file" id="file-input" accept="image/*,image/gif,video/*" multiple style="display:none;">
+        
+        <input type="text" id="message-input" placeholder="Сообщение..." onkeypress="handleMessageKeyPress(event)" oninput="onTyping()">
+        
+        <button id="sticker-btn" class="emoji-btn" onclick="toggleEmojiPicker()">😊</button>
+        <button id="voice-record-btn" class="voice-btn" onclick="startVoiceRecording()" onmouseup="stopVoiceRecording()" ontouchend="stopVoiceRecording()">🎤</button>
+        <button id="send-btn" class="send-btn" onclick="sendMessage()">➤</button>
+    </div>
+</div>
 
         <!-- ВКЛАДКА SLICES -->
         <div id="reels-tab" class="tab-content hidden">
