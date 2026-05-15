@@ -454,6 +454,7 @@ function closeChat() {
 }
 
 // ========== СООБЩЕНИЯ ==========
+// ========== СООБЩЕНИЯ ==========
 function loadMessages(chatId) {
     var container = document.getElementById('messages-container');
     if (!container) return;
@@ -462,6 +463,15 @@ function loadMessages(chatId) {
     loadedMessageIds.clear();
     
     if (messagesListener) messagesListener.off();
+    
+    // Флаг для авто-прокрутки
+    var shouldAutoScroll = true;
+    
+    // Отслеживаем, прокручивает ли пользователь вручную
+    container.addEventListener('scroll', function() {
+        var isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+        shouldAutoScroll = isAtBottom;
+    });
     
     messagesListener = database.ref('messages/'+chatId).orderByChild('timestamp').limitToLast(50);
     messagesListener.on('child_added', function(snapshot) {
@@ -473,6 +483,13 @@ function loadMessages(chatId) {
         
         message.id = messageId;
         createMessageElement(message);
+        
+        // Автопрокрутка вниз только если пользователь внизу
+        if (shouldAutoScroll) {
+            setTimeout(function() {
+                container.scrollTop = container.scrollHeight;
+            }, 50);
+        }
         
         if (message.senderId !== currentUser.uid) {
             if (typeof playReceiveSound === 'function') {
@@ -495,8 +512,101 @@ function loadMessages(chatId) {
         if (msgElement) msgElement.remove();
         loadedMessageIds.delete(removedId);
     });
+    
+    // Загружаем старые сообщения при прокрутке вверх
+    var lastLoadedTimestamp = null;
+    var isLoadingMore = false;
+    
+    container.addEventListener('scroll', function() {
+        if (container.scrollTop < 100 && !isLoadingMore) {
+            loadMoreMessages(chatId, lastLoadedTimestamp);
+        }
+    });
+    
+    function loadMoreMessages(chatId, beforeTimestamp) {
+        isLoadingMore = true;
+        var query = database.ref('messages/'+chatId).orderByChild('timestamp');
+        if (beforeTimestamp) {
+            query = query.endAt(beforeTimestamp - 1);
+        }
+        query.limitToLast(20).once('value').then(function(snapshot) {
+            var messages = snapshot.val();
+            if (messages) {
+                var messageKeys = Object.keys(messages);
+                if (messageKeys.length > 0) {
+                    var oldScrollHeight = container.scrollHeight;
+                    
+                    messageKeys.forEach(function(key) {
+                        var message = messages[key];
+                        if (!loadedMessageIds.has(key)) {
+                            loadedMessageIds.add(key);
+                            message.id = key;
+                            prependMessageElement(message);
+                        }
+                    });
+                    
+                    // Сохраняем позицию прокрутки
+                    var newScrollHeight = container.scrollHeight;
+                    container.scrollTop = newScrollHeight - oldScrollHeight;
+                    
+                    // Обновляем lastLoadedTimestamp
+                    var oldestMsg = messages[messageKeys[0]];
+                    if (oldestMsg && oldestMsg.timestamp) {
+                        lastLoadedTimestamp = oldestMsg.timestamp;
+                    }
+                }
+            }
+            isLoadingMore = false;
+        }).catch(function() {
+            isLoadingMore = false;
+        });
+    }
 }
 
+function prependMessageElement(message) {
+    var container = document.getElementById('messages-container');
+    if (!container) return;
+    
+    var div = document.createElement('div');
+    var isSent = message.senderId === currentUser.uid;
+    div.className = 'message ' + (isSent ? 'sent' : 'received');
+    div.setAttribute('data-message-id', message.id);
+    div.setAttribute('data-sender-id', message.senderId);
+    
+    var content = '';
+    
+    if (message.type === 'image') {
+        content = '<div class="message-image" onclick="openLightbox(\''+message.imageUrl+'\')"><img src="'+message.imageUrl+'" class="lazy-message" loading="lazy"></div>';
+        if (message.caption && message.caption.trim()) {
+            content += '<div class="message-caption">' + formatMessageText(message.caption) + '</div>';
+        }
+    } else if (message.type === 'gif') {
+        content = '<div class="gif-message" onclick="openLightbox(\''+message.gifUrl+'\')"><img src="'+message.gifUrl+'" alt="GIF" class="gif-image lazy-message" loading="lazy"><span class="gif-badge">GIF</span></div>';
+        if (message.caption && message.caption.trim()) {
+            content += '<div class="message-caption">' + formatMessageText(message.caption) + '</div>';
+        }
+    } else if (message.type === 'audio') {
+        content = '<div class="audio-message"><button onclick="playAudio(\''+message.audioUrl+'\')">▶️</button><span>Голосовое сообщение</span></div>';
+    } else if (message.type === 'video') {
+        content = '<div class="video-message"><video src="'+message.videoUrl+'" controls preload="metadata" style="max-width:250px; max-height:300px; border-radius:12px;"></video><div class="message-text">'+escapeHtml(message.fileName || 'Видео')+'</div></div>';
+    } else if (message.type === 'file') {
+        var fileIcon = '📎';
+        content = '<div class="file-message"><span style="font-size:24px;">'+fileIcon+'</span><a href="'+message.fileUrl+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(message.fileName)+'</a></div>';
+    } else {
+        var textContent = formatMessageText(message.text || '');
+        if (message.edited) textContent += ' <span style="font-size:10px; opacity:0.6;">(ред.)</span>';
+        content = '<div class="message-text">'+textContent+'</div>';
+    }
+    
+    div.innerHTML = '<div class="message-content" style="flex:1;">'+content+'<div class="message-time">'+formatTime(message.timestamp)+'</div></div>';
+    
+    // Вставляем в начало
+    if (container.firstChild) {
+        container.insertBefore(div, container.firstChild);
+    } else {
+        container.appendChild(div);
+    }
+}
 function createMessageElement(message) {
     var container = document.getElementById('messages-container');
     if (!container) return;
