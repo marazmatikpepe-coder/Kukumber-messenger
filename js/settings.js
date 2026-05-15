@@ -7,7 +7,7 @@ var translations = {
         username: 'Отображаемое имя', about_me: 'О себе', save: 'Сохранить',
         notifications: 'Уведомления', privacy: 'Конфиденциальность', theme: 'Оформление',
         language: 'Язык', storage: 'Данные и память', about: 'О приложении', help: 'Помощь',
-        logout: 'Выйти из аккаунта', version: 'v1.0', tagline: 'Свежее общение каждый день 🥒',
+        logout: 'Выйти из аккаунта', version: 'v1.0', tagline: 'Свежее общение каждый день ',
         select_language: 'Выберите язык', settings_saved: 'Настройки сохранены',
         profile_updated: 'Профиль обновлён', enter_username: 'Введите отображаемое имя',
         in_development: 'в разработке', phone: 'Телефон', online: 'В сети', offline: 'Не в сети',
@@ -42,7 +42,7 @@ var translations = {
         username: 'Display Name', about_me: 'About me', save: 'Save', notifications: 'Notifications',
         privacy: 'Privacy', theme: 'Theme', language: 'Language', storage: 'Storage',
         about: 'About', help: 'Help', logout: 'Logout', version: 'v1.0',
-        tagline: 'Fresh communication every day 🥒', select_language: 'Select language',
+        tagline: 'Fresh communication every day ', select_language: 'Select language',
         settings_saved: 'Settings saved', profile_updated: 'Profile updated',
         enter_username: 'Enter display name', in_development: 'in development', phone: 'Phone',
         online: 'Online', offline: 'Offline', chats: 'Chats', reels: 'Slices', new_chat: 'Chat',
@@ -75,7 +75,7 @@ var translations = {
         username: 'Nombre de usuario', about_me: 'Sobre mí', save: 'Guardar',
         notifications: 'Notificaciones', privacy: 'Privacidad', theme: 'Tema',
         language: 'Idioma', storage: 'Almacenamiento', about: 'Acerca de', help: 'Ayuda',
-        logout: 'Cerrar sesión', version: 'v1.0', tagline: 'Comunicación fresca cada día 🥒',
+        logout: 'Cerrar sesión', version: 'v1.0', tagline: 'Comunicación fresca cada día ',
         select_language: 'Seleccionar idioma', settings_saved: 'Configuración guardada',
         profile_updated: 'Perfil actualizado', enter_username: 'Ingrese nombre de usuario',
         in_development: 'en desarrollo', phone: 'Teléfono', online: 'En línea', offline: 'Desconectado',
@@ -111,7 +111,7 @@ var translations = {
         username: 'Benutzername', about_me: 'Über mich', save: 'Speichern',
         notifications: 'Benachrichtigungen', privacy: 'Datenschutz', theme: 'Design',
         language: 'Sprache', storage: 'Speicher', about: 'Über', help: 'Hilfe',
-        logout: 'Abmelden', version: 'v1.0', tagline: 'Frische Kommunikation jeden Tag 🥒',
+        logout: 'Abmelden', version: 'v1.0', tagline: 'Frische Kommunikation jeden Tag ',
         select_language: 'Sprache auswählen', settings_saved: 'Einstellungen gespeichert',
         profile_updated: 'Profil aktualisiert', enter_username: 'Benutzername eingeben',
         in_development: 'in Entwicklung', phone: 'Telefon', online: 'Online', offline: 'Offline',
@@ -147,7 +147,7 @@ var translations = {
         username: "Nom d'utilisateur", about_me: 'À propos de moi', save: 'Enregistrer',
         notifications: 'Notifications', privacy: 'Confidentialité', theme: 'Thème',
         language: 'Langue', storage: 'Stockage', about: 'À propos', help: 'Aide',
-        logout: 'Déconnexion', version: 'v1.0', tagline: 'Communication fraîche chaque jour 🥒',
+        logout: 'Déconnexion', version: 'v1.0', tagline: 'Communication fraîche chaque jour ',
         select_language: 'Choisir la langue', settings_saved: 'Paramètres enregistrés',
         profile_updated: 'Profil mis à jour', enter_username: "Entrez le nom d'utilisateur",
         in_development: 'en développement', phone: 'Téléphone', online: 'En ligne', offline: 'Hors ligne',
@@ -184,7 +184,7 @@ var translations = {
         username: 'Nome utente', about_me: 'Su di me', save: 'Salva',
         notifications: 'Notifiche', privacy: 'Privacy', theme: 'Tema',
         language: 'Lingua', storage: 'Archiviazione', about: 'Informazioni', help: 'Aiuto',
-        logout: 'Esci', version: 'v1.0', tagline: 'Comunicazione fresca ogni giorno 🥒',
+        logout: 'Esci', version: 'v1.0', tagline: 'Comunicazione fresca ogni giorno ',
         select_language: 'Seleziona lingua', settings_saved: 'Impostazioni salvate',
         profile_updated: 'Profilo aggiornato', enter_username: 'Inserisci nome utente',
         in_development: 'in sviluppo', phone: 'Telefono', online: 'Online', offline: 'Offline',
@@ -220,7 +220,7 @@ var translations = {
         username: 'Імя карыстальніка', about_me: 'Пра сябе', save: 'Захаваць',
         notifications: 'Апавяшчэнні', privacy: 'Прыватнасць', theme: 'Тэма',
         language: 'Мова', storage: 'Памяць', about: 'Пра праграму', help: 'Дапамога',
-        logout: 'Выйсці', version: 'v1.0', tagline: 'Свежая камунікацыя кожны дзень 🥒',
+        logout: 'Выйсці', version: 'v1.0', tagline: 'Свежая камунікацыя кожны дзень ',
         select_language: 'Абярыце мову', settings_saved: 'Налады захаваны',
         profile_updated: 'Профіль абноўлены', enter_username: 'Увядзіце імя карыстальніка',
         in_development: 'у распрацоўцы', phone: 'Тэлефон', online: 'У сетцы', offline: 'Не ў сетцы',
@@ -256,7 +256,7 @@ var translations = {
         username: "Ім'я користувача", about_me: 'Про себе', save: 'Зберегти',
         notifications: 'Сповіщення', privacy: 'Конфіденційність', theme: 'Тема',
         language: 'Мова', storage: "Пам'ять", about: 'Про додаток', help: 'Допомога',
-        logout: 'Вийти', version: 'v1.0', tagline: 'Свіже спілкування щодня 🥒',
+        logout: 'Вийти', version: 'v1.0', tagline: 'Свіже спілкування щодня ',
         select_language: 'Виберіть мову', settings_saved: 'Налаштування збережено',
         profile_updated: 'Профіль оновлено', enter_username: "Введіть ім'я користувача",
         in_development: 'в розробці', phone: 'Телефон', online: 'В мережі', offline: 'Не в мережі',
@@ -622,12 +622,12 @@ function saveNotificationSettings() {
 function showNotificationSettings() {
     var modalHtml = `
         <div id="notifications-settings-modal" class="modal" style="z-index: 10002;">
-            <div class="modal-content" style="max-width: 500px; border-radius: 20px; overflow: hidden;">
-                <div class="modal-header">
+            <div class="modal-content" style="max-width: 500px; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; max-height: 80vh;">
+                <div class="modal-header" style="flex-shrink: 0;">
                     <h3>🔔 Уведомления и звук</h3>
                     <button onclick="closeNotificationSettings()" class="btn-close">×</button>
                 </div>
-                <div style="padding: 15px;">
+                <div style="padding: 15px; overflow-y: auto; flex: 1;">
                     <div class="notification-category" onclick="openCategorySettings('private')" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; background: var(--background); border-radius: 16px; margin-bottom: 10px; cursor: pointer;">
                         <span>📱 Личные чаты</span>
                         <span>›</span>
@@ -657,7 +657,6 @@ function closeNotificationSettings() {
     var categoryModal = document.getElementById('category-settings-modal');
     if (categoryModal) categoryModal.remove();
 }
-
 function openCategorySettings(category) {
     closeNotificationSettings();
     
@@ -776,12 +775,12 @@ function showThemeSettings() {
     
     var modalHtml = `
         <div id="theme-settings-modal" class="modal" style="z-index: 10002;">
-            <div class="modal-content" style="max-width: 500px; border-radius: 20px; overflow: hidden;">
-                <div class="modal-header">
+            <div class="modal-content" style="max-width: 500px; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; max-height: 80vh;">
+                <div class="modal-header" style="flex-shrink: 0;">
                     <h3>🎨 Оформление</h3>
                     <button onclick="closeThemeSettings()" class="btn-close">×</button>
                 </div>
-                <div style="padding: 15px;">
+                <div style="padding: 15px; overflow-y: auto; flex: 1;">
                     <div style="margin-bottom: 20px;">
                         <button id="night-mode-toggle-btn" onclick="toggleNightModeUI()" style="width: 100%; padding: 14px; background: ${nightModeEnabled ? '#2d2d2d' : 'var(--background)'}; border: 2px solid var(--border); border-radius: 16px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
                             ${nightModeEnabled ? '🌙 Ночной режим (вкл)' : '☀️ Ночной режим (выкл)'}
@@ -789,7 +788,7 @@ function showThemeSettings() {
                     </div>
                     
                     <div style="font-weight: 600; margin-bottom: 15px;">🎨 Цвет темы</div>
-                    <div id="themes-grid" style="display: grid; grid-template-columns: repeat(${isMobile ? '3' : '4'}, 1fr); gap: 15px;"></div>
+                    <div id="themes-grid" style="display: grid; grid-template-columns: repeat(${isMobile ? '3' : '4'}, 1fr); gap: 15px; padding-bottom: 20px;"></div>
                 </div>
             </div>
         </div>
@@ -802,7 +801,6 @@ function showThemeSettings() {
     
     renderThemesGrid();
 }
-
 function closeThemeSettings() {
     var modal = document.getElementById('theme-settings-modal');
     if (modal) modal.remove();
