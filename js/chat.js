@@ -576,6 +576,7 @@ function sendMessage() {
     var text = input.value.trim();
     if (!text || !currentChatId) return;
     
+    // ФИКС: длинные сообщения не обрезаем
     var message = { 
         type: 'text', 
         text: text, 
@@ -585,7 +586,8 @@ function sendMessage() {
     input.value = '';
     
     database.ref('messages/'+currentChatId).push(message).then(function() {
-        var lastMsg = text.length > 50 ? text.substring(0,50)+'...' : text;
+        // Сохраняем полный текст в lastMessage, а не обрезанный
+        var lastMsg = text.length > 100 ? text.substring(0, 97) + '...' : text;
         database.ref('chats/'+currentChatId).update({ 
             lastMessage: lastMsg, 
             lastMessageTime: firebase.database.ServerValue.TIMESTAMP 
@@ -597,14 +599,13 @@ function sendMessage() {
             KukumberSounds.playSend();
         }
     }).catch(function(err) { 
-        showNotification('Ошибка', 'error'); 
+        showNotification('Ошибка отправки', 'error'); 
         input.value = text; 
     });
     
     var emojiPicker = document.getElementById('emoji-picker');
     if (emojiPicker) emojiPicker.classList.add('hidden');
 }
-
 function handleMessageKeyPress(e) { 
     if (e.key === 'Enter' && !e.shiftKey) { 
         e.preventDefault(); 
