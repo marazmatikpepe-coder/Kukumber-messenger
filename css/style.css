@@ -719,3 +719,184 @@ body.night-mode .profile-close-btn:hover{background:rgba(0,0,0,0.7) !important}
     border-radius: 12px;
     display: block;
 }
+/* ===== ИСПРАВЛЕНИЕ ТЁМНОГО РЕЖИМА ===== */
+
+/* Настройки - все элементы */
+body.night-mode .settings-section {
+    background: #1e1e1e !important;
+}
+
+body.night-mode .settings-item {
+    background: #2a2a2a !important;
+    border-bottom-color: #3a3a3a !important;
+}
+
+body.night-mode .settings-item span {
+    color: #e0e0e0 !important;
+}
+
+body.night-mode .settings-item .settings-icon {
+    color: #aaaaaa !important;
+}
+
+body.night-mode .settings-profile {
+    background: #2a2a2a !important;
+}
+
+body.night-mode .settings-profile .settings-profile-info h3 {
+    color: #ffffff !important;
+}
+
+body.night-mode .settings-profile .settings-profile-info p {
+    color: #aaaaaa !important;
+}
+
+body.night-mode .settings-header {
+    background: #1e1e1e !important;
+    border-bottom-color: #3a3a3a !important;
+}
+
+body.night-mode .settings-header h2 {
+    color: #ffffff !important;
+}
+
+/* Печатная строка */
+body.night-mode .message-input-area {
+    background: #1e1e1e !important;
+    border-top-color: #3a3a3a !important;
+}
+
+body.night-mode #message-input {
+    background: #2a2a2a !important;
+    border-color: #3a3a3a !important;
+    color: #ffffff !important;
+}
+
+body.night-mode #message-input::placeholder {
+    color: #888888 !important;
+}
+
+body.night-mode .attach-btn,
+body.night-mode .voice-btn,
+body.night-mode .emoji-btn {
+    background: transparent !important;
+}
+
+body.night-mode .attach-btn img {
+    filter: brightness(0.8);
+}
+
+/* Шапка чата */
+body.night-mode .chat-header {
+    background: #1e1e1e !important;
+    border-bottom-color: #3a3a3a !important;
+}
+
+body.night-mode .chat-user-info h3 {
+    color: #ffffff !important;
+}
+
+body.night-mode #chat-status {
+    color: #aaaaaa !important;
+}
+
+body.night-mode .back-btn,
+body.night-mode .call-btn {
+    background: #2a2a2a !important;
+    color: #ffffff !important;
+}
+
+/* Профиль (человек, канал, группа) */
+body.night-mode .profile-modal-content {
+    background: #1e1e1e !important;
+}
+
+body.night-mode .profile-banner {
+    background: linear-gradient(135deg, #2a2a2a, #1a1a1a) !important;
+}
+
+body.night-mode .profile-name {
+    color: #ffffff !important;
+}
+
+body.night-mode .profile-username,
+body.night-mode .profile-status {
+    color: #aaaaaa !important;
+}
+
+body.night-mode .profile-bio {
+    color: #cccccc !important;
+}
+
+body.night-mode .profile-subscribers {
+    color: #888888 !important;
+}
+
+body.night-mode .profile-tabs {
+    background: #1e1e1e !important;
+    border-top-color: #3a3a3a !important;
+    border-bottom-color: #3a3a3a !important;
+}
+
+body.night-mode .profile-tab-btn {
+    background: #1e1e1e !important;
+    color: #aaaaaa !important;
+}
+
+body.night-mode .profile-tab-btn.active {
+    color: var(--forest) !important;
+    border-bottom-color: var(--forest) !important;
+}
+
+body.night-mode .profile-content {
+    background: #121212 !important;
+}
+
+/* Модальные окна настроек уведомлений */
+body.night-mode #notifications-settings-modal .modal-content,
+body.night-mode #category-settings-modal .modal-content {
+    background: #1e1e1e !important;
+}
+
+body.night-mode .modal-header {
+    background: #1e1e1e !important;
+    border-bottom-color: #3a3a3a !important;
+}
+
+body.night-mode .modal-header h3 {
+    color: #ffffff !important;
+}
+
+body.night-mode .notification-category > div {
+    background: #2a2a2a !important;
+    color: #e0e0e0 !important;
+}
+
+body.night-mode .notification-setting-item {
+    border-bottom-color: #3a3a3a !important;
+}
+
+body.night-mode .notification-setting-label {
+    color: #ffffff !important;
+}
+
+body.night-mode .sound-option {
+    background: #2a2a2a !important;
+    color: #e0e0e0 !important;
+}
+
+body.night-mode .sound-option.active {
+    background: var(--forest) !important;
+    color: white !important;
+}
+
+/* Кнопки в модалках */
+body.night-mode .btn-close {
+    color: #ffffff !important;
+}
+
+body.night-mode .btn-secondary {
+    background: #2a2a2a !important;
+    border-color: #3a3a3a !important;
+    color: #e0e0e0 !important;
+}
