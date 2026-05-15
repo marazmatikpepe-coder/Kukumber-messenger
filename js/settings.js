@@ -771,6 +771,12 @@ var colorThemes = {
 };
 
 function showThemeSettings() {
+    // ФИКС: проверяем существование модального окна
+    var oldModal = document.getElementById('theme-settings-modal');
+    if (oldModal) oldModal.remove();
+    
+    // остальной код без изменений...
+}
     var isMobile = window.innerWidth <= 768;
     
     var modalHtml = `
