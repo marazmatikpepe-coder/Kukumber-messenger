@@ -590,3 +590,132 @@ body.night-mode #simple-channel-profile .avatar,body.night-mode #simple-group-pr
 body.night-mode .profile-close-btn{background:rgba(0,0,0,0.5) !important;color:white !important}
 body.night-mode .profile-close-btn:hover{background:rgba(0,0,0,0.7) !important}
 .publish-as-selector select{background:var(--background);border:2px solid var(--border);padding:10px;border-radius:12px;font-size:14px;color:var(--text-dark);cursor:pointer;width:100%}
+/* Исправление печатной строки */
+.message-input-area {
+    display: flex;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: white;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.attach-btn {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.attach-btn img {
+    width: 36px;
+    height: 36px;
+}
+
+#message-input {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 14px;
+    border: 2px solid var(--border);
+    border-radius: 28px;
+    font-size: 15px;
+    background: white;
+    outline: none;
+}
+
+.voice-btn, .emoji-btn, .send-btn {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    background: none;
+    border: none;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.send-btn {
+    background: linear-gradient(135deg, var(--forest), var(--lime));
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .message-input-area {
+        padding: 8px 10px;
+        gap: 4px;
+    }
+    .attach-btn, .voice-btn, .emoji-btn, .send-btn {
+        width: 40px;
+        height: 40px;
+    }
+    .attach-btn img {
+        width: 30px;
+        height: 30px;
+    }
+    #message-input {
+        font-size: 14px;
+        padding: 8px 12px;
+    }
+}
+/* Исправление GIF сообщений */
+.message .gif-message {
+    max-width: 250px;
+    max-height: 250px;
+    overflow: hidden;
+    border-radius: 12px;
+    position: relative;
+}
+
+.message .gif-message img {
+    width: 100%;
+    height: auto;
+    max-width: 250px;
+    max-height: 250px;
+    object-fit: contain;
+    display: block;
+}
+
+.message .gif-badge {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+}
+
+.message.sent .gif-message {
+    max-width: 250px;
+}
+
+.message.received .gif-message {
+    max-width: 250px;
+}
+
+/* Общие ограничения для всех сообщений с медиа */
+.message {
+    max-width: 80%;
+    overflow: hidden;
+}
+
+.message-image img, .message-video video {
+    max-width: 250px;
+    max-height: 300px;
+    border-radius: 12px;
+    display: block;
+}
