@@ -29,10 +29,17 @@ function playSliceCreateSound() {
     }
 }
 
-// ========== ЗАГРУЗКА ЛЕНТЫ ==========
 function loadSlices() {
     var feed = document.getElementById('slices-feed');
-    if (!feed) return;
+    if (!feed) {
+        console.error('slices-feed не найден');
+        return;
+    }
+    
+    if (!currentUser || !currentUser.uid) {
+        feed.innerHTML = '<div class="empty-slices"><span>🔐</span><p>Войдите в аккаунт</p></div>';
+        return;
+    }
     
     var searchInput = document.getElementById('slices-search-input');
     if (searchInput) searchInput.value = '';
@@ -44,9 +51,10 @@ function loadSlices() {
     slicesListener = database.ref('slices').orderByChild('createdAt').limitToLast(100);
     slicesListener.on('value', function(snapshot) {
         var slices = snapshot.val();
+        if (!feed) return;
         feed.innerHTML = '';
         
-        if (!slices) {
+        if (!slices || Object.keys(slices).length === 0) {
             feed.innerHTML = '<div class="empty-slices"><span>🍕</span><p>Пока нет постов</p><p>Будьте первым!</p></div>';
             return;
         }
@@ -62,14 +70,21 @@ function loadSlices() {
             return (b.data.createdAt || 0) - (a.data.createdAt || 0);
         });
         
+        var pendingImages = slicesArray.length;
+        if (pendingImages === 0) {
+            feed.innerHTML = '<div class="empty-slices"><span>🍕</span><p>Нет постов</p></div>';
+        }
+        
         slicesArray.forEach(function(slice) {
-            var likeRef = database.ref('sliceLikes/' + slice.id + '/' + currentUser.uid);
-            likeRef.once('value').then(function(snap) {
+            database.ref('sliceLikes/' + slice.id + '/' + currentUser.uid).once('value').then(function(snap) {
                 slice.data.userLiked = snap.exists();
                 var card = createSliceCard(slice.id, slice.data);
-                feed.appendChild(card);
+                if (feed) feed.appendChild(card);
             });
         });
+    }, function(error) {
+        console.error('Ошибка загрузки слайсов:', error);
+        if (feed) feed.innerHTML = '<div class="empty-slices"><span>❌</span><p>Ошибка загрузки</p></div>';
     });
 }
 
