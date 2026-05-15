@@ -285,28 +285,24 @@ function openChat(chatId, chatData) {
         chatAvatar.textContent = '';
     }
     
-    if (chatData.type === 'private' && chatData.otherUserId) {
-        var chatHeader = document.querySelector('.chat-user-info');
-        if (chatHeader) {
-            chatHeader.style.cursor = 'pointer';
-            chatHeader.onclick = function() {
-                if (typeof openUserProfile === 'function') {
-                    openUserProfile(chatData.otherUserId);
-                } else {
-                    showNotification('Функция профиля не загружена', 'error');
-                }
-            };
-        }
-    } else {
-        var chatHeader = document.querySelector('.chat-user-info');
-        if (chatHeader) {
-            chatHeader.style.cursor = 'pointer';
-            chatHeader.onclick = function() {
-                openChannelOrGroupProfile();
-            };
-        }
+    // В функции openChat, после установки имени и аватара, добавь:
+if (chatData.type === 'private' && chatData.otherUserId) {
+    var chatHeader = document.querySelector('.chat-user-info');
+    if (chatHeader) {
+        chatHeader.style.cursor = 'pointer';
+        chatHeader.onclick = function(e) {
+            e.stopPropagation();
+            if (typeof openUserProfile === 'function') {
+                openUserProfile(chatData.otherUserId);
+            } else if (typeof window.openUserProfile === 'function') {
+                window.openUserProfile(chatData.otherUserId);
+            } else {
+                console.log('openUserProfile не найдена');
+                showNotification('Функция профиля не загружена', 'error');
+            }
+        };
     }
-    
+}
     document.querySelectorAll('.chat-item').forEach(function(i) { 
         i.classList.remove('active'); 
     });
