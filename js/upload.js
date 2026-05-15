@@ -691,42 +691,49 @@ async function uploadVideoToPixelDrain(file) {
     return videoUrl;
 }
 
-// Отправка видео в чат
 async function sendVideoMessage(file) {
     if (!currentChatId) {
         showNotification('Выберите чат', 'error');
         return;
     }
     
+    if (file.size > 100 * 1024 * 1024) {
+        showNotification('Видео не более 100MB', 'error');
+        return;
+    }
+    
+    showNotification('📤 Загрузка видео...', 'info');
+    
+    var formData = new FormData();
+    formData.append('file', file);
+    
     try {
-        var videoUrl = await uploadVideoToPixelDrain(file);
+        var response = await fetch('https://pixeldrain.com/api/file/', {
+            method: 'POST',
+            headers: { 'Authorization': 'Basic ' + btoa('fb14ed75-4352-4e78-804c-a797b3131456' + ':') },
+            body: formData
+        });
         
-        var message = {
+        var data = await response.json();
+        if (!data.id) throw new Error('Ошибка');
+        
+        var videoUrl = 'https://pixeldrain.com/api/file/' + data.id;
+        
+        await database.ref('messages/' + currentChatId).push({
             type: 'video',
             videoUrl: videoUrl,
             fileName: file.name,
             senderId: currentUser.uid,
             timestamp: firebase.database.ServerValue.TIMESTAMP
-        };
+        });
         
-        await database.ref('messages/' + currentChatId).push(message);
         await database.ref('chats/' + currentChatId).update({
-            lastMessage: '🎬 Видео: ' + file.name,
+            lastMessage: '🎬 Видео',
             lastMessageTime: firebase.database.ServerValue.TIMESTAMP
         });
         
         showNotification('✅ Видео отправлено!', 'success');
-    } catch (error) {
-        console.error(error);
-        showNotification('Ошибка: ' + error.message, 'error');
+    } catch(e) {
+        showNotification('Ошибка загрузки видео', 'error');
     }
-}
-
-// Обработчик выбора видео (добавь в attach-btn)
-function handleVideoSelect(event) {
-    var file = event.target.files[0];
-    if (file && file.type.startsWith('video/')) {
-        sendVideoMessage(file);
-    }
-    event.target.value = '';
 }
