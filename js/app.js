@@ -504,3 +504,18 @@ window.switchToTab = function(tabName) {
     
     closeSidebar();
 };
+// Глобальная функция для открытия профиля пользователя
+window.openUserProfile = function(userId) {
+    if (typeof openUserProfileFromChat === 'function') {
+        openUserProfileFromChat(userId);
+    } else if (typeof openUserProfile === 'function') {
+        openUserProfile(userId);
+    } else if (typeof window.openUserProfileModal === 'function') {
+        window.openUserProfileModal(userId);
+    } else {
+        console.warn('Функция профиля не найдена, загружаем slices.js');
+        if (typeof loadSlices === 'function') {
+            showNotification('Профиль загружается...', 'info');
+        }
+    }
+};
