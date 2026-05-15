@@ -484,3 +484,23 @@ sidebarElement.addEventListener('touchend', function(e) {
         closeSidebar();
     }
 }, { passive: true });
+// ===== ФИКС ПЕРЕКЛЮЧЕНИЯ ВКЛАДОК =====
+var originalSwitchToTab = window.switchToTab;
+window.switchToTab = function(tabName) {
+    document.getElementById('chats-tab').classList.add('hidden');
+    document.getElementById('reels-tab').classList.add('hidden');
+    document.getElementById('settings-tab').classList.add('hidden');
+    
+    document.getElementById('nav-chats').classList.remove('active');
+    document.getElementById('nav-reels').classList.remove('active');
+    document.getElementById('nav-settings').classList.remove('active');
+    
+    document.getElementById(tabName + '-tab').classList.remove('hidden');
+    document.getElementById('nav-' + tabName).classList.add('active');
+    
+    if (tabName === 'reels' && typeof loadSlices === 'function') loadSlices();
+    if (tabName === 'chats' && typeof loadChats === 'function') loadChats();
+    if (tabName === 'settings' && typeof updateUserDisplay === 'function') updateUserDisplay();
+    
+    closeSidebar();
+};
