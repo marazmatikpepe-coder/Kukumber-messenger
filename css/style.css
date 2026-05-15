@@ -960,3 +960,79 @@ body.night-mode .nav-item.active {
 body.night-mode .nav-label {
     color: inherit !important;
 }
+/* ===== ИСПРАВЛЕНИЕ ВКЛАДОК ===== */
+.main-screen {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.tab-content {
+    flex: 1;
+    overflow: hidden;
+    display: block !important;
+}
+
+.tab-content.hidden {
+    display: none !important;
+}
+
+#chats-tab, #reels-tab, #settings-tab {
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Контейнеры внутри вкладок */
+.app-container, .slices-container, .settings-container {
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Область чата */
+.chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Слайсы */
+.slices-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.slices-feed {
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* Настройки */
+.settings-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+/* Нижняя навигация всегда видна */
+.bottom-nav {
+    flex-shrink: 0;
+    background: white;
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 100;
+    position: relative;
+}
+
+body.night-mode .bottom-nav {
+    background: #1e1e1e !important;
+    border-top-color: #3a3a3a !important;
+}
