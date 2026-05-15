@@ -148,34 +148,32 @@ function showMainScreen() {
 function switchToTab(tabName) {
     currentTab = tabName;
     
-    // Скрыть все вкладки
     document.getElementById('chats-tab').classList.add('hidden');
     document.getElementById('reels-tab').classList.add('hidden');
     document.getElementById('settings-tab').classList.add('hidden');
     
-    // Убрать active со всех кнопок
     document.getElementById('nav-chats').classList.remove('active');
     document.getElementById('nav-reels').classList.remove('active');
     document.getElementById('nav-settings').classList.remove('active');
     
-    // Показать нужную вкладку
     document.getElementById(tabName + '-tab').classList.remove('hidden');
     document.getElementById('nav-' + tabName).classList.add('active');
     
-    // Загрузить данные для вкладки если нужно
     if (tabName === 'reels' && typeof loadSlices === 'function') {
         loadSlices();
     }
     if (tabName === 'chats' && typeof loadChats === 'function') {
+        console.log('Переключение на чаты, загрузка...');
         loadChats();
     }
     if (tabName === 'settings' && typeof updateUserDisplay === 'function') {
         updateUserDisplay();
+        // Обновляем язык в настройках
+        if (typeof applyTranslations === 'function') applyTranslations();
     }
     
     closeSidebar();
 }
-
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('open');
 }
