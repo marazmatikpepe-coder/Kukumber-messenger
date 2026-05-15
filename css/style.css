@@ -1568,3 +1568,8 @@ html {
     background: transparent !important;
     box-shadow: none;
 }
+/* ТОЛЬКО ЭТО - ИСПРАВЛЕНИЕ ДЛЯ СООБЩЕНИЙ */
+.message .message-text {
+    word-break: break-word !important;
+    white-space: normal !important;
+}
