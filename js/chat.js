@@ -487,7 +487,14 @@ function createMessageElement(message) {
     div.setAttribute('data-sender-id', message.senderId);
     
     var content = '';
-    
+
+        // Показываем ответ, если есть
+    if (message.replyTo) {
+        content += '<div style="background:rgba(0,0,0,0.05); border-left:3px solid #228B22; padding:5px 10px; margin-bottom:6px; border-radius:8px; font-size:12px;">' +
+            '<span style="color:#228B22; font-weight:600;">↩️ Ответ для ' + escapeHtml(message.replyTo.senderName) + '</span><br>' +
+            '<span style="color:#666;">' + escapeHtml(message.replyTo.text) + '</span>' +
+        '</div>';
+    }
     if (message.type === 'image') {
         content = '<div class="message-image" onclick="openLightbox(\''+message.imageUrl+'\')"><img src="'+message.imageUrl+'" class="lazy-message" loading="lazy" style="max-width:250px; max-height:250px; border-radius:12px;"></div>';
         if (message.caption && message.caption.trim()) {
@@ -1037,3 +1044,250 @@ window.showCallButtons = showCallButtons;
 // Инициализация
 initChatSounds();
 console.log('chat.js полностью загружен');
+// ========== КОНТЕКСТНОЕ МЕНЮ ДЛЯ СООБЩЕНИЙ ==========
+var replyToMessage = null;
+
+function showMessageMenu(messageId, message, isSent) {
+    var oldMenu = document.getElementById('message-context-menu');
+    if (oldMenu) oldMenu.remove();
+    
+    var menu = document.createElement('div');
+    menu.id = 'message-context-menu';
+    menu.style.cssText = 'position:fixed; z-index:10001; background:white; border-radius:16px; box-shadow:0 5px 25px rgba(0,0,0,0.2); min-width:200px; overflow:hidden; backdrop-filter:blur(10px);';
+    
+    var menuHtml = '';
+    
+    if (isSent) {
+        menuHtml += '<div class="context-menu-item" onclick="editMessage(\'' + messageId + '\', \'' + escapeHtml(message.text || '').replace(/'/g, "\\'") + '\')">✏️ Редактировать</div>';
+        menuHtml += '<div class="context-menu-item" onclick="deleteForMe(\'' + messageId + '\')">🗑️ Удалить у меня</div>';
+        menuHtml += '<div class="context-menu-item" onclick="deleteForEveryone(\'' + messageId + '\')">⚠️ Удалить у всех</div>';
+        menuHtml += '<div style="height:1px; background:#eee; margin:5px 0;"></div>';
+    }
+    
+    menuHtml += '<div class="context-menu-item" onclick="copyMessageText(\'' + escapeHtml(message.text || '').replace(/'/g, "\\'") + '\')">📋 Копировать текст</div>';
+    menuHtml += '<div class="context-menu-item" onclick="forwardMessage(\'' + messageId + '\')">📤 Переслать</div>';
+    menuHtml += '<div class="context-menu-item" onclick="replyToMessageFunc(\'' + messageId + '\', \'' + escapeHtml(message.text || '').replace(/'/g, "\\'") + '\', \'' + (message.senderId === currentUser.uid ? 'Вы' : (message.senderName || 'Пользователь')) + '\')">💬 Ответить</div>';
+    
+    menu.innerHTML = menuHtml;
+    document.body.appendChild(menu);
+    
+    // Позиционирование
+    var rect = document.querySelector('.message[data-message-id="' + messageId + '"]')?.getBoundingClientRect();
+    if (rect) {
+        var x = rect.left + 10;
+        var y = rect.top - 10;
+        var menuRect = menu.getBoundingClientRect();
+        if (y + menuRect.height > window.innerHeight) {
+            y = rect.bottom + 10;
+        }
+        if (x + menuRect.width > window.innerWidth) {
+            x = window.innerWidth - menuRect.width - 10;
+        }
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+    }
+    
+    setTimeout(function() {
+        document.addEventListener('click', function closeMenu(e) {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        });
+    }, 10);
+}
+
+function editMessage(messageId, oldText) {
+    var newText = prompt('Редактировать сообщение:', oldText);
+    if (newText && newText.trim() && newText !== oldText) {
+        database.ref('messages/' + currentChatId + '/' + messageId).update({
+            text: newText.trim(),
+            edited: true,
+            editedAt: firebase.database.ServerValue.TIMESTAMP
+        }).then(function() {
+            showNotification('Сообщение отредактировано', 'success');
+        });
+    }
+    closeMessageMenu();
+}
+
+function deleteForMe(messageId) {
+    if (confirm('Удалить сообщение только у себя?')) {
+        database.ref('messages/' + currentChatId + '/' + messageId).remove();
+        showNotification('Сообщение удалено', 'info');
+    }
+    closeMessageMenu();
+}
+
+function deleteForEveryone(messageId) {
+    if (confirm('Удалить сообщение у всех? Это действие необратимо.')) {
+        database.ref('messages/' + currentChatId + '/' + messageId).remove();
+        showNotification('Сообщение удалено у всех', 'success');
+    }
+    closeMessageMenu();
+}
+
+function copyMessageText(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        showNotification('Текст скопирован', 'success');
+    });
+    closeMessageMenu();
+}
+
+function forwardMessage(messageId) {
+    showNotification('Пересылка сообщений будет в следующем обновлении', 'info');
+    closeMessageMenu();
+}
+
+function closeMessageMenu() {
+    var menu = document.getElementById('message-context-menu');
+    if (menu) menu.remove();
+}
+
+// ========== ОТВЕТ НА СООБЩЕНИЕ ==========
+function replyToMessageFunc(messageId, messageText, senderName) {
+    replyToMessage = {
+        id: messageId,
+        text: messageText.length > 50 ? messageText.substring(0, 47) + '...' : messageText,
+        senderName: senderName
+    };
+    showReplyBar();
+    closeMessageMenu();
+}
+
+function showReplyBar() {
+    var oldBar = document.getElementById('reply-bar');
+    if (oldBar) oldBar.remove();
+    
+    var bar = document.createElement('div');
+    bar.id = 'reply-bar';
+    bar.style.cssText = 'display:flex; align-items:center; justify-content:space-between; background:#e8f5e9; padding:8px 15px; border-left:4px solid var(--forest); margin:0 10px 5px 10px; border-radius:12px;';
+    bar.innerHTML = `
+        <div style="flex:1; overflow:hidden;">
+            <div style="font-size:12px; color:var(--forest); font-weight:600;">Ответ для ${escapeHtml(replyToMessage.senderName)}</div>
+            <div style="font-size:13px; color:#555; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(replyToMessage.text)}</div>
+        </div>
+        <button onclick="cancelReply()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#999;">✕</button>
+    `;
+    
+    var messageInputArea = document.querySelector('.message-input-area');
+    if (messageInputArea) {
+        messageInputArea.parentNode.insertBefore(bar, messageInputArea);
+    }
+}
+
+function cancelReply() {
+    replyToMessage = null;
+    var bar = document.getElementById('reply-bar');
+    if (bar) bar.remove();
+}
+
+function sendMessageWithReply() {
+    var input = document.getElementById('message-input');
+    if (!input) return;
+    
+    var text = input.value.trim();
+    if (!text || !currentChatId) return;
+    
+    var message = { 
+        type: 'text', 
+        text: text, 
+        senderId: currentUser.uid,
+        senderName: currentUserData?.username || 'Вы',
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    };
+    
+    if (replyToMessage) {
+        message.replyTo = replyToMessage;
+        message.text = text;
+    }
+    
+    input.value = '';
+    
+    database.ref('messages/' + currentChatId).push(message).then(function() {
+        var lastMsg = text.length > 50 ? text.substring(0,47)+'...' : text;
+        database.ref('chats/' + currentChatId).update({ 
+            lastMessage: lastMsg, 
+            lastMessageTime: firebase.database.ServerValue.TIMESTAMP 
+        });
+        cancelReply();
+        if (typeof playSendSound === 'function') playSendSound();
+    }).catch(function() { 
+        showNotification('Ошибка отправки', 'error'); 
+        input.value = text; 
+    });
+}
+
+// Переопределяем sendMessage
+var originalSendMessage = window.sendMessage;
+window.sendMessage = sendMessageWithReply;
+
+// Добавляем обработчики для открытия меню
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('messages-container')?.addEventListener('contextmenu', function(e) {
+        var messageDiv = e.target.closest('.message');
+        if (messageDiv) {
+            e.preventDefault();
+            var messageId = messageDiv.getAttribute('data-message-id');
+            var senderId = messageDiv.getAttribute('data-sender-id');
+            if (messageId) {
+                database.ref('messages/' + currentChatId + '/' + messageId).once('value').then(function(snap) {
+                    var msg = snap.val();
+                    if (msg) {
+                        showMessageMenu(messageId, msg, senderId === currentUser?.uid);
+                    }
+                });
+            }
+        }
+    });
+    
+    // Для телефона - долгое нажатие
+    document.getElementById('messages-container')?.addEventListener('touchstart', function(e) {
+        var messageDiv = e.target.closest('.message');
+        if (!messageDiv) return;
+        var timer;
+        timer = setTimeout(function() {
+            var messageId = messageDiv.getAttribute('data-message-id');
+            var senderId = messageDiv.getAttribute('data-sender-id');
+            if (messageId) {
+                database.ref('messages/' + currentChatId + '/' + messageId).once('value').then(function(snap) {
+                    var msg = snap.val();
+                    if (msg) {
+                        showMessageMenu(messageId, msg, senderId === currentUser?.uid);
+                    }
+                });
+            }
+        }, 500);
+        messageDiv.addEventListener('touchend', function() { clearTimeout(timer); }, { once: true });
+        messageDiv.addEventListener('touchmove', function() { clearTimeout(timer); }, { once: true });
+    });
+});
+
+// Добавляем CSS для меню
+var style = document.createElement('style');
+style.textContent = `
+    .context-menu-item {
+        padding: 12px 16px;
+        cursor: pointer;
+        transition: background 0.1s;
+        font-size: 14px;
+        color: #333;
+    }
+    .context-menu-item:hover {
+        background: #f5f5f5;
+    }
+    body.night-mode .context-menu-item {
+        color: #eee;
+    }
+    body.night-mode .context-menu-item:hover {
+        background: #2a2a2a;
+    }
+    #message-context-menu {
+        animation: menuFadeIn 0.1s ease;
+    }
+    @keyframes menuFadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+`;
+document.head.appendChild(style);
