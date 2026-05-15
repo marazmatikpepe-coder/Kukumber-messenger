@@ -51,6 +51,18 @@ function loadUserData() {
             updateUserDisplay();
             checkSuperAdmin();
             showMainScreen();
+            
+            // ОБЯЗАТЕЛЬНО ЗАГРУЖАЕМ ЧАТЫ
+            if (typeof loadChats === 'function') {
+                setTimeout(function() {
+                    loadChats();
+                }, 500);
+            }
+            
+            // ... остальной код
+        }
+    });
+}
             // Обновляем аватарку в Slices
             var slicesAvatar = document.getElementById('slices-user-avatar');
             if (slicesAvatar) {
@@ -273,9 +285,9 @@ function closeAllModals() {
 }
 
 // Функции для настроек (чтобы не падали ошибки)
-function showNotificationSettings() { showNotification('Уведомления: в разработке', 'info'); }
-function showPrivacySettings() { showNotification('Конфиденциальность: в разработке', 'info'); }
-function showThemeSettings() { showNotification('Тема: в разработке', 'info'); }
+//function showNotificationSettings() { showNotification('Уведомления: в разработке', 'info'); }
+//function showPrivacySettings() { showNotification('Конфиденциальность: в разработке', 'info'); }
+//function showThemeSettings() { showNotification('Тема: в разработке', 'info'); }
 function showLanguageSettings() { 
     if (typeof window.showLanguageSettings === 'function') {
         window.showLanguageSettings();
@@ -295,7 +307,10 @@ function logout() {
         currentChatId = null;
         currentChatUser = null;
         showNotification('Вы вышли', 'info');
-    }).catch(function() { showNotification('Ошибка выхода', 'error'); });
+        location.reload(); // Принудительная перезагрузка
+    }).catch(function() { 
+        showNotification('Ошибка выхода', 'error'); 
+    });
 }
 // ========== PUSH-УВЕДОМЛЕНИЯ ==========
 async function requestNotificationPermission() {
