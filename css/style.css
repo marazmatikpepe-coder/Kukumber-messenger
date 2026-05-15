@@ -1092,10 +1092,11 @@ body.night-mode .bottom-nav {
     min-width: 0;
 }
 
-/* Длинные сообщения */
+/* Длинные сообщения - ИСПРАВЛЕНО */
 .message .message-text {
-    word-break: break-all;
+    word-break: break-word;  /* ← ЭТО ГЛАВНОЕ ИСПРАВЛЕНИЕ */
     white-space: pre-wrap;
+    overflow-wrap: break-word;
 }
 
 /* Изображения в сообщениях */
@@ -1117,7 +1118,6 @@ body.night-mode .bottom-nav {
     overflow: hidden;
     border-radius: 12px;
 }
-
 /* ===== ИСПРАВЛЕНИЕ ПРОКРУТКИ НАСТРОЕК ===== */
 .settings-container {
     height: 100%;
@@ -1456,4 +1456,115 @@ html {
     .messages-container {
         padding: 10px;
     }
+}
+/* ========== ИСПРАВЛЕНИЕ СООБЩЕНИЙ - НЕ СПЛЮСНУТЫЕ ========== */
+
+/* Контейнер сообщений - правильная прокрутка */
+.messages-container {
+    flex: 1;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    height: auto;
+    max-height: 100%;
+}
+
+/* Каждое сообщение - независимый блок */
+.message {
+    max-width: 75%;
+    width: auto;
+    padding: 10px 14px;
+    border-radius: 16px;
+    animation: msgIn 0.2s;
+    display: block;
+    clear: both;
+    position: relative;
+}
+
+.message.sent {
+    align-self: flex-end;
+    background: linear-gradient(135deg, var(--forest), var(--cucumber));
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.message.received {
+    align-self: flex-start;
+    background: white;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 3px var(--shadow);
+}
+
+/* Текст сообщения - НЕ сплюснутый, с переносом слов */
+.message-text {
+    font-size: 15px;
+    line-height: 1.4;
+    margin-bottom: 4px;
+    word-break: break-word;
+    white-space: normal;
+    overflow-wrap: break-word;
+}
+
+/* Время сообщения */
+.message-time {
+    font-size: 10px;
+    text-align: right;
+    opacity: 0.7;
+    margin-top: 4px;
+}
+
+/* Изображения в сообщениях - ограничение по размеру */
+.message-image img,
+.gif-message img,
+.video-message video {
+    max-width: 250px;
+    max-height: 250px;
+    width: auto;
+    height: auto;
+    border-radius: 12px;
+    display: block;
+}
+
+.message-image,
+.gif-message,
+.video-message {
+    max-width: 250px;
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+/* Аудиосообщения */
+.audio-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,0,0,0.05);
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+
+.message.sent .audio-message {
+    background: rgba(255,255,255,0.2);
+}
+
+/* Файлы */
+.file-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Системные сообщения */
+.message.system {
+    text-align: center;
+    font-style: italic;
+    opacity: 0.7;
+    max-width: 90%;
+    align-self: center;
+    background: transparent !important;
+    box-shadow: none;
 }
