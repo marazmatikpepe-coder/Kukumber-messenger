@@ -129,12 +129,22 @@ function showAuthScreen() {
 function showMainScreen() {
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('main-screen').classList.remove('hidden');
-    if (typeof loadChats === 'function') loadChats();
+    
+    // Загружаем чаты
+    if (typeof loadChats === 'function') {
+        console.log('Загрузка чатов...');
+        loadChats();
+    } else {
+        console.error('loadChats не определена');
+    }
+    
+    // Загружаем слайсы
     setTimeout(function() {
-        if (typeof loadSlices === 'function') loadSlices();
+        if (typeof loadSlices === 'function') {
+            loadSlices();
+        }
     }, 300);
 }
-
 function switchToTab(tabName) {
     currentTab = tabName;
     
