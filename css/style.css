@@ -1036,3 +1036,169 @@ body.night-mode .bottom-nav {
     background: #1e1e1e !important;
     border-top-color: #3a3a3a !important;
 }
+/* ===== ИСПРАВЛЕНИЕ ПРОКРУТКИ ЧАТОВ ===== */
+.messages-container {
+    flex: 1;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: auto;
+    max-height: calc(100vh - 120px);
+    min-height: 0;
+}
+
+.active-chat {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    width: 100%;
+}
+
+.chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Исправление для сообщений - они не должны обрезаться */
+.message {
+    max-width: 75%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    animation: msgIn 0.2s;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.message .message-text {
+    font-size: 15px;
+    line-height: 1.4;
+    margin-bottom: 4px;
+    word-break: break-word;
+    white-space: normal;
+}
+
+.message .message-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Длинные сообщения */
+.message .message-text {
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+
+/* Изображения в сообщениях */
+.message-image img,
+.gif-message img,
+.video-message video {
+    max-width: 250px;
+    max-height: 250px;
+    width: auto;
+    height: auto;
+    border-radius: 12px;
+    display: block;
+}
+
+.message-image,
+.gif-message,
+.video-message {
+    max-width: 250px;
+    overflow: hidden;
+    border-radius: 12px;
+}
+
+/* ===== ИСПРАВЛЕНИЕ ПРОКРУТКИ НАСТРОЕК ===== */
+.settings-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+    background: var(--background);
+}
+
+.settings-section {
+    background: white;
+    margin: 10px 15px;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.settings-header {
+    background: white;
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.settings-footer {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--text-muted);
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+/* Общие исправления для всех прокручиваемых контейнеров */
+.slices-feed,
+.chats-list,
+#profile-content,
+.comments-list {
+    overflow-y: auto !important;
+    overflow-x: hidden;
+}
+
+/* Исправление для модальных окон с прокруткой */
+.modal-content {
+    max-height: 85vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+    flex-shrink: 0;
+}
+
+body.night-mode .modal-header {
+    background: #1e1e1e;
+}
+
+/* Плавная прокрутка */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Для WebKit браузеров (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--sage);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--forest);
+}
