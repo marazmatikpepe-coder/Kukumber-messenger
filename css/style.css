@@ -1573,3 +1573,35 @@ html {
     word-break: break-word !important;
     white-space: normal !important;
 }
+/* ФИКС: правильная структура */
+.app-container {
+    display: flex;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+}
+
+.main-screen {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.bottom-nav {
+    flex-shrink: 0;
+    height: 60px;
+}
+
+/* ФИКС: шапка чата кликабельна */
+.chat-user-info {
+    cursor: pointer;
+    flex: 1;
+}
