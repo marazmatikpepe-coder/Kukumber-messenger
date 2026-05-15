@@ -487,14 +487,7 @@ function createMessageElement(message) {
     div.setAttribute('data-sender-id', message.senderId);
     
     var content = '';
-
-        // Показываем ответ, если есть
-    if (message.replyTo) {
-        content += '<div style="background:rgba(0,0,0,0.05); border-left:3px solid #228B22; padding:5px 10px; margin-bottom:6px; border-radius:8px; font-size:12px;">' +
-            '<span style="color:#228B22; font-weight:600;">↩️ Ответ для ' + escapeHtml(message.replyTo.senderName) + '</span><br>' +
-            '<span style="color:#666;">' + escapeHtml(message.replyTo.text) + '</span>' +
-        '</div>';
-    }
+    
     if (message.type === 'image') {
         content = '<div class="message-image" onclick="openLightbox(\''+message.imageUrl+'\')"><img src="'+message.imageUrl+'" class="lazy-message" loading="lazy" style="max-width:250px; max-height:250px; border-radius:12px;"></div>';
         if (message.caption && message.caption.trim()) {
@@ -515,7 +508,17 @@ function createMessageElement(message) {
     } else {
         var textContent = formatMessageText(message.text || '');
         if (message.edited) textContent += ' <span style="font-size:10px; opacity:0.6;">(ред.)</span>';
-        content = '<div class="message-text" style="word-break:break-word; white-space:normal;">'+textContent+'</div>';
+        
+        // Показываем ответ, если есть
+        var replyHtml = '';
+        if (message.replyTo) {
+            replyHtml = '<div style="background:rgba(0,0,0,0.05); border-left:3px solid #228B22; padding:5px 10px; margin-bottom:6px; border-radius:8px; font-size:12px;">' +
+                '<span style="color:#228B22; font-weight:600;">↩️ Ответ для ' + escapeHtml(message.replyTo.senderName) + '</span><br>' +
+                '<span style="color:#666;">' + escapeHtml(message.replyTo.text) + '</span>' +
+            '</div>';
+        }
+        
+        content = replyHtml + '<div class="message-text" style="word-break:break-word; white-space:normal;">' + textContent + '</div>';
     }
     
     div.innerHTML = '<div class="message-content" style="flex:1;">'+content+'<div class="message-time">'+formatTime(message.timestamp)+'</div></div>';
@@ -523,7 +526,6 @@ function createMessageElement(message) {
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
 }
-
 function updateMessageElement(message) {
     var existingDiv = document.querySelector('.message[data-message-id="'+message.id+'"]');
     if (existingDiv) {
