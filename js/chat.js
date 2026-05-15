@@ -351,32 +351,43 @@ function openChatWithData(chatId, chatData) {
                     }
                 }
                 
-                // Делаем шапку чата кликабельной для открытия профиля
-                var chatHeader = document.querySelector('.chat-user-info');
-                if (chatHeader) {
-                    chatHeader.style.cursor = 'pointer';
-                    // Убираем старый обработчик, чтобы не было конфликтов
-                    chatHeader.removeEventListener('click', chatHeader._profileClickHandler);
-                    chatHeader._profileClickHandler = function(e) {
-                        e.stopPropagation();
-                        if (typeof openUserProfile === 'function') {
-                            openUserProfile(otherUserId);
-                        } else if (typeof window.openUserProfile === 'function') {
-                            window.openUserProfile(otherUserId);
-                        } else {
-                            showNotification('Функция профиля не загружена', 'error');
-                        }
-                    };
-                    chatHeader.addEventListener('click', chatHeader._profileClickHandler);
-                }
-            });
-        } else {
-            var chatUsernameEl = document.getElementById('chat-username');
-            if (chatUsernameEl) chatUsernameEl.textContent = 'Пользователь';
-            var statusEl = document.getElementById('chat-status');
-            if (statusEl) statusEl.textContent = 'загрузка...';
+              // Делаем шапку чата кликабельной для открытия профиля (ПОЛНОСТЬЮ ИСПРАВЛЕНО)
+var chatHeader = document.querySelector('.chat-user-info');
+if (chatHeader) {
+    chatHeader.style.cursor = 'pointer';
+    // Удаляем старые обработчики
+    var oldHandler = chatHeader._clickHandler;
+    if (oldHandler) chatHeader.removeEventListener('click', oldHandler);
+    
+    // Создаём новый обработчик
+    var clickHandler = function(e) {
+        e.stopPropagation();
+        if (chatData.type === 'private' && otherUserId) {
+            if (typeof openUserProfile === 'function') {
+                openUserProfile(otherUserId);
+            } else if (typeof window.openUserProfile === 'function') {
+                window.openUserProfile(otherUserId);
+            } else {
+                showNotification('Функция профиля не загружена', 'error');
+            }
+        } else if (chatData.type === 'channel') {
+            if (typeof openChannelProfile === 'function') {
+                openChannelProfile(chatId);
+            } else {
+                showNotification('Профиль канала в разработке', 'info');
+            }
+        } else if (chatData.type === 'group') {
+            if (typeof openGroupProfile === 'function') {
+                openGroupProfile(chatId);
+            } else {
+                showNotification('Профиль группы в разработке', 'info');
+            }
         }
-    }
+    };
+    
+    chatHeader._clickHandler = clickHandler;
+    chatHeader.addEventListener('click', clickHandler);
+}
     
     // Обновляем аватарку чата (для групп и каналов)
     var chatAvatar = document.getElementById('chat-avatar');
