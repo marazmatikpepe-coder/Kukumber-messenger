@@ -174,30 +174,18 @@
                         </div>
                         
                         <div class="messages-container" id="messages-container"></div>
-                     <div class="message-input-area" id="message-input-area">
-    <label for="file-input" class="attach-btn" id="attach-file-btn">
+                    <div class="message-input-area" id="message-input-area">
+    <button id="attach-file-btn" class="attach-btn">
         <img src="https://i.ibb.co/bRjHz7T5/Picsart-26-04-10-15-45-03-668.png" alt="Файл" style="width: 50px; height: 50px;">
-    </label>
+    </button>
     <input type="file" id="file-input" accept="image/*,image/gif,video/*" multiple style="display:none;">
     
     <input type="text" id="message-input" placeholder="Сообщение..." onkeypress="handleMessageKeyPress(event)" oninput="onTyping()">
     
+    <button id="sticker-btn" class="emoji-btn" onclick="toggleEmojiPicker()">😊</button>
     <button id="voice-record-btn" class="voice-btn" ontouchstart="startRecording()" ontouchend="stopRecording()" onmousedown="startRecording()" onmouseup="stopRecording()">🎤</button>
-    <button onclick="toggleEmojiPicker()" class="emoji-btn">😊</button>
-    <button onclick="sendMessage()" class="send-btn">➤</button>
+    <button id="send-btn" class="send-btn" onclick="sendMessage()">➤</button>
 </div>
-                        
-                        <div class="channel-footer hidden" id="channel-footer">
-                            <p>Только админы могут писать</p>
-                        </div>
-                        
-                        <div id="emoji-picker" class="emoji-picker hidden">
-                            <div class="emoji-grid"></div>
-                        </div>
-                    </div>
-                </main>
-            </div>
-        </div>
 
         <!-- ВКЛАДКА SLICES -->
         <div id="reels-tab" class="tab-content hidden">
