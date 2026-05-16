@@ -95,3 +95,22 @@
     
     showDebugMsg('PC FIX загружен и работает');
 })();
+// ТЕСТОВАЯ КНОПКА - ПРИНУДИТЕЛЬНО ПОКАЗЫВАЕМ ЧАТ
+setTimeout(function() {
+    var testBtn = document.getElementById('test-chat-btn');
+    if (testBtn) {
+        testBtn.onclick = function() {
+            var noChat = document.getElementById('no-chat-selected');
+            var activeChat = document.getElementById('active-chat');
+            
+            if (noChat) noChat.style.display = 'none';
+            if (activeChat) activeChat.style.display = 'flex';
+            
+            // Меняем текст в шапке для теста
+            var chatName = document.getElementById('chat-username');
+            if (chatName) chatName.textContent = 'ТЕСТОВЫЙ ЧАТ';
+            
+            alert('Кнопка сработала! Если вы видите область чата - проблема в обработчике кликов');
+        };
+    }
+}, 1000);
