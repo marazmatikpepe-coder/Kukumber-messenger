@@ -123,8 +123,12 @@ function loadChats() {
 }
 
 function renderChats(chats) {
+    console.log('renderChats вызвана, чатов:', chats.length);
     var chatsList = document.getElementById('chats-list');
-    if (!chatsList) return;
+    if (!chatsList) {
+        console.error('chats-list не найден!');
+        return;
+    }
     
     var uniqueChats = [];
     var seenIds = {};
@@ -147,80 +151,97 @@ function renderChats(chats) {
         return; 
     }
     
-    var batchSize = 10;
-    var index = 0;
-    
-    function renderBatch() {
-        var end = Math.min(index + batchSize, chats.length);
-        for (var i = index; i < end; i++) {
-            createChatItem(chats[i].chatId, chats[i].data);
-        }
-        index = end;
-        if (index < chats.length) {
-            setTimeout(renderBatch, 50);
-        }
+    // Простой цикл без batch для отладки
+    for (var i = 0; i < chats.length; i++) {
+        createChatItem(chats[i].chatId, chats[i].data);
     }
     
-    renderBatch();
+    console.log('Чат-лист отрисован, элементов:', document.querySelectorAll('.chat-item').length);
 }
 
 function createChatItem(chatId, chatData) {
+    console.log('createChatItem для:', chatId, chatData.type);
+    
+    var chatsList = document.getElementById('chats-list');
+    if (!chatsList) return;
+    
     var div = document.createElement('div');
     div.className = 'chat-item';
     if (currentChatId === chatId) div.classList.add('active');
     
-    // Устанавливаем onclick СРАЗУ, до любой асинхронной загрузки
-    // В createChatItem, где устанавливается div.onclick, замените на:
-div.onclick = (function(cId, cData) {
-    return function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('Клик по чату:', cId);
-        openChat(cId, cData);
-    };
-})(chatId, chatData);
-    var name = '', avatar = '', badge = '', isOnline = false;
-    var avatarContent = '';
-    var avatarStyle = '';
+    // Определяем имя и аватар
+    var name = 'Загрузка...';
+    var preview = chatData.lastMessage || 'Нет сообщений';
+    var time = chatData.lastMessageTime ? formatTime(chatData.lastMessageTime) : '';
     
     if (chatData.type === 'group') {
         name = chatData.name || 'Группа';
-        avatar = chatData.avatar || '';
-        badge = '<span class="chat-type-badge">👥</span>';
-        finishCreate();
-    } else if (chatData.type === 'channel') {
+        var avatarHtml = '<div class="avatar">👥</div>';
+        div.innerHTML = '<div class="chat-item-avatar">' + avatarHtml + '</div>' +
+            '<div class="chat-item-info">' +
+                '<div class="chat-item-header">' +
+                    '<span class="chat-item-name">' + escapeHtml(name) + '</span>' +
+                    '<span class="chat-item-time">' + time + '</span>' +
+                '</div>' +
+                '<div class="chat-item-preview">' + escapeHtml(preview) + '</div>' +
+            '</div>';
+    } 
+    else if (chatData.type === 'channel') {
         name = chatData.name || 'Канал';
-        avatar = chatData.avatar || '';
-        badge = '<span class="chat-type-badge">📢</span>';
-        finishCreate();
-    } else {
+        var avatarHtml = '<div class="avatar">📢</div>';
+        div.innerHTML = '<div class="chat-item-avatar">' + avatarHtml + '</div>' +
+            '<div class="chat-item-info">' +
+                '<div class="chat-item-header">' +
+                    '<span class="chat-item-name">' + escapeHtml(name) + '</span>' +
+                    '<span class="chat-item-time">' + time + '</span>' +
+                '</div>' +
+                '<div class="chat-item-preview">' + escapeHtml(preview) + '</div>' +
+            '</div>';
+    }
+    else {
+        // Приватный чат - временно показываем "Пользователь"
+        var avatarHtml = '<div class="avatar">👤</div>';
+        div.innerHTML = '<div class="chat-item-avatar">' + avatarHtml + '</div>' +
+            '<div class="chat-item-info">' +
+                '<div class="chat-item-header">' +
+                    '<span class="chat-item-name">Пользователь</span>' +
+                    '<span class="chat-item-time">' + time + '</span>' +
+                '</div>' +
+                '<div class="chat-item-preview">' + escapeHtml(preview) + '</div>' +
+            '</div>';
+        
+        // Асинхронно загружаем имя
         var otherUserId = null;
         if (chatData.participants) {
             for (var i = 0; i < chatData.participants.length; i++) {
-                if (chatData.participants[i] !== currentUser.uid) { 
-                    otherUserId = chatData.participants[i]; 
-                    break; 
+                if (chatData.participants[i] !== currentUser.uid) {
+                    otherUserId = chatData.participants[i];
+                    break;
                 }
             }
         }
         if (otherUserId) {
-            Promise.all([getUsername(otherUserId), getUserAvatar(otherUserId), getUserStatus(otherUserId)]).then(function(results) {
-                name = results[0];
-                avatar = results[1];
-                isOnline = results[2].online === true;
-                chatData.otherUserId = otherUserId;
-                if (!chatData.otherUser) chatData.otherUser = {};
-                chatData.otherUser.username = name;
-                chatData.otherUser.avatar = avatar;
-                updateChatItemDisplay(div, name, avatar, isOnline, badge, chatData);
+            getUsername(otherUserId).then(function(userName) {
+                var nameSpan = div.querySelector('.chat-item-name');
+                if (nameSpan) nameSpan.textContent = userName;
             });
-        } else { 
-            name = 'Пользователь'; 
-            updateChatItemDisplay(div, name, avatar, isOnline, badge, chatData);
         }
-        return;
     }
     
+    // Устанавливаем обработчик клика
+    div.style.cursor = 'pointer';
+    div.onclick = (function(id, data) {
+        return function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('КЛИК по чату! ID:', id);
+            openChat(id, data);
+        };
+    })(chatId, chatData);
+    
+    chatsList.appendChild(div);
+    console.log('Элемент чата добавлен в DOM');
+}
     function finishCreate() {
         updateChatItemDisplay(div, name, avatar, isOnline, badge, chatData);
     }
