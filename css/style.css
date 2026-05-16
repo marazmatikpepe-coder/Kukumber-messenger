@@ -1721,3 +1721,12 @@ html {
         background: white;
     }
 }
+/* Фикс для кликов на ПК */
+.chat-item {
+    cursor: pointer;
+    user-select: none;
+}
+
+.chat-item:hover {
+    background: var(--background);
+}
