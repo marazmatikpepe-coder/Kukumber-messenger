@@ -121,14 +121,9 @@ function loadChats() {
         });
     });
 }
-
 function renderChats(chats) {
-    console.log('renderChats вызвана, чатов:', chats.length);
     var chatsList = document.getElementById('chats-list');
-    if (!chatsList) {
-        console.error('chats-list не найден!');
-        return;
-    }
+    if (!chatsList) return;
     
     var uniqueChats = [];
     var seenIds = {};
@@ -151,14 +146,22 @@ function renderChats(chats) {
         return; 
     }
     
-    // Простой цикл без batch для отладки
-    for (var i = 0; i < chats.length; i++) {
-        createChatItem(chats[i].chatId, chats[i].data);
+    var batchSize = 10;
+    var index = 0;
+    
+    function renderBatch() {
+        var end = Math.min(index + batchSize, chats.length);
+        for (var i = index; i < end; i++) {
+            createChatItem(chats[i].chatId, chats[i].data);
+        }
+        index = end;
+        if (index < chats.length) {
+            setTimeout(renderBatch, 50);
+        }
     }
     
-    console.log('Чат-лист отрисован, элементов:', document.querySelectorAll('.chat-item').length);
+    renderBatch();
 }
-
 function createChatItem(chatId, chatData) {
     console.log('createChatItem для:', chatId, chatData.type);
     
