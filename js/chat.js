@@ -1293,34 +1293,32 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
-// ========== ФИКС ДЛЯ ПК: ОТКРЫТИЕ ЧАТОВ ==========
+// ========== ФИКС ДЛЯ ПК: ОТКРЫТИЕ ЧАТОВ (ИСПРАВЛЕННЫЙ) ==========
 function fixPCChats() {
-    // Навешиваем обработчики на все чаты заново
     var chatItems = document.querySelectorAll('.chat-item');
     chatItems.forEach(function(item) {
+        if (item.hasAttribute('data-fixed')) return;
+        
+        // Ищем chatId внутри onclick атрибута
         var onclickAttr = item.getAttribute('onclick');
         if (onclickAttr && onclickAttr.includes('openChat')) {
-            // Уже есть обработчик, ничего не делаем
+            item.setAttribute('data-fixed', 'true');
             return;
         }
         
-        // Ищем chatId внутри элемента
+        // Пытаемся найти chatId в данных
         var match = item.innerHTML.match(/openChat\('([^']+)'/);
         if (match && match[1]) {
             var chatId = match[1];
             item.style.cursor = 'pointer';
+            item.setAttribute('data-fixed', 'true');
             item.onclick = function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('Клик по чату (ПК фикс):', chatId);
-                
-                // Загружаем данные чата
                 database.ref('chats/' + chatId).once('value').then(function(snapshot) {
                     var chatData = snapshot.val();
                     if (chatData) {
                         openChat(chatId, chatData);
-                    } else {
-                        showNotification('Чат не найден', 'error');
                     }
                 });
             };
@@ -1328,27 +1326,13 @@ function fixPCChats() {
     });
 }
 
-// Переопределяем рендер чатов, чтобы сразу вешать обработчики
-var originalRenderChats = window.renderChats;
-window.renderChats = function(chats) {
-    if (originalRenderChats) originalRenderChats(chats);
-    setTimeout(fixPCChats, 100);
-};
-
-// Также вешаем обработчик на динамическое изменение списка
-var observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-        if (mutation.addedNodes.length) {
-            fixPCChats();
-        }
-    });
+// Наблюдатель за изменениями
+var chatObserver = new MutationObserver(function() {
+    fixPCChats();
 });
 
-// Запускаем observer после загрузки DOM
-document.addEventListener('DOMContentLoaded', function() {
-    var chatsList = document.getElementById('chats-list');
-    if (chatsList) {
-        observer.observe(chatsList, { childList: true, subtree: true });
-    }
-    setTimeout(fixPCChats, 500);
-});
+// Запуск
+if (document.getElementById('chats-list')) {
+    chatObserver.observe(document.getElementById('chats-list'), { childList: true, subtree: true });
+}
+setTimeout(fixPCChats, 1000);
