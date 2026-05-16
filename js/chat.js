@@ -1087,6 +1087,21 @@ function initChat() {
     window.startPrivateChat = startPrivateChat;
     window.openChatProfile = openChatProfile;
     
+    // Добавляем новые функции
+    window.openCreateGroupWizard = openCreateGroupWizard;
+    window.openCreateChannelWizard = openCreateChannelWizard;
+    window.createGroup = createGroup;
+    window.createChannel = createChannel;
+    window.closeGroupModal = closeGroupModal;
+    window.closeChannelModal = closeChannelModal;
+    window.openGroupProfileModal = openGroupProfileModal;
+    window.openChannelProfileModal = openChannelProfileModal;
+    window.closeGroupProfileModal = closeGroupProfileModal;
+    window.closeChannelProfileModal = closeChannelProfileModal;
+    window.leaveGroupChat = leaveGroupChat;
+    window.subscribeToChannel = subscribeToChannel;
+    window.unsubscribeFromChannel = unsubscribeFromChannel;
+    
     // Наблюдатель за изменением списка чатов
     var observer = new MutationObserver(function() {
         attachChatClickHandlers();
