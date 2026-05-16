@@ -1,12 +1,62 @@
-// ========== ФИКС ДЛЯ ПК - ОТКРЫТИЕ ЧАТОВ ==========
-// Этот файл подключается после chat.js и исправляет открытие чатов на ПК
-
+// ========== ФИКС ДЛЯ ПК - ПРИНУДИТЕЛЬНОЕ ОТКРЫТИЕ ЧАТА ==========
 (function() {
-    console.log('PC FIX: загрузка исправления для чатов');
+    console.log('PC FIX: загрузка...');
     
-    // Перехватываем клики по чатам через делегирование
+    // Функция показа уведомления
+    function showDebugMsg(msg) {
+        console.log(msg);
+        // Создаём красное уведомление на экране
+        var div = document.createElement('div');
+        div.textContent = msg;
+        div.style.cssText = 'position:fixed; bottom:10px; left:10px; background:red; color:white; padding:10px; z-index:99999; font-size:14px; border-radius:5px;';
+        document.body.appendChild(div);
+        setTimeout(function() { div.remove(); }, 3000);
+    }
+    
+    // Принудительное открытие чата
+    window.forceOpenChat = function(chatId, chatData) {
+        showDebugMsg('Открываю чат: ' + chatId);
+        
+        // 1. Прячем "нет чата"
+        var noChat = document.getElementById('no-chat-selected');
+        if (noChat) {
+            noChat.style.display = 'none';
+            noChat.classList.add('hidden');
+            showDebugMsg('Скрыл no-chat-selected');
+        } else {
+            showDebugMsg('ОШИБКА: no-chat-selected не найден');
+        }
+        
+        // 2. Показываем активный чат
+        var activeChat = document.getElementById('active-chat');
+        if (activeChat) {
+            activeChat.style.display = 'flex';
+            activeChat.classList.remove('hidden');
+            showDebugMsg('Показал active-chat');
+        } else {
+            showDebugMsg('ОШИБКА: active-chat не найден');
+        }
+        
+        // 3. Обновляем шапку чата (просто для теста)
+        var chatName = document.getElementById('chat-username');
+        if (chatName) {
+            if (chatData.type === 'private') {
+                chatName.textContent = 'Личный чат';
+            } else if (chatData.type === 'group') {
+                chatName.textContent = chatData.name || 'Группа';
+            } else if (chatData.type === 'channel') {
+                chatName.textContent = chatData.name || 'Канал';
+            }
+            showDebugMsg('Шапка обновлена: ' + chatName.textContent);
+        }
+        
+        // Сохраняем глобально
+        window.currentChatId = chatId;
+        window.currentChatData = chatData;
+    };
+    
+    // Перехват кликов по чатам
     document.addEventListener('click', function(e) {
-        // Ищем элемент чата
         var chatItem = e.target.closest('.chat-item');
         if (!chatItem) return;
         
@@ -14,203 +64,34 @@
         e.stopPropagation();
         
         var chatId = chatItem.getAttribute('data-chat-id');
+        showDebugMsg('Клик по чату: ' + chatId);
+        
         if (!chatId) return;
         
-        console.log('PC FIX: клик по чату', chatId);
-        
-        // Получаем данные чата из Firebase
+        // Загружаем данные чата
         database.ref('chats/' + chatId).once('value').then(function(snapshot) {
             var chatData = snapshot.val();
-            if (!chatData) {
-                showNotification('Чат не найден', 'error');
-                return;
+            if (chatData) {
+                window.forceOpenChat(chatId, chatData);
+            } else {
+                showDebugMsg('ОШИБКА: чат не найден в БД');
             }
-            
-            // Открываем чат напрямую
-            forceOpenChat(chatId, chatData);
         }).catch(function(err) {
-            console.error('PC FIX ошибка:', err);
+            showDebugMsg('Ошибка БД: ' + err.message);
         });
     });
     
-    // Функция принудительного открытия чата
-    function forceOpenChat(chatId, chatData) {
-        console.log('PC FIX: открываю чат', chatId);
+    // Проверяем наличие элементов при загрузке
+    setTimeout(function() {
+        var noChat = document.getElementById('no-chat-selected');
+        var activeChat = document.getElementById('active-chat');
         
-        // Сохраняем глобальные переменные
-        window.currentChatId = chatId;
-        window.currentChatData = chatData;
-        currentChatId = chatId;
-        currentChatData = chatData;
+        if (noChat) showDebugMsg('✓ no-chat-selected найден');
+        else showDebugMsg('✗ no-chat-selected НЕ найден');
         
-        // 1. Обновляем активный класс
-        document.querySelectorAll('.chat-item').forEach(function(item) {
-            item.classList.remove('active');
-            if (item.getAttribute('data-chat-id') === chatId) {
-                item.classList.add('active');
-            }
-        });
-        
-        // 2. ПОКАЗЫВАЕМ ОБЛАСТЬ ЧАТА (САМОЕ ВАЖНОЕ!)
-        var noChatElement = document.getElementById('no-chat-selected');
-        var activeChatElement = document.getElementById('active-chat');
-        
-        if (noChatElement) noChatElement.classList.add('hidden');
-        if (activeChatElement) activeChatElement.classList.remove('hidden');
-        
-        // 3. Очищаем сообщения
-        var messagesContainer = document.getElementById('messages-container');
-        if (messagesContainer) messagesContainer.innerHTML = '';
-        
-        // 4. Заполняем шапку чата
-        fillChatHeader(chatId, chatData);
-        
-        // 5. Загружаем сообщения
-        loadChatMessages(chatId);
-    }
+        if (activeChat) showDebugMsg('✓ active-chat найден');
+        else showDebugMsg('✗ active-chat НЕ найден');
+    }, 1000);
     
-    // Заполнение шапки чата
-    async function fillChatHeader(chatId, chatData) {
-        var chatUsername = document.getElementById('chat-username');
-        var chatStatus = document.getElementById('chat-status');
-        var chatAvatar = document.getElementById('chat-avatar');
-        
-        if (!chatUsername) return;
-        
-        if (chatData.type === 'group') {
-            chatUsername.textContent = chatData.name || 'Группа';
-            if (chatStatus) {
-                var membersCount = chatData.members ? Object.keys(chatData.members).length : 0;
-                chatStatus.textContent = membersCount + ' участников';
-            }
-            if (chatAvatar) {
-                if (chatData.avatar) {
-                    chatAvatar.style.backgroundImage = 'url(' + chatData.avatar + ')';
-                    chatAvatar.style.backgroundSize = 'cover';
-                    chatAvatar.textContent = '';
-                } else {
-                    chatAvatar.style.backgroundImage = '';
-                    chatAvatar.textContent = '👥';
-                }
-            }
-        } 
-        else if (chatData.type === 'channel') {
-            chatUsername.textContent = chatData.name || 'Канал';
-            if (chatStatus) {
-                var subsCount = chatData.subscribers ? Object.keys(chatData.subscribers).length : 0;
-                chatStatus.textContent = subsCount + ' подписчиков';
-            }
-            if (chatAvatar) {
-                if (chatData.avatar) {
-                    chatAvatar.style.backgroundImage = 'url(' + chatData.avatar + ')';
-                    chatAvatar.style.backgroundSize = 'cover';
-                    chatAvatar.textContent = '';
-                } else {
-                    chatAvatar.style.backgroundImage = '';
-                    chatAvatar.textContent = '📢';
-                }
-            }
-        }
-        else {
-            // Личный чат - ищем собеседника
-            var otherUserId = null;
-            if (chatData.participants) {
-                for (var i = 0; i < chatData.participants.length; i++) {
-                    if (chatData.participants[i] !== currentUser.uid) {
-                        otherUserId = chatData.participants[i];
-                        break;
-                    }
-                }
-            }
-            
-            if (otherUserId) {
-                try {
-                    var userSnap = await database.ref('users/' + otherUserId).once('value');
-                    var userData = userSnap.val();
-                    
-                    if (userData) {
-                        chatUsername.textContent = userData.username || 'Пользователь';
-                        if (chatStatus) {
-                            var status = userData.status || {};
-                            if (status.online) {
-                                chatStatus.innerHTML = 'в сети';
-                            } else {
-                                chatStatus.innerHTML = formatLastSeen(status.lastSeen);
-                            }
-                        }
-                        if (chatAvatar) {
-                            if (userData.avatar) {
-                                chatAvatar.style.backgroundImage = 'url(' + userData.avatar + ')';
-                                chatAvatar.style.backgroundSize = 'cover';
-                                chatAvatar.textContent = '';
-                            } else {
-                                chatAvatar.style.backgroundImage = '';
-                                chatAvatar.textContent = '👤';
-                            }
-                        }
-                    }
-                } catch(e) {
-                    chatUsername.textContent = 'Пользователь';
-                }
-            } else {
-                chatUsername.textContent = 'Пользователь';
-            }
-        }
-    }
-    
-    // Загрузка сообщений
-    function loadChatMessages(chatId) {
-        var container = document.getElementById('messages-container');
-        if (!container) return;
-        
-        // Отписываемся от старых
-        if (window.messagesListener) {
-            window.messagesListener.off();
-        }
-        
-        // Подписываемся на новые
-        window.messagesListener = database.ref('messages/' + chatId)
-            .orderByChild('timestamp')
-            .limitToLast(50);
-        
-        window.messagesListener.on('child_added', function(snapshot) {
-            var message = snapshot.val();
-            message.id = snapshot.key;
-            
-            var isSent = message.senderId === currentUser?.uid;
-            var messageDiv = document.createElement('div');
-            messageDiv.className = 'message ' + (isSent ? 'sent' : 'received');
-            messageDiv.setAttribute('data-message-id', message.id);
-            
-            var content = '';
-            if (message.type === 'text') {
-                content = '<div class="message-text">' + escapeHtml(message.text || '') + '</div>';
-            } else if (message.type === 'image') {
-                content = '<div class="message-image"><img src="' + message.imageUrl + '" style="max-width:250px; border-radius:12px;"></div>';
-            } else if (message.type === 'gif') {
-                content = '<div class="gif-message"><img src="' + message.gifUrl + '" style="max-width:250px; border-radius:12px;"><span class="gif-badge">GIF</span></div>';
-            } else {
-                content = '<div class="message-text">📎 Вложение</div>';
-            }
-            
-            messageDiv.innerHTML = '<div class="message-content">' + content + '<div class="message-time">' + formatTime(message.timestamp) + '</div></div>';
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
-        });
-    }
-    
-    // Перехватываем кнопку закрытия чата
-    var backBtn = document.querySelector('.back-btn');
-    if (backBtn) {
-        backBtn.addEventListener('click', function() {
-            var noChat = document.getElementById('no-chat-selected');
-            var activeChat = document.getElementById('active-chat');
-            if (noChat) noChat.classList.remove('hidden');
-            if (activeChat) activeChat.classList.add('hidden');
-            window.currentChatId = null;
-            if (window.messagesListener) window.messagesListener.off();
-        });
-    }
-    
-    console.log('PC FIX: готово');
+    showDebugMsg('PC FIX загружен и работает');
 })();
