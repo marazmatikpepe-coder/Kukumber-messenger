@@ -250,33 +250,54 @@ function updateChatItemDisplay(div, name, avatar, isOnline, badge, chatData) {
 
 // ========== ОТКРЫТИЕ ЧАТА ==========
 function openChat(chatId, chatData) {
-    console.log('openChat вызван с chatId:', chatId, 'chatData:', chatData);
+    console.log('=== ОТКРЫТИЕ ЧАТА ===');
+    console.log('chatId:', chatId);
+    console.log('chatData:', chatData);
+    console.log('currentUser:', currentUser);
     
-    // НЕ закрываем сайдбар на ПК, только на мобильных
+    if (!chatId) {
+        console.error('Нет chatId!');
+        showNotification('Ошибка: нет ID чата', 'error');
+        return;
+    }
+    
+    if (!currentUser) {
+        console.error('Нет currentUser!');
+        showNotification('Ошибка: пользователь не авторизован', 'error');
+        return;
+    }
+    
+    // Закрываем сайдбар только на мобильных
     if (window.innerWidth <= 768) {
         closeSidebar();
     }
     
+    // Если нет данных чата, загружаем их
     if (!chatData || !chatData.type) {
+        console.log('Нет данных чата, загружаем из БД...');
         database.ref('chats/' + chatId).once('value').then(function(snapshot) {
             var freshData = snapshot.val();
+            console.log('Загруженные данные чата:', freshData);
             if (freshData) {
                 openChatWithData(chatId, freshData);
             } else {
+                console.error('Чат не найден в БД!');
                 showNotification('Чат не найден', 'error');
             }
+        }).catch(function(err) {
+            console.error('Ошибка загрузки чата:', err);
+            showNotification('Ошибка загрузки чата', 'error');
         });
         return;
     }
     
-    openChatWithData(chatId, chatData);
-}
-
-function openChatWithData(chatId, chatData) {
-    console.log('openChatWithData:', chatId, chatData.type);
+  function openChatWithData(chatId, chatData) {
+    console.log('=== openChatWithData ===');
+    console.log('chatId:', chatId);
+    console.log('chatData:', chatData);
     
     if (!chatData) {
-        console.error('Нет данных чата');
+        console.error('Нет данных чата в openChatWithData');
         return;
     }
     
@@ -284,83 +305,65 @@ function openChatWithData(chatId, chatData) {
     currentChatUser = chatData;
     currentChatUser.chatId = chatId;
     
+    // Показываем область активного чата
     var noChatElement = document.getElementById('no-chat-selected');
     var activeChatElement = document.getElementById('active-chat');
+    
+    console.log('noChatElement:', noChatElement);
+    console.log('activeChatElement:', activeChatElement);
     
     if (noChatElement) noChatElement.classList.add('hidden');
     if (activeChatElement) activeChatElement.classList.remove('hidden');
     
-    // Обновляем активный класс в списке чатов
-    var chatItems = document.querySelectorAll('.chat-item');
-    chatItems.forEach(function(item) {
-        item.classList.remove('active');
-        // Проверяем onclick атрибут или data-chat-id
-        var onclickAttr = item.getAttribute('onclick');
-        if (onclickAttr && onclickAttr.includes("openChat('" + chatId + "'")) {
-            item.classList.add('active');
-        }
-    });
+    // Устанавливаем базовую информацию
+    var chatUsername = document.getElementById('chat-username');
+    var chatStatus = document.getElementById('chat-status');
     
-    var name = '', avatar = '', status = '';
-    var messageInputArea = document.getElementById('message-input-area');
-    var channelFooter = document.getElementById('channel-footer');
+    if (!chatUsername || !chatStatus) {
+        console.error('Элементы чата не найдены!');
+        return;
+    }
     
+    // Временные значения
     if (chatData.type === 'group') {
-        name = chatData.name || 'Группа';
-        avatar = chatData.avatar || '';
-        var membersCount = chatData.members ? Object.keys(chatData.members).length : 0;
-        status = membersCount + ' участников';
-        if (messageInputArea) messageInputArea.classList.remove('hidden');
-        if (channelFooter) channelFooter.classList.add('hidden');
-        hideCallButtons();
-        
-        document.getElementById('chat-username').textContent = name;
-        document.getElementById('chat-status').textContent = status;
-        
+        chatUsername.textContent = chatData.name || 'Группа';
+        chatStatus.textContent = 'загрузка...';
     } else if (chatData.type === 'channel') {
-        name = chatData.name || 'Канал';
-        avatar = chatData.avatar || '';
-        var subsCount = chatData.subscribers ? Object.keys(chatData.subscribers).length : 0;
-        status = subsCount + ' подписчиков';
-        var isAdmin = chatData.admins && chatData.admins[currentUser.uid];
-        if (messageInputArea) {
-            if (isAdmin) messageInputArea.classList.remove('hidden');
-            else messageInputArea.classList.add('hidden');
-        }
-        if (channelFooter) {
-            if (isAdmin) channelFooter.classList.add('hidden');
-            else channelFooter.classList.remove('hidden');
-        }
-        hideCallButtons();
-        
-        document.getElementById('chat-username').textContent = name;
-        document.getElementById('chat-status').textContent = status;
-        
+        chatUsername.textContent = chatData.name || 'Канал';
+        chatStatus.textContent = 'загрузка...';
     } else {
-        // ПРИВАТНЫЙ ЧАТ
-        if (messageInputArea) messageInputArea.classList.remove('hidden');
-        if (channelFooter) channelFooter.classList.add('hidden');
-        showCallButtons();
-        
+        chatUsername.textContent = 'загрузка...';
+        chatStatus.textContent = 'загрузка...';
+    }
+    
+    console.log('Базовые данные установлены, загружаем сообщения...');
+    
+    // Загружаем сообщения
+    loadMessages(chatId);
+    setupTypingListener(chatId);
+    
+    // Обновляем данные пользователя для приватного чата
+    if (chatData.type === 'private' && chatData.participants) {
         var otherUserId = null;
-        if (chatData.participants) {
-            for (var i = 0; i < chatData.participants.length; i++) {
-                if (chatData.participants[i] !== currentUser.uid) {
-                    otherUserId = chatData.participants[i];
-                    break;
-                }
+        for (var i = 0; i < chatData.participants.length; i++) {
+            if (chatData.participants[i] !== currentUser.uid) {
+                otherUserId = chatData.participants[i];
+                break;
             }
         }
         
         if (otherUserId) {
+            console.log('Загружаем данные пользователя:', otherUserId);
             chatData.otherUserId = otherUserId;
             
             Promise.all([getUsername(otherUserId), getUserAvatar(otherUserId), getUserStatus(otherUserId)]).then(function(results) {
+                console.log('Данные загружены:', results);
                 var userName = results[0];
                 var userAvatar = results[1];
                 var userStatusData = results[2];
                 
-                document.getElementById('chat-username').textContent = userName;
+                var chatUsernameEl = document.getElementById('chat-username');
+                if (chatUsernameEl) chatUsernameEl.textContent = userName;
                 
                 var chatAvatar = document.getElementById('chat-avatar');
                 if (chatAvatar) {
@@ -382,53 +385,13 @@ function openChatWithData(chatId, chatData) {
                         statusEl.innerHTML = formatLastSeen(userStatusData.lastSeen);
                     }
                 }
-                
-                // Делаем шапку чата кликабельной
-                var chatHeader = document.querySelector('.chat-user-info');
-                if (chatHeader) {
-                    chatHeader.style.cursor = 'pointer';
-                    chatHeader.removeEventListener('click', chatHeader._profileClick);
-                    chatHeader._profileClick = function(e) {
-                        e.stopPropagation();
-                        if (typeof window.openUserProfile === 'function') {
-                            window.openUserProfile(otherUserId);
-                        } else {
-                            showNotification('Профиль будет доступен в следующем обновлении', 'info');
-                        }
-                    };
-                    chatHeader.addEventListener('click', chatHeader._profileClick);
-                }
+            }).catch(function(err) {
+                console.error('Ошибка загрузки данных пользователя:', err);
             });
-        } else {
-            document.getElementById('chat-username').textContent = 'Пользователь';
-            document.getElementById('chat-status').textContent = 'загрузка...';
         }
     }
     
-    // Обновляем аватар чата
-    var chatAvatar = document.getElementById('chat-avatar');
-    if (chatAvatar) {
-        if (avatar && avatar.indexOf('http') === 0) {
-            chatAvatar.style.backgroundImage = 'url(' + avatar + ')';
-            chatAvatar.style.backgroundSize = 'cover';
-            chatAvatar.textContent = '';
-        } else if (chatData.type !== 'private') {
-            chatAvatar.style.backgroundImage = '';
-            if (chatData.type === 'group') {
-                chatAvatar.textContent = '👥';
-            } else if (chatData.type === 'channel') {
-                chatAvatar.textContent = '📢';
-            } else {
-                chatAvatar.textContent = '👤';
-            }
-        }
-    }
-    
-    // Загружаем сообщения
-    loadMessages(chatId);
-    setupTypingListener(chatId);
-    
-    console.log('Чат открыт:', chatId);
+    console.log('Чат успешно открыт!');
 }
 function hideCallButtons() {
     var btns = document.querySelectorAll('.call-btn');
