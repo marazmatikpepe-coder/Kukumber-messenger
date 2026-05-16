@@ -1058,7 +1058,10 @@ function openUserByUsername(username) {
     console.log('Поиск пользователя по username:', username);
     showNotification('Поиск пользователя...', 'info');
 }
-
+function openNewChatFromMenu() {
+    closeCreateMenu();
+    showNewChatDialog();
+}
 // ========== ИНИЦИАЛИЗАЦИЯ ==========
 function initChat() {
     console.log('Chat.js инициализирован');
