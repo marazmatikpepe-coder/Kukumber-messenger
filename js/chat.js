@@ -1121,11 +1121,10 @@ function initChat() {
 }
 
 // Запускаем инициализацию после загрузки DOM
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initChat);
-} else {
+// Запускаем инициализацию после загрузки DOM
+setTimeout(function() {
     initChat();
-}
+}, 1000);
 
 console.log('chat.js полностью загружен и готов к работе');
 // ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ОТКРЫТИЯ ЧАТА ==========
