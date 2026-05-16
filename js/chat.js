@@ -168,6 +168,17 @@ function createChatItem(chatId, chatData) {
     var div = document.createElement('div');
     div.className = 'chat-item';
     if (currentChatId === chatId) div.classList.add('active');
+    
+    // Устанавливаем onclick СРАЗУ, до любой асинхронной загрузки
+    div.onclick = (function(cId, cData) {
+        return function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Клик по чату:', cId);
+            openChat(cId, cData);
+        };
+    })(chatId, chatData);
+    
     var name = '', avatar = '', badge = '', isOnline = false;
     var avatarContent = '';
     var avatarStyle = '';
@@ -201,31 +212,39 @@ function createChatItem(chatId, chatData) {
                 if (!chatData.otherUser) chatData.otherUser = {};
                 chatData.otherUser.username = name;
                 chatData.otherUser.avatar = avatar;
-                finishCreate();
+                updateChatItemDisplay(div, name, avatar, isOnline, badge, chatData);
             });
         } else { 
             name = 'Пользователь'; 
-            finishCreate(); 
+            updateChatItemDisplay(div, name, avatar, isOnline, badge, chatData);
         }
         return;
     }
     
     function finishCreate() {
-        if (avatar && avatar.indexOf('http') === 0) { 
-            avatarStyle = 'background-image:url('+avatar+');background-size:cover;'; 
-            avatarContent = ''; 
-        } else { 
-            avatarStyle = '';
-            avatarContent = chatData.type === 'group' ? '👥' : (chatData.type === 'channel' ? '📢' : '👤'); 
-        }
-        var time = chatData.lastMessageTime ? formatTime(chatData.lastMessageTime) : '';
-        var preview = chatData.lastMessage || 'Нет сообщений';
-        if (preview.length > 50) preview = preview.substring(0, 47) + '...';
-        
-        div.innerHTML = '<div class="chat-item-avatar"><div class="avatar" style="'+avatarStyle+'">'+avatarContent+'</div>'+(isOnline?'<div class="online-indicator"></div>':'')+badge+'</div><div class="chat-item-info"><div class="chat-item-header"><span class="chat-item-name">'+escapeHtml(name)+'</span><span class="chat-item-time">'+time+'</span></div><div class="chat-item-preview">'+escapeHtml(preview)+'</div></div>';
-        div.onclick = function() { openChat(chatId, chatData); };
-        var chatsList = document.getElementById('chats-list');
-        if (chatsList) chatsList.appendChild(div);
+        updateChatItemDisplay(div, name, avatar, isOnline, badge, chatData);
+    }
+}
+
+function updateChatItemDisplay(div, name, avatar, isOnline, badge, chatData) {
+    var avatarStyle = '';
+    var avatarContent = '';
+    if (avatar && avatar.indexOf('http') === 0) { 
+        avatarStyle = 'background-image:url('+avatar+');background-size:cover;'; 
+        avatarContent = ''; 
+    } else { 
+        avatarStyle = '';
+        avatarContent = chatData.type === 'group' ? '👥' : (chatData.type === 'channel' ? '📢' : '👤'); 
+    }
+    var time = chatData.lastMessageTime ? formatTime(chatData.lastMessageTime) : '';
+    var preview = chatData.lastMessage || 'Нет сообщений';
+    if (preview.length > 50) preview = preview.substring(0, 47) + '...';
+    
+    div.innerHTML = '<div class="chat-item-avatar"><div class="avatar" style="'+avatarStyle+'">'+avatarContent+'</div>'+(isOnline ? '<div class="online-indicator"></div>' : '')+badge+'</div><div class="chat-item-info"><div class="chat-item-header"><span class="chat-item-name">'+escapeHtml(name)+'</span><span class="chat-item-time">'+time+'</span></div><div class="chat-item-preview">'+escapeHtml(preview)+'</div></div>';
+    
+    var chatsList = document.getElementById('chats-list');
+    if (chatsList && !chatsList.contains(div)) {
+        chatsList.appendChild(div);
     }
 }
 
