@@ -1315,21 +1315,10 @@ function fixPCChats() {
     });
 }
 
-// Наблюдатель за изменениями
-var chatObserver = new MutationObserver(function() {
-    fixPCChats();
-});
-
-// Запуск
-if (document.getElementById('chats-list')) {
-    chatObserver.observe(document.getElementById('chats-list'), { childList: true, subtree: true });
-}
-setTimeout(fixPCChats, 1000);
 // Фикс для ПК - принудительное обновление кликов
 function fixChatClickListeners() {
     var chatItems = document.querySelectorAll('.chat-item');
     chatItems.forEach(function(item) {
-        // Если у элемента нет onclick или он неправильный
         if (!item.onclick && !item.hasAttribute('data-fixed')) {
             var match = item.innerHTML.match(/openChat\('([^']+)'/);
             if (match && match[1]) {
@@ -1355,24 +1344,7 @@ function fixChatClickListeners() {
     });
 }
 
-// Запускаем фикс после загрузки чатов
-var originalRenderChats = window.renderChats;
-window.renderChats = function(chats) {
-    originalRenderChats(chats);
-    setTimeout(fixChatClickListeners, 100);
-};
-
-// Наблюдатель за изменениями в списке чатов
-if (document.getElementById('chats-list')) {
-    var chatObserver = new MutationObserver(function() {
-        fixChatClickListeners();
-    });
-    chatObserver.observe(document.getElementById('chats-list'), { 
-        childList: true, 
-        subtree: true 
-    });
-}
-// Функция для прямого открытия чата по ID (для onclick атрибутов)
+// Функция для прямого открытия чата по ID
 window.openChatById = function(chatId) {
     console.log('openChatById вызван для:', chatId);
     database.ref('chats/' + chatId).once('value').then(function(snapshot) {
@@ -1387,3 +1359,19 @@ window.openChatById = function(chatId) {
         showNotification('Ошибка загрузки чата', 'error');
     });
 };
+
+// Наблюдатель за изменениями в списке чатов
+if (document.getElementById('chats-list')) {
+    var chatListObserver = new MutationObserver(function() {
+        fixChatClickListeners();
+    });
+    chatListObserver.observe(document.getElementById('chats-list'), { 
+        childList: true, 
+        subtree: true 
+    });
+}
+
+// Запускаем фикс после загрузки
+setTimeout(fixChatClickListeners, 1000);
+
+console.log('chat.js полностью загружен');
