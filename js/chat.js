@@ -250,8 +250,12 @@ function updateChatItemDisplay(div, name, avatar, isOnline, badge, chatData) {
 
 // ========== ОТКРЫТИЕ ЧАТА ==========
 function openChat(chatId, chatData) {
-    console.log('openChat вызван с chatId:', chatId);
-    closeSidebar();
+    console.log('openChat вызван с chatId:', chatId, 'chatData:', chatData);
+    
+    // НЕ закрываем сайдбар на ПК, только на мобильных
+    if (window.innerWidth <= 768) {
+        closeSidebar();
+    }
     
     if (!chatData || !chatData.type) {
         database.ref('chats/' + chatId).once('value').then(function(snapshot) {
@@ -271,6 +275,11 @@ function openChat(chatId, chatData) {
 function openChatWithData(chatId, chatData) {
     console.log('openChatWithData:', chatId, chatData.type);
     
+    if (!chatData) {
+        console.error('Нет данных чата');
+        return;
+    }
+    
     currentChatId = chatId;
     currentChatUser = chatData;
     currentChatUser.chatId = chatId;
@@ -281,8 +290,18 @@ function openChatWithData(chatId, chatData) {
     if (noChatElement) noChatElement.classList.add('hidden');
     if (activeChatElement) activeChatElement.classList.remove('hidden');
     
-    var name = '', avatar = '', status = '';
+    // Обновляем активный класс в списке чатов
+    var chatItems = document.querySelectorAll('.chat-item');
+    chatItems.forEach(function(item) {
+        item.classList.remove('active');
+        // Проверяем onclick атрибут или data-chat-id
+        var onclickAttr = item.getAttribute('onclick');
+        if (onclickAttr && onclickAttr.includes("openChat('" + chatId + "'")) {
+            item.classList.add('active');
+        }
+    });
     
+    var name = '', avatar = '', status = '';
     var messageInputArea = document.getElementById('message-input-area');
     var channelFooter = document.getElementById('channel-footer');
     
@@ -349,11 +368,9 @@ function openChatWithData(chatId, chatData) {
                         chatAvatar.style.backgroundImage = 'url(' + userAvatar + ')';
                         chatAvatar.style.backgroundSize = 'cover';
                         chatAvatar.textContent = '';
-                        chatAvatar.classList.remove('default-avatar-user', 'default-avatar-group', 'default-avatar-channel');
                     } else {
                         chatAvatar.style.backgroundImage = '';
-                        chatAvatar.classList.add('default-avatar-user');
-                        chatAvatar.textContent = '';
+                        chatAvatar.textContent = '👤';
                     }
                 }
                 
@@ -375,8 +392,6 @@ function openChatWithData(chatId, chatData) {
                         e.stopPropagation();
                         if (typeof window.openUserProfile === 'function') {
                             window.openUserProfile(otherUserId);
-                        } else if (typeof openUserProfile === 'function') {
-                            openUserProfile(otherUserId);
                         } else {
                             showNotification('Профиль будет доступен в следующем обновлении', 'info');
                         }
@@ -397,33 +412,24 @@ function openChatWithData(chatId, chatData) {
             chatAvatar.style.backgroundImage = 'url(' + avatar + ')';
             chatAvatar.style.backgroundSize = 'cover';
             chatAvatar.textContent = '';
-            chatAvatar.classList.remove('default-avatar-user', 'default-avatar-group', 'default-avatar-channel');
         } else if (chatData.type !== 'private') {
             chatAvatar.style.backgroundImage = '';
             if (chatData.type === 'group') {
-                chatAvatar.classList.add('default-avatar-group');
+                chatAvatar.textContent = '👥';
             } else if (chatData.type === 'channel') {
-                chatAvatar.classList.add('default-avatar-channel');
+                chatAvatar.textContent = '📢';
+            } else {
+                chatAvatar.textContent = '👤';
             }
-            chatAvatar.textContent = '';
         }
     }
-    
-    // Подсвечиваем активный чат в списке
-    var chatItems = document.querySelectorAll('.chat-item');
-    chatItems.forEach(function(item) {
-        item.classList.remove('active');
-        var onclickAttr = item.getAttribute('onclick');
-        if (onclickAttr && onclickAttr.includes("openChat('" + chatId + "'")) {
-            item.classList.add('active');
-        }
-    });
     
     // Загружаем сообщения
     loadMessages(chatId);
     setupTypingListener(chatId);
+    
+    console.log('Чат открыт:', chatId);
 }
-
 function hideCallButtons() {
     var btns = document.querySelectorAll('.call-btn');
     btns.forEach(function(btn) { 
