@@ -845,7 +845,50 @@ function closeSearchResults() {
 // ========== НОВЫЙ ЧАТ ==========
 function openCreateMenu() {
     var menu = document.getElementById('create-menu-modal');
-    if (menu) menu.classList.remove('hidden');
+    if (menu) {
+        menu.classList.remove('hidden');
+    } else {
+        // Если меню нет в DOM, создаём
+        var modalHtml = `
+            <div id="create-menu-modal" class="modal" style="z-index: 10002;">
+                <div class="modal-content" style="max-width: 400px; border-radius: 28px; overflow: hidden;">
+                    <div class="modal-header">
+                        <h3>Создать</h3>
+                        <button onclick="closeCreateMenu()" class="btn-close">×</button>
+                    </div>
+                    <div style="padding: 8px 0 20px 0;">
+                        <div class="create-menu-item" onclick="openNewChatFromMenu()">
+                            <div class="create-menu-icon">💬</div>
+                            <div class="create-menu-info">
+                                <div class="create-menu-title">Новый чат</div>
+                                <div class="create-menu-desc">Начать диалог с пользователем</div>
+                            </div>
+                            <span class="create-menu-arrow">›</span>
+                        </div>
+                        <div class="create-menu-item" onclick="openCreateGroupWizard()">
+                            <div class="create-menu-icon">👥</div>
+                            <div class="create-menu-info">
+                                <div class="create-menu-title">Группа</div>
+                                <div class="create-menu-desc">Для общения с друзьями</div>
+                            </div>
+                            <span class="create-menu-arrow">›</span>
+                        </div>
+                        <div class="create-menu-item" onclick="openCreateChannelWizard()">
+                            <div class="create-menu-icon">📢</div>
+                            <div class="create-menu-info">
+                                <div class="create-menu-title">Канал</div>
+                                <div class="create-menu-desc">Для публикаций и вещания</div>
+                            </div>
+                            <span class="create-menu-arrow">›</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        var newMenu = document.getElementById('create-menu-modal');
+        if (newMenu) newMenu.classList.remove('hidden');
+    }
 }
 
 function closeCreateMenu() {
@@ -853,9 +896,15 @@ function closeCreateMenu() {
     if (menu) menu.classList.add('hidden');
 }
 
-function openNewChatFromMenu() {
+// Функции для создания группы и канала (временно показываем уведомление)
+function openCreateGroupWizard() {
     closeCreateMenu();
-    showNewChatDialog();
+    showNotification('Создание группы скоро будет доступно', 'info');
+}
+
+function openCreateChannelWizard() {
+    closeCreateMenu();
+    showNotification('Создание канала скоро будет доступно', 'info');
 }
 
 function showNewChatDialog() {
