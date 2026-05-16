@@ -1355,3 +1355,50 @@ if (document.getElementById('chats-list')) {
     chatObserver.observe(document.getElementById('chats-list'), { childList: true, subtree: true });
 }
 setTimeout(fixPCChats, 1000);
+// Фикс для ПК - принудительное обновление кликов
+function fixChatClickListeners() {
+    var chatItems = document.querySelectorAll('.chat-item');
+    chatItems.forEach(function(item) {
+        // Если у элемента нет onclick или он неправильный
+        if (!item.onclick && !item.hasAttribute('data-fixed')) {
+            var match = item.innerHTML.match(/openChat\('([^']+)'/);
+            if (match && match[1]) {
+                var chatId = match[1];
+                item.setAttribute('data-fixed', 'true');
+                item.style.cursor = 'pointer';
+                (function(cId) {
+                    item.onclick = function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        database.ref('chats/' + cId).once('value').then(function(snapshot) {
+                            var chatData = snapshot.val();
+                            if (chatData) {
+                                openChat(cId, chatData);
+                            } else {
+                                showNotification('Чат не найден', 'error');
+                            }
+                        });
+                    };
+                })(chatId);
+            }
+        }
+    });
+}
+
+// Запускаем фикс после загрузки чатов
+var originalRenderChats = window.renderChats;
+window.renderChats = function(chats) {
+    originalRenderChats(chats);
+    setTimeout(fixChatClickListeners, 100);
+};
+
+// Наблюдатель за изменениями в списке чатов
+if (document.getElementById('chats-list')) {
+    var chatObserver = new MutationObserver(function() {
+        fixChatClickListeners();
+    });
+    chatObserver.observe(document.getElementById('chats-list'), { 
+        childList: true, 
+        subtree: true 
+    });
+}
