@@ -824,7 +824,6 @@ function renderThemesGrid() {
         container.appendChild(div);
     }
 }
-
 function setSimpleTheme(colorKey) {
     currentThemeColor = colorKey;
     localStorage.setItem('kukumber_theme_color', colorKey);
