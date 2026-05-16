@@ -1849,3 +1849,61 @@ body.night-mode #message-input {
     font-size: 15px;
     outline: none;
 }
+/* ========== ЭКСТРЕННЫЙ ФИКС ДЛЯ ОТОБРАЖЕНИЯ ЧАТА ========== */
+#active-chat {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    width: 100% !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+#active-chat.hidden {
+    display: none !important;
+}
+
+#no-chat-selected {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100% !important;
+}
+
+#no-chat-selected.hidden {
+    display: none !important;
+}
+
+.chat-area {
+    position: relative !important;
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+.messages-container {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    padding: 15px !important;
+    min-height: 0 !important;
+}
+
+.message-input-area {
+    flex-shrink: 0 !important;
+    display: flex !important;
+    gap: 6px !important;
+    align-items: center !important;
+    padding: 8px 12px !important;
+    background: white !important;
+    border-top: 1px solid var(--border) !important;
+}
+
+#message-input {
+    flex: 1 !important;
+    padding: 10px 14px !important;
+    border: 2px solid var(--border) !important;
+    border-radius: 28px !important;
+    font-size: 15px !important;
+    outline: none !important;
+}
