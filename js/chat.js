@@ -170,15 +170,15 @@ function createChatItem(chatId, chatData) {
     if (currentChatId === chatId) div.classList.add('active');
     
     // Устанавливаем onclick СРАЗУ, до любой асинхронной загрузки
-    div.onclick = (function(cId, cData) {
-        return function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Клик по чату:', cId);
-            openChat(cId, cData);
-        };
-    })(chatId, chatData);
-    
+    // В createChatItem, где устанавливается div.onclick, замените на:
+div.onclick = (function(cId, cData) {
+    return function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('Клик по чату:', cId);
+        openChat(cId, cData);
+    };
+})(chatId, chatData);
     var name = '', avatar = '', badge = '', isOnline = false;
     var avatarContent = '';
     var avatarStyle = '';
@@ -1408,3 +1408,18 @@ if (document.getElementById('chats-list')) {
         subtree: true 
     });
 }
+// Функция для прямого открытия чата по ID (для onclick атрибутов)
+window.openChatById = function(chatId) {
+    console.log('openChatById вызван для:', chatId);
+    database.ref('chats/' + chatId).once('value').then(function(snapshot) {
+        var chatData = snapshot.val();
+        if (chatData) {
+            openChat(chatId, chatData);
+        } else {
+            showNotification('Чат не найден', 'error');
+        }
+    }).catch(function(err) {
+        console.error('Ошибка загрузки чата:', err);
+        showNotification('Ошибка загрузки чата', 'error');
+    });
+};
