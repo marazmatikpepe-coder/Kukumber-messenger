@@ -1725,3 +1725,191 @@ async function createChannel() {
         showNotification('Ошибка создания канала', 'error');
     }
 }
+// ========== ОТКРЫТИЕ ПРОФИЛЯ ПРИ КЛИКЕ НА ШАПКУ ЧАТА ==========
+
+// Функция для открытия профиля (человек, группа, канал)
+function openChatProfile() {
+    if (!currentChatData) {
+        console.log('Нет данных чата');
+        return;
+    }
+    
+    console.log('Открытие профиля для чата:', currentChatData.type, currentChatId);
+    
+    if (currentChatData.type === 'private') {
+        // Личный чат - открываем профиль пользователя
+        var otherUserId = currentChatData.otherUserId;
+        if (!otherUserId && currentChatData.participants) {
+            for (var i = 0; i < currentChatData.participants.length; i++) {
+                if (currentChatData.participants[i] !== currentUser.uid) {
+                    otherUserId = currentChatData.participants[i];
+                    break;
+                }
+            }
+        }
+        
+        if (otherUserId) {
+            // Используем существующую функцию открытия профиля
+            if (typeof window.openUserProfile === 'function') {
+                window.openUserProfile(otherUserId);
+            } else if (typeof openUserProfile === 'function') {
+                openUserProfile(otherUserId);
+            } else if (typeof openChatProfile === 'function' && window.openChatProfile !== openChatProfile) {
+                // Избегаем рекурсии
+                window.openChatProfile(otherUserId);
+            } else {
+                showNotification('Открытие профиля пользователя', 'info');
+                console.log('Нужно открыть профиль пользователя:', otherUserId);
+            }
+        }
+    } 
+    else if (currentChatData.type === 'group') {
+        // Открываем профиль группы
+        openGroupProfileModal(currentChatId, currentChatData);
+    } 
+    else if (currentChatData.type === 'channel') {
+        // Открываем профиль канала
+        openChannelProfileModal(currentChatId, currentChatData);
+    }
+}
+
+// ========== ПРОФИЛЬ ГРУППЫ ==========
+function openGroupProfileModal(groupId, groupData) {
+    var modalHtml = `
+        <div id="group-profile-modal" class="modal" style="z-index: 10003;">
+            <div class="modal-content" style="max-width: 450px; border-radius: 24px;">
+                <div class="modal-header">
+                    <h3>👥 Информация о группе</h3>
+                    <button onclick="closeGroupProfileModal()" class="btn-close">×</button>
+                </div>
+                <div style="padding: 20px; text-align: center;">
+                    <div class="avatar" style="width: 80px; height: 80px; margin: 0 auto 15px; font-size: 40px; ${groupData.avatar ? 'background-image: url(' + groupData.avatar + '); background-size: cover;' : ''}">
+                        ${groupData.avatar ? '' : '👥'}
+                    </div>
+                    <h2 style="margin-bottom: 5px;">${escapeHtml(groupData.name || 'Группа')}</h2>
+                    <p style="color: #666; margin-bottom: 15px;">${escapeHtml(groupData.description || 'Нет описания')}</p>
+                    <div style="background: #f5f5f5; border-radius: 12px; padding: 10px; margin-bottom: 10px;">
+                        <span>👥 Участников: ${groupData.members ? Object.keys(groupData.members).length : 0}</span>
+                    </div>
+                    <div style="background: #f5f5f5; border-radius: 12px; padding: 10px; margin-bottom: 10px;">
+                        <span>📅 Создана: ${new Date(groupData.createdAt).toLocaleDateString()}</span>
+                    </div>
+                </div>
+                <div style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                    <button onclick="closeGroupProfileModal()" class="btn-secondary" style="flex:1;">Закрыть</button>
+                    <button onclick="leaveGroupChat()" class="btn-danger" style="flex:1;">Покинуть группу</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    var oldModal = document.getElementById('group-profile-modal');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function closeGroupProfileModal() {
+    var modal = document.getElementById('group-profile-modal');
+    if (modal) modal.remove();
+}
+
+async function leaveGroupChat() {
+    if (!currentChatId || !currentChatData || currentChatData.type !== 'group') return;
+    
+    if (!confirm('Вы уверены, что хотите покинуть группу?')) return;
+    
+    try {
+        // Удаляем пользователя из участников
+        await database.ref('chats/' + currentChatId + '/members/' + currentUser.uid).remove();
+        // Удаляем чат из списка пользователя
+        await database.ref('userChats/' + currentUser.uid + '/' + currentChatId).remove();
+        
+        showNotification('Вы покинули группу', 'success');
+        closeGroupProfileModal();
+        closeChat();
+        loadChats();
+    } catch (err) {
+        showNotification('Ошибка', 'error');
+    }
+}
+
+// ========== ПРОФИЛЬ КАНАЛА ==========
+function openChannelProfileModal(channelId, channelData) {
+    var isSubscribed = channelData.subscribers && channelData.subscribers[currentUser.uid];
+    var isAdmin = channelData.admins && channelData.admins[currentUser.uid];
+    
+    var modalHtml = `
+        <div id="channel-profile-modal" class="modal" style="z-index: 10003;">
+            <div class="modal-content" style="max-width: 450px; border-radius: 24px;">
+                <div class="modal-header">
+                    <h3>📢 Информация о канале</h3>
+                    <button onclick="closeChannelProfileModal()" class="btn-close">×</button>
+                </div>
+                <div style="padding: 20px; text-align: center;">
+                    <div class="avatar" style="width: 80px; height: 80px; margin: 0 auto 15px; font-size: 40px; ${channelData.avatar ? 'background-image: url(' + channelData.avatar + '); background-size: cover;' : ''}">
+                        ${channelData.avatar ? '' : '📢'}
+                    </div>
+                    <h2 style="margin-bottom: 5px;">${escapeHtml(channelData.name || 'Канал')}</h2>
+                    ${channelData.kname ? '<p style="color: #228B22; margin-bottom: 5px;">@' + escapeHtml(channelData.kname) + '</p>' : ''}
+                    <p style="color: #666; margin-bottom: 15px;">${escapeHtml(channelData.description || 'Нет описания')}</p>
+                    <div style="background: #f5f5f5; border-radius: 12px; padding: 10px; margin-bottom: 10px;">
+                        <span>👥 Подписчиков: ${channelData.subscribers ? Object.keys(channelData.subscribers).length : 0}</span>
+                    </div>
+                    <div style="background: #f5f5f5; border-radius: 12px; padding: 10px; margin-bottom: 10px;">
+                        <span>${channelData.privacy === 'public' ? '🌍 Публичный' : '🔒 Приватный'}</span>
+                    </div>
+                </div>
+                <div style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
+                    ${!isSubscribed ? '<button onclick="subscribeToChannel()" class="btn-primary" style="flex:1;">📢 Подписаться</button>' : ''}
+                    ${isSubscribed ? '<button onclick="unsubscribeFromChannel()" class="btn-danger" style="flex:1;">🔕 Отписаться</button>' : ''}
+                    <button onclick="closeChannelProfileModal()" class="btn-secondary" style="flex:1;">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    var oldModal = document.getElementById('channel-profile-modal');
+    if (oldModal) oldModal.remove();
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function closeChannelProfileModal() {
+    var modal = document.getElementById('channel-profile-modal');
+    if (modal) modal.remove();
+}
+
+async function subscribeToChannel() {
+    if (!currentChatId || !currentChatData || currentChatData.type !== 'channel') return;
+    
+    try {
+        await database.ref('chats/' + currentChatId + '/subscribers/' + currentUser.uid).set(true);
+        await database.ref('userChats/' + currentUser.uid + '/' + currentChatId).set(true);
+        showNotification('Вы подписались на канал', 'success');
+        closeChannelProfileModal();
+        
+        // Обновляем данные чата
+        currentChatData.subscribers = currentChatData.subscribers || {};
+        currentChatData.subscribers[currentUser.uid] = true;
+    } catch (err) {
+        showNotification('Ошибка', 'error');
+    }
+}
+
+async function unsubscribeFromChannel() {
+    if (!currentChatId || !currentChatData || currentChatData.type !== 'channel') return;
+    
+    if (!confirm('Отписаться от канала?')) return;
+    
+    try {
+        await database.ref('chats/' + currentChatId + '/subscribers/' + currentUser.uid).remove();
+        await database.ref('userChats/' + currentUser.uid + '/' + currentChatId).remove();
+        showNotification('Вы отписались от канала', 'info');
+        closeChannelProfileModal();
+        closeChat();
+        loadChats();
+    } catch (err) {
+        showNotification('Ошибка', 'error');
+    }
+}
