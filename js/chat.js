@@ -163,90 +163,67 @@ function renderChats(chats) {
     renderBatch();
 }
 function createChatItem(chatId, chatData) {
-    console.log('createChatItem для:', chatId, chatData.type);
-    
-    var chatsList = document.getElementById('chats-list');
-    if (!chatsList) return;
-    
     var div = document.createElement('div');
     div.className = 'chat-item';
     if (currentChatId === chatId) div.classList.add('active');
-    
-    // Определяем имя и аватар
-    var name = 'Загрузка...';
-    var preview = chatData.lastMessage || 'Нет сообщений';
-    var time = chatData.lastMessageTime ? formatTime(chatData.lastMessageTime) : '';
+    var name = '', avatar = '', badge = '', isOnline = false;
+    var avatarContent = '';
+    var avatarStyle = '';
     
     if (chatData.type === 'group') {
         name = chatData.name || 'Группа';
-        var avatarHtml = '<div class="avatar">👥</div>';
-        div.innerHTML = '<div class="chat-item-avatar">' + avatarHtml + '</div>' +
-            '<div class="chat-item-info">' +
-                '<div class="chat-item-header">' +
-                    '<span class="chat-item-name">' + escapeHtml(name) + '</span>' +
-                    '<span class="chat-item-time">' + time + '</span>' +
-                '</div>' +
-                '<div class="chat-item-preview">' + escapeHtml(preview) + '</div>' +
-            '</div>';
-    } 
-    else if (chatData.type === 'channel') {
+        avatar = chatData.avatar || '';
+        badge = '<span class="chat-type-badge">👥</span>';
+        finishCreate();
+    } else if (chatData.type === 'channel') {
         name = chatData.name || 'Канал';
-        var avatarHtml = '<div class="avatar">📢</div>';
-        div.innerHTML = '<div class="chat-item-avatar">' + avatarHtml + '</div>' +
-            '<div class="chat-item-info">' +
-                '<div class="chat-item-header">' +
-                    '<span class="chat-item-name">' + escapeHtml(name) + '</span>' +
-                    '<span class="chat-item-time">' + time + '</span>' +
-                '</div>' +
-                '<div class="chat-item-preview">' + escapeHtml(preview) + '</div>' +
-            '</div>';
-    }
-    else {
-        // Приватный чат - временно показываем "Пользователь"
-        var avatarHtml = '<div class="avatar">👤</div>';
-        div.innerHTML = '<div class="chat-item-avatar">' + avatarHtml + '</div>' +
-            '<div class="chat-item-info">' +
-                '<div class="chat-item-header">' +
-                    '<span class="chat-item-name">Пользователь</span>' +
-                    '<span class="chat-item-time">' + time + '</span>' +
-                '</div>' +
-                '<div class="chat-item-preview">' + escapeHtml(preview) + '</div>' +
-            '</div>';
-        
-        // Асинхронно загружаем имя
+        avatar = chatData.avatar || '';
+        badge = '<span class="chat-type-badge">📢</span>';
+        finishCreate();
+    } else {
         var otherUserId = null;
         if (chatData.participants) {
             for (var i = 0; i < chatData.participants.length; i++) {
-                if (chatData.participants[i] !== currentUser.uid) {
-                    otherUserId = chatData.participants[i];
-                    break;
+                if (chatData.participants[i] !== currentUser.uid) { 
+                    otherUserId = chatData.participants[i]; 
+                    break; 
                 }
             }
         }
         if (otherUserId) {
-            getUsername(otherUserId).then(function(userName) {
-                var nameSpan = div.querySelector('.chat-item-name');
-                if (nameSpan) nameSpan.textContent = userName;
+            Promise.all([getUsername(otherUserId), getUserAvatar(otherUserId), getUserStatus(otherUserId)]).then(function(results) {
+                name = results[0];
+                avatar = results[1];
+                isOnline = results[2].online === true;
+                chatData.otherUserId = otherUserId;
+                if (!chatData.otherUser) chatData.otherUser = {};
+                chatData.otherUser.username = name;
+                chatData.otherUser.avatar = avatar;
+                finishCreate();
             });
+        } else { 
+            name = 'Пользователь'; 
+            finishCreate(); 
         }
+        return;
     }
     
-    // Устанавливаем обработчик клика
-    div.style.cursor = 'pointer';
-    div.onclick = (function(id, data) {
-        return function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('КЛИК по чату! ID:', id);
-            openChat(id, data);
-        };
-    })(chatId, chatData);
-    
-    chatsList.appendChild(div);
-    console.log('Элемент чата добавлен в DOM');
-}
     function finishCreate() {
-        updateChatItemDisplay(div, name, avatar, isOnline, badge, chatData);
+        if (avatar && avatar.indexOf('http') === 0) { 
+            avatarStyle = 'background-image:url('+avatar+');background-size:cover;'; 
+            avatarContent = ''; 
+        } else { 
+            avatarStyle = '';
+            avatarContent = chatData.type === 'group' ? '👥' : (chatData.type === 'channel' ? '📢' : '👤'); 
+        }
+        var time = chatData.lastMessageTime ? formatTime(chatData.lastMessageTime) : '';
+        var preview = chatData.lastMessage || 'Нет сообщений';
+        if (preview.length > 50) preview = preview.substring(0, 47) + '...';
+        
+        div.innerHTML = '<div class="chat-item-avatar"><div class="avatar" style="'+avatarStyle+'">'+avatarContent+'</div>'+(isOnline?'<div class="online-indicator"></div>':'')+badge+'</div><div class="chat-item-info"><div class="chat-item-header"><span class="chat-item-name">'+escapeHtml(name)+'</span><span class="chat-item-time">'+time+'</span></div><div class="chat-item-preview">'+escapeHtml(preview)+'</div></div>';
+        div.onclick = function() { openChat(chatId, chatData); };
+        var chatsList = document.getElementById('chats-list');
+        if (chatsList) chatsList.appendChild(div);
     }
 }
 
@@ -293,7 +270,7 @@ function openChat(chatId, chatData) {
     
     // Закрываем сайдбар только на мобильных
     if (window.innerWidth <= 768) {
-        closeSidebar();
+      //  closeSidebar();
     }
     
     // Если нет данных чата, загружаем их
