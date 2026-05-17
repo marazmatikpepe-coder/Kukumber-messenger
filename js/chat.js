@@ -2377,3 +2377,43 @@ window.openChatProfile = function() {
 };
 
 console.log('Расширенные функции профиля группы/канала добавлены!');
+// ========== СУПЕР-ПРОСТОЕ ИСПРАВЛЕНИЕ ОТКРЫТИЯ ЧАТОВ ==========
+// Перехватываем все клики по документу
+document.addEventListener('click', function(e) {
+    // Находим ближайший элемент чата
+    var chatItem = e.target.closest('.chat-item');
+    if (!chatItem) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    var chatId = chatItem.getAttribute('data-chat-id');
+    if (!chatId) return;
+    
+    console.log('ГЛОБАЛЬНЫЙ КЛИК по чату:', chatId);
+    
+    // Принудительно показываем область чата
+    var noChat = document.getElementById('no-chat-selected');
+    var activeChat = document.getElementById('active-chat');
+    
+    if (noChat) {
+        noChat.classList.add('hidden');
+        noChat.style.display = 'none';
+    }
+    
+    if (activeChat) {
+        activeChat.classList.remove('hidden');
+        activeChat.style.display = 'flex';
+    }
+    
+    // Открываем чат
+    if (typeof window.openChatById === 'function') {
+        window.openChatById(chatId);
+    } else if (typeof openChatById === 'function') {
+        openChatById(chatId);
+    }
+    
+    return false;
+}, true); // true = захват события на фазе погружения
+
+console.log('✅ Глобальный обработчик кликов по чатам установлен!');
