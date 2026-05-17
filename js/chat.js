@@ -1431,17 +1431,30 @@ function setupTypingListenerDirect(chatId) {
 function openChatProfileInfo() {
     if (!window.currentChatData) return;
     
+    console.log('openChatProfileInfo: тип чата', window.currentChatData.type);
+    
     if (window.currentChatData.type === 'private' && window.currentChatData.otherUserId) {
         if (typeof window.openUserProfile === 'function') {
             window.openUserProfile(window.currentChatData.otherUserId);
+        } else if (typeof openUserProfile === 'function') {
+            openUserProfile(window.currentChatData.otherUserId);
         } else {
-            console.log('Открыть профиль:', window.currentChatData.otherUserId);
-            alert('Профиль пользователя');
+            showNotification('Профиль пользователя', 'info');
         }
     } else if (window.currentChatData.type === 'group') {
-        alert('Информация о группе');
+        // Открываем профиль группы через модальное окно
+        if (typeof window.openGroupProfile === 'function') {
+            window.openGroupProfile(window.currentChatId);
+        } else {
+            showNotification('Информация о группе', 'info');
+        }
     } else if (window.currentChatData.type === 'channel') {
-        alert('Информация о канале');
+        // Открываем профиль канала через модальное окно
+        if (typeof window.openChannelProfile === 'function') {
+            window.openChannelProfile(window.currentChatId);
+        } else {
+            showNotification('Информация о канале', 'info');
+        }
     }
 }
 
@@ -1802,30 +1815,33 @@ function openChatProfile() {
         }
         
         if (otherUserId) {
-            // Используем существующую функцию открытия профиля
             if (typeof window.openUserProfile === 'function') {
                 window.openUserProfile(otherUserId);
             } else if (typeof openUserProfile === 'function') {
                 openUserProfile(otherUserId);
-            } else if (typeof openChatProfile === 'function' && window.openChatProfile !== openChatProfile) {
-                // Избегаем рекурсии
-                window.openChatProfile(otherUserId);
             } else {
-                showNotification('Открытие профиля пользователя', 'info');
+                showNotification('Профиль пользователя', 'info');
                 console.log('Нужно открыть профиль пользователя:', otherUserId);
             }
         }
     } 
     else if (currentChatData.type === 'group') {
-        // Открываем профиль группы
-        openGroupProfileModal(currentChatId, currentChatData);
+        // Открываем профиль группы через модальное окно
+        if (typeof window.openGroupProfile === 'function') {
+            window.openGroupProfile(currentChatId);
+        } else {
+            showNotification('Информация о группе', 'info');
+        }
     } 
     else if (currentChatData.type === 'channel') {
-        // Открываем профиль канала
-        openChannelProfileModal(currentChatId, currentChatData);
+        // Открываем профиль канала через модальное окно
+        if (typeof window.openChannelProfile === 'function') {
+            window.openChannelProfile(currentChatId);
+        } else {
+            showNotification('Информация о канале', 'info');
+        }
     }
 }
-
 // ========== ПРОФИЛЬ ГРУППЫ ==========
 function openGroupProfileModal(groupId, groupData) {
     var modalHtml = `
@@ -2415,5 +2431,10 @@ document.addEventListener('click', function(e) {
     
     return false;
 }, true); // true = захват события на фазе погружения
+// Убеждаемся, что функции профилей доступны глобально
+window.openGroupProfile = window.openGroupProfile || openGroupProfile;
+window.openChannelProfile = window.openChannelProfile || openChannelProfile;
+window.openUserProfile = window.openUserProfile || openUserProfile;
 
+console.log('Профильные функции зарегистрированы глобально');
 console.log('✅ Глобальный обработчик кликов по чатам установлен!');
