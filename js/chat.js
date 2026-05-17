@@ -299,8 +299,10 @@ async function createChatItem(chatId, chatData, container) {
         
         container.appendChild(div);
     }
+    
+    // Возвращаем Promise, чтобы знать, когда всё отрисовано
+    return Promise.resolve();
 }
-
 function attachChatClickHandlers() {
     var chatItems = document.querySelectorAll('.chat-item');
     console.log('Привязка обработчиков к чатам, найдено:', chatItems.length);
