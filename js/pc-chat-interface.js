@@ -94,7 +94,11 @@
     
     // Добавление стилей
     function addPCStyles() {
+        // Проверяем, не добавлены ли уже стили
+        if (document.getElementById('pc-interface-styles')) return;
+        
         const style = document.createElement('style');
+        style.id = 'pc-interface-styles';
         style.textContent = `
             .pc-chats-layout {
                 display: flex;
@@ -190,6 +194,9 @@
                 margin: 10px 15px;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.15);
                 overflow: hidden;
+                position: absolute;
+                z-index: 100;
+                width: calc(100% - 30px);
             }
             
             .pc-create-item {
@@ -237,6 +244,7 @@
                 background-size: cover;
                 background-position: center;
                 position: relative;
+                flex-shrink: 0;
             }
             
             .pc-online-dot {
@@ -275,6 +283,7 @@
             .pc-chat-time {
                 font-size: 11px;
                 color: #999;
+                flex-shrink: 0;
             }
             
             /* Правая область */
@@ -315,6 +324,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
+                flex-shrink: 0;
             }
             
             .pc-chat-user-info {
@@ -413,6 +423,7 @@
                 display: flex;
                 gap: 8px;
                 align-items: center;
+                flex-shrink: 0;
             }
             
             .pc-attach-btn, .pc-emoji-btn {
@@ -465,6 +476,51 @@
                 padding: 40px;
                 color: #999;
             }
+            
+            /* Тёмная тема для ПК интерфейса */
+            body.night-mode .pc-sidebar {
+                background: #1e1e1e !important;
+                border-right-color: #3a3a3a !important;
+            }
+            
+            body.night-mode .pc-chat-header,
+            body.night-mode .pc-message-input-area {
+                background: #1e1e1e !important;
+                border-color: #3a3a3a !important;
+            }
+            
+            body.night-mode .pc-message-input {
+                background: #2a2a2a !important;
+                border-color: #3a3a3a !important;
+                color: white !important;
+            }
+            
+            body.night-mode .pc-chat-name,
+            body.night-mode .pc-chat-user-info h3 {
+                color: white !important;
+            }
+            
+            body.night-mode .pc-chat-preview {
+                color: #aaa !important;
+            }
+            
+            body.night-mode .pc-message.received {
+                background: #2a2a2a !important;
+                color: white !important;
+            }
+            
+            body.night-mode .pc-create-menu {
+                background: #2a2a2a !important;
+            }
+            
+            body.night-mode .pc-create-item {
+                color: white !important;
+                border-bottom-color: #3a3a3a !important;
+            }
+            
+            body.night-mode .pc-create-item:hover {
+                background: #3a3a3a !important;
+            }
         `;
         document.head.appendChild(style);
     }
@@ -475,33 +531,45 @@
         const plusBtn = document.getElementById('pc-plus-btn');
         const createMenu = document.getElementById('pc-create-menu');
         
-        if (plusBtn) {
+        if (plusBtn && createMenu) {
             plusBtn.onclick = function(e) {
                 e.stopPropagation();
                 const isVisible = createMenu.style.display === 'block';
                 createMenu.style.display = isVisible ? 'none' : 'block';
             };
+            
+            // Закрыть меню при клике вне
+            document.addEventListener('click', function(e) {
+                if (createMenu.style.display === 'block' && 
+                    !createMenu.contains(e.target) && 
+                    !plusBtn.contains(e.target)) {
+                    createMenu.style.display = 'none';
+                }
+            });
         }
-        
-        // Закрыть меню при клике вне
-        document.addEventListener('click', function(e) {
-            if (createMenu && !createMenu.contains(e.target) && !plusBtn?.contains(e.target)) {
-                createMenu.style.display = 'none';
-            }
-        });
         
         // Обработчики создания
         document.querySelectorAll('.pc-create-item').forEach(item => {
-            item.onclick = function() {
+            item.onclick = function(e) {
+                e.stopPropagation();
                 const type = this.dataset.type;
-                createMenu.style.display = 'none';
+                const createMenuEl = document.getElementById('pc-create-menu');
+                if (createMenuEl) createMenuEl.style.display = 'none';
                 
                 if (type === 'chat') {
                     showNewChatDialogPC();
                 } else if (type === 'group') {
-                    showNotification('Создание группы в разработке', 'info');
+                    if (typeof window.openCreateGroupWizard === 'function') {
+                        window.openCreateGroupWizard();
+                    } else {
+                        showNotification('Создание группы в разработке', 'info');
+                    }
                 } else if (type === 'channel') {
-                    showNotification('Создание канала в разработке', 'info');
+                    if (typeof window.openCreateChannelWizard === 'function') {
+                        window.openCreateChannelWizard();
+                    } else {
+                        showNotification('Создание канала в разработке', 'info');
+                    }
                 }
             };
         });
@@ -511,11 +579,14 @@
         const messageInput = document.getElementById('pc-message-input');
         
         if (sendBtn) {
-            sendBtn.onclick = sendPCMessage;
+            sendBtn.onclick = function() {
+                sendPCMessage();
+            };
         }
         if (messageInput) {
             messageInput.onkeypress = function(e) {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
                     sendPCMessage();
                 }
             };
@@ -525,8 +596,8 @@
         const userInfo = document.getElementById('pc-user-info');
         if (userInfo) {
             userInfo.onclick = function() {
-                if (typeof switchToTab === 'function') {
-                    switchToTab('settings');
+                if (typeof window.switchToTab === 'function') {
+                    window.switchToTab('settings');
                 }
             };
         }
@@ -539,6 +610,47 @@
                 filterPCChats(query);
             };
         }
+        
+        // Кнопки звонков
+        const callBtns = document.querySelectorAll('.pc-call-btn');
+        callBtns.forEach(btn => {
+            btn.onclick = function(e) {
+                e.stopPropagation();
+                const type = this.dataset.type;
+                if (type === 'voice' && typeof window.startVoiceCall === 'function') {
+                    window.startVoiceCall();
+                } else if (type === 'video' && typeof window.startVideoCall === 'function') {
+                    window.startVideoCall();
+                } else {
+                    showNotification('Звонки в разработке', 'info');
+                }
+            };
+        });
+        
+        // Клик по шапке чата для открытия профиля
+        const chatUserInfo = document.getElementById('pc-chat-user-info');
+        if (chatUserInfo) {
+            chatUserInfo.onclick = function() {
+                openPCChatProfile();
+            };
+        }
+    }
+    
+    // Открытие профиля из ПК чата
+    function openPCChatProfile() {
+        if (!window.currentChatData) return;
+        
+        if (window.currentChatData.type === 'private' && window.currentChatData.otherUserId) {
+            if (typeof window.openUserProfile === 'function') {
+                window.openUserProfile(window.currentChatData.otherUserId);
+            } else {
+                showNotification('Профиль пользователя', 'info');
+            }
+        } else if (window.currentChatData.type === 'group') {
+            showNotification('Информация о группе', 'info');
+        } else if (window.currentChatData.type === 'channel') {
+            showNotification('Информация о канале', 'info');
+        }
     }
     
     // Загрузка чатов
@@ -546,7 +658,7 @@
         const container = document.getElementById('pc-chats-list');
         if (!container) return;
         
-        if (!window.currentUser) {
+        if (!window.currentUser || !window.currentUser.uid) {
             container.innerHTML = '<div class="pc-loading">Авторизуйтесь для просмотра чатов</div>';
             return;
         }
@@ -554,7 +666,7 @@
         container.innerHTML = '<div class="pc-loading">Загрузка чатов...</div>';
         
         try {
-            const userChatsSnap = await database.ref('userChats/' + currentUser.uid).once('value');
+            const userChatsSnap = await database.ref('userChats/' + window.currentUser.uid).once('value');
             const userChats = userChatsSnap.val();
             
             if (!userChats) {
@@ -582,10 +694,31 @@
                 container.appendChild(chatElement);
             }
             
+            // Обновляем информацию о пользователе в боковой панели
+            updatePCUserInfo();
+            
         } catch (err) {
             console.error('Ошибка загрузки чатов:', err);
             container.innerHTML = '<div class="pc-loading">Ошибка загрузки чатов</div>';
         }
+    }
+    
+    // Получение данных пользователя
+    async function getUserDataForPC(userId) {
+        try {
+            const snapshot = await database.ref('users/' + userId).once('value');
+            const data = snapshot.val();
+            if (data) {
+                return {
+                    username: data.username || 'Пользователь',
+                    avatar: data.avatar || '',
+                    status: data.status || { online: false }
+                };
+            }
+        } catch (err) {
+            console.error('Ошибка получения данных пользователя:', err);
+        }
+        return { username: 'Пользователь', avatar: '', status: { online: false } };
     }
     
     // Создание элемента чата
@@ -600,7 +733,7 @@
         let isOnline = false;
         let preview = chatData.lastMessage || 'Нет сообщений';
         
-        if (preview.length > 50) preview = preview.substring(0, 47) + '...';
+        if (preview && preview.length > 50) preview = preview.substring(0, 47) + '...';
         
         if (chatData.type === 'group') {
             name = chatData.name || 'Группа';
@@ -617,7 +750,7 @@
             let otherUserId = null;
             if (chatData.participants) {
                 for (const uid of chatData.participants) {
-                    if (uid !== currentUser.uid) {
+                    if (uid !== window.currentUser.uid) {
                         otherUserId = uid;
                         break;
                     }
@@ -625,7 +758,7 @@
             }
             
             if (otherUserId) {
-                const userData = await getUserData(otherUserId);
+                const userData = await getUserDataForPC(otherUserId);
                 name = userData.username;
                 if (userData.avatar) {
                     avatarStyle = `background-image: url(${userData.avatar}); background-size: cover;`;
@@ -639,7 +772,7 @@
         
         div.innerHTML = `
             <div class="pc-chat-avatar-small" style="${avatarStyle}">
-                ${avatarContent || '👤'}
+                ${avatarContent || ''}
                 ${isOnline ? '<span class="pc-online-dot"></span>' : ''}
             </div>
             <div class="pc-chat-info">
@@ -649,7 +782,13 @@
             <div class="pc-chat-time">${formatTime(chatData.lastMessageTime)}</div>
         `;
         
-        div.onclick = () => openPCChat(chatId, chatData);
+        // ПРЯМОЕ НАЗНАЧЕНИЕ ОБРАБОТЧИКА onclick
+        div.onclick = (function(id, data) {
+            return function() {
+                console.log('Клик по чату ПК:', id);
+                openPCChat(id, data);
+            };
+        })(chatId, chatData);
         
         return div;
     }
@@ -667,8 +806,25 @@
     async function openPCChat(chatId, chatData) {
         console.log('PC: открываю чат', chatId);
         
+        if (!chatId || !chatData) {
+            console.error('Нет данных чата');
+            return;
+        }
+        
+        // Сохраняем глобальные переменные
         window.currentChatId = chatId;
         window.currentChatData = chatData;
+        window.currentChatData.chatId = chatId;
+        
+        // Устанавливаем otherUserId для личных чатов
+        if (chatData.type === 'private' && chatData.participants) {
+            for (const uid of chatData.participants) {
+                if (uid !== window.currentUser.uid) {
+                    window.currentChatData.otherUserId = uid;
+                    break;
+                }
+            }
+        }
         
         // Обновляем активный класс
         document.querySelectorAll('.pc-chat-item').forEach(item => {
@@ -697,7 +853,6 @@
         const nameEl = document.getElementById('pc-chat-name');
         const statusEl = document.getElementById('pc-chat-status');
         const avatarEl = document.getElementById('pc-chat-avatar');
-        const userInfoDiv = document.getElementById('pc-chat-user-info');
         
         if (!nameEl) return;
         
@@ -709,6 +864,7 @@
                 avatarEl.style.backgroundSize = 'cover';
                 avatarEl.textContent = '';
             } else {
+                avatarEl.style.backgroundImage = '';
                 avatarEl.textContent = '👥';
             }
         } 
@@ -720,6 +876,7 @@
                 avatarEl.style.backgroundSize = 'cover';
                 avatarEl.textContent = '';
             } else {
+                avatarEl.style.backgroundImage = '';
                 avatarEl.textContent = '📢';
             }
         }
@@ -728,7 +885,7 @@
             let otherUserId = null;
             if (chatData.participants) {
                 for (const uid of chatData.participants) {
-                    if (uid !== currentUser.uid) {
+                    if (uid !== window.currentUser.uid) {
                         otherUserId = uid;
                         break;
                     }
@@ -736,55 +893,65 @@
             }
             
             if (otherUserId) {
-                const userData = await getUserData(otherUserId);
+                const userData = await getUserDataForPC(otherUserId);
                 nameEl.textContent = userData.username;
-                if (userData.status.online) {
+                if (userData.status && userData.status.online) {
                     statusEl.textContent = 'в сети';
                 } else {
-                    statusEl.textContent = formatLastSeen(userData.status.lastSeen);
+                    statusEl.textContent = formatLastSeen(userData.status?.lastSeen);
                 }
                 if (userData.avatar) {
                     avatarEl.style.backgroundImage = `url(${userData.avatar})`;
                     avatarEl.style.backgroundSize = 'cover';
                     avatarEl.textContent = '';
                 } else {
+                    avatarEl.style.backgroundImage = '';
                     avatarEl.textContent = '👤';
                 }
-                
-                // Клик по шапке - открыть профиль
-                if (userInfoDiv) {
-                    userInfoDiv.onclick = () => {
-                        if (typeof window.openUserProfile === 'function') {
-                            window.openUserProfile(otherUserId);
-                        } else {
-                            showNotification('Профиль пользователя', 'info');
-                        }
-                    };
-                }
+            } else {
+                nameEl.textContent = 'Пользователь';
+                statusEl.textContent = 'неизвестно';
             }
         }
     }
     
     // Загрузка сообщений
+    let pcMessagesListener = null;
+    let pcLoadedMessageIds = new Set();
+    
     function loadPCMessages(chatId) {
         const container = document.getElementById('pc-messages-container');
         if (!container) return;
         
-        container.innerHTML = '<div style="text-align:center;padding:20px;">Загрузка сообщений...</div>';
+        // Очищаем
+        container.innerHTML = '';
+        pcLoadedMessageIds.clear();
         
-        if (window.pcMessagesListener) {
-            window.pcMessagesListener.off();
+        // Отписываемся от старого слушателя
+        if (pcMessagesListener) {
+            pcMessagesListener.off();
         }
         
-        window.pcMessagesListener = database.ref('messages/' + chatId)
+        // Подписываемся на новые сообщения
+        pcMessagesListener = database.ref('messages/' + chatId)
             .orderByChild('timestamp')
             .limitToLast(50);
         
-        window.pcMessagesListener.on('child_added', function(snapshot) {
+        pcMessagesListener.on('child_added', function(snapshot) {
             const message = snapshot.val();
-            message.id = snapshot.key;
+            const messageId = snapshot.key;
+            
+            if (pcLoadedMessageIds.has(messageId)) return;
+            pcLoadedMessageIds.add(messageId);
+            
+            message.id = messageId;
             appendPCMessage(message);
         });
+        
+        // Небольшая задержка для прокрутки
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 100);
     }
     
     // Добавление сообщения
@@ -792,13 +959,7 @@
         const container = document.getElementById('pc-messages-container');
         if (!container) return;
         
-        // При первом сообщении очищаем заглушку
-        if (container.innerHTML === '<div style="text-align:center;padding:20px;">Загрузка сообщений...</div>' ||
-            container.innerHTML === '<div style="text-align:center;padding:20px;">Нет сообщений. Напишите первым!</div>') {
-            container.innerHTML = '';
-        }
-        
-        const isSent = message.senderId === currentUser?.uid;
+        const isSent = message.senderId === window.currentUser?.uid;
         const messageDiv = document.createElement('div');
         messageDiv.className = `pc-message ${isSent ? 'sent' : 'received'}`;
         
@@ -806,9 +967,17 @@
         if (message.type === 'text') {
             content = `<div class="pc-message-text">${escapeHtml(message.text || '')}</div>`;
         } else if (message.type === 'image') {
-            content = `<img src="${message.imageUrl}" style="max-width:200px; border-radius:10px;">`;
+            content = `<img src="${message.imageUrl}" style="max-width:200px; max-height:200px; border-radius:10px;">`;
+        } else if (message.type === 'gif') {
+            content = `<img src="${message.gifUrl}" style="max-width:200px; max-height:200px; border-radius:10px;"><span style="font-size:10px; margin-left:5px;">GIF</span>`;
+        } else if (message.type === 'audio') {
+            content = `<div>🎤 Голосовое сообщение</div>`;
+        } else if (message.type === 'video') {
+            content = `<video src="${message.videoUrl}" controls style="max-width:200px; border-radius:10px;"></video>`;
+        } else if (message.type === 'file') {
+            content = `<div>📎 <a href="${message.fileUrl}" target="_blank">${escapeHtml(message.fileName || 'Файл')}</a></div>`;
         } else {
-            content = `<div class="pc-message-text">📎 Вложение</div>`;
+            content = `<div class="pc-message-text">${escapeHtml(message.text || '')}</div>`;
         }
         
         const time = message.timestamp ? new Date(message.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
@@ -833,17 +1002,27 @@
         const message = {
             type: 'text',
             text: text,
-            senderId: currentUser.uid,
+            senderId: window.currentUser.uid,
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
         
         input.value = '';
         
         database.ref('messages/' + window.currentChatId).push(message).then(() => {
+            const shortText = text.length > 50 ? text.substring(0, 47) + '...' : text;
             database.ref('chats/' + window.currentChatId).update({
-                lastMessage: text.length > 50 ? text.substring(0, 47) + '...' : text,
+                lastMessage: shortText,
                 lastMessageTime: firebase.database.ServerValue.TIMESTAMP
             });
+            
+            // Звук отправки
+            if (typeof KukumberSounds !== 'undefined') {
+                KukumberSounds.playSend();
+            }
+        }).catch(err => {
+            console.error('Ошибка отправки:', err);
+            showNotification('Ошибка отправки', 'error');
+            input.value = text;
         });
     }
     
@@ -879,6 +1058,8 @@
     }
     
     // Поиск пользователей для нового чата
+    let pcSearchTimeout = null;
+    
     async function searchPCUsers(query) {
         const container = document.getElementById('pc-search-users-list');
         if (!container) return;
@@ -888,69 +1069,76 @@
             return;
         }
         
+        if (pcSearchTimeout) clearTimeout(pcSearchTimeout);
+        
         container.innerHTML = '<div style="text-align:center;padding:20px;">Поиск...</div>';
         
-        const snapshot = await database.ref('users').once('value');
-        const users = snapshot.val();
-        const results = [];
-        const searchQuery = query.toLowerCase().replace('@', '');
-        
-        for (const uid in users) {
-            if (uid === currentUser.uid) continue;
-            const user = users[uid];
-            const username = (user.username || '').toLowerCase();
-            const userTag = (user.userTag || '').toLowerCase().replace('@', '');
+        pcSearchTimeout = setTimeout(async () => {
+            const snapshot = await database.ref('users').once('value');
+            const users = snapshot.val();
+            const results = [];
+            const searchQuery = query.toLowerCase().replace('@', '');
             
-            if (username.includes(searchQuery) || userTag.includes(searchQuery)) {
-                results.push({ uid, ...user });
+            for (const uid in users) {
+                if (uid === window.currentUser?.uid) continue;
+                const user = users[uid];
+                const username = (user.username || '').toLowerCase();
+                const userTag = (user.userTag || '').toLowerCase().replace('@', '');
+                
+                if (username.includes(searchQuery) || userTag.includes(searchQuery)) {
+                    results.push({ uid, ...user });
+                }
+                if (results.length >= 20) break;
             }
-            if (results.length >= 20) break;
-        }
-        
-        container.innerHTML = '';
-        
-        if (results.length === 0) {
-            container.innerHTML = '<div style="text-align:center;padding:20px;">Пользователи не найдены</div>';
-            return;
-        }
-        
-        for (const user of results) {
-            const avatarStyle = user.avatar ? `background-image: url(${user.avatar}); background-size: cover;` : '';
-            const avatarContent = user.avatar ? '' : '👤';
             
-            const div = document.createElement('div');
-            div.style.cssText = 'display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #eee; cursor:pointer;';
-            div.onclick = () => createPCNewChat(user.uid, user);
-            div.innerHTML = `
-                <div class="pc-chat-avatar-small" style="${avatarStyle}">${avatarContent}</div>
-                <div style="flex:1;">
-                    <div style="font-weight:600;">${escapeHtml(user.username)}</div>
-                    <div style="font-size:12px; color:#999;">${user.userTag ? '@' + user.userTag : '@' + user.username.toLowerCase().replace(/\s/g, '')}</div>
-                </div>
-                <div style="color:var(--forest);">→</div>
-            `;
-            container.appendChild(div);
-        }
+            container.innerHTML = '';
+            
+            if (results.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:20px;">Пользователи не найдены</div>';
+                return;
+            }
+            
+            for (const user of results) {
+                const avatarStyle = user.avatar ? `background-image: url(${user.avatar}); background-size: cover;` : '';
+                const avatarContent = user.avatar ? '' : '👤';
+                
+                const div = document.createElement('div');
+                div.style.cssText = 'display:flex; align-items:center; gap:12px; padding:12px; border-bottom:1px solid #eee; cursor:pointer;';
+                div.onclick = () => createPCNewChat(user.uid, user);
+                div.innerHTML = `
+                    <div class="pc-chat-avatar-small" style="${avatarStyle}">${avatarContent}</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:600;">${escapeHtml(user.username)}</div>
+                        <div style="font-size:12px; color:#999;">${user.userTag ? '@' + user.userTag : '@' + user.username.toLowerCase().replace(/\s/g, '')}</div>
+                    </div>
+                    <div style="color:var(--forest);">→</div>
+                `;
+                container.appendChild(div);
+            }
+        }, 300);
     }
     
     // Создание нового чата
     async function createPCNewChat(otherUserId, otherUser) {
         showNotification('Создание чата...', 'info');
         
-        const chatId = currentUser.uid < otherUserId ? currentUser.uid + '_' + otherUserId : otherUserId + '_' + currentUser.uid;
+        const chatId = window.currentUser.uid < otherUserId ? 
+            window.currentUser.uid + '_' + otherUserId : 
+            otherUserId + '_' + window.currentUser.uid;
+            
         const chatSnapshot = await database.ref('chats/' + chatId).once('value');
         
         if (!chatSnapshot.exists()) {
             await database.ref('chats/' + chatId).set({
                 type: 'private',
-                participants: [currentUser.uid, otherUserId],
+                participants: [window.currentUser.uid, otherUserId],
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
                 lastMessage: 'Чат создан',
                 lastMessageTime: firebase.database.ServerValue.TIMESTAMP
             });
             
             await Promise.all([
-                database.ref('userChats/' + currentUser.uid + '/' + chatId).set(true),
+                database.ref('userChats/' + window.currentUser.uid + '/' + chatId).set(true),
                 database.ref('userChats/' + otherUserId + '/' + chatId).set(true)
             ]);
             
@@ -963,9 +1151,10 @@
         const modal = document.getElementById('pc-new-chat-modal');
         if (modal) modal.remove();
         
-        // Перезагружаем чаты и открываем новый
+        // Перезагружаем чаты
         loadPCChats();
         
+        // Открываем чат
         const chatData = await database.ref('chats/' + chatId).once('value');
         openPCChat(chatId, chatData.val());
     }
@@ -985,6 +1174,7 @@
                 avatarEl.style.backgroundSize = 'cover';
                 avatarEl.textContent = '';
             } else {
+                avatarEl.style.backgroundImage = '';
                 avatarEl.textContent = '🥒';
             }
         }
@@ -994,7 +1184,7 @@
     function showNotification(message, type) {
         const container = document.getElementById('notifications-container');
         if (!container) {
-            alert(message);
+            console.log(message);
             return;
         }
         const notif = document.createElement('div');
@@ -1004,23 +1194,64 @@
         setTimeout(() => notif.remove(), 3000);
     }
     
+    // Вспомогательные функции
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function formatTime(timestamp) {
+        if (!timestamp) return '';
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = now - date;
+        if (diff < 60000) return 'сейчас';
+        if (diff < 3600000) return Math.floor(diff / 60000) + ' мин';
+        if (date.toDateString() === now.toDateString()) {
+            return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        }
+        return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+    }
+    
+    function formatLastSeen(timestamp) {
+        if (!timestamp) return 'неизвестно';
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = Math.floor((now - date) / 1000);
+        if (diff < 60) return 'только что';
+        if (diff < 3600) return Math.floor(diff / 60) + ' минут назад';
+        if (diff < 86400) {
+            return 'сегодня в ' + date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        }
+        return date.toLocaleDateString('ru-RU') + ' в ' + date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    }
+    
     // Экспорт в глобальную область
     window.pcRebuildChats = buildPCInterface;
     window.pcUpdateUserInfo = updatePCUserInfo;
+    window.pcLoadChats = loadPCChats;
     
     // Автоматический запуск при переключении на вкладку чатов
     const originalSwitchToTab = window.switchToTab;
     window.switchToTab = function(tabName) {
-        if (tabName === 'chats' && !pcInterfaceActive) {
-            setTimeout(() => buildPCInterface(), 100);
+        if (tabName === 'chats') {
+            setTimeout(() => {
+                if (!pcInterfaceActive) {
+                    buildPCInterface();
+                } else {
+                    loadPCChats();
+                }
+            }, 100);
         }
         if (originalSwitchToTab) originalSwitchToTab(tabName);
     };
     
-    // Если уже на вкладке чатов
+    // Если уже на вкладке чатов при загрузке
     setTimeout(() => {
         const chatsTab = document.getElementById('chats-tab');
-        if (chatsTab && !chatsTab.classList.contains('hidden')) {
+        if (chatsTab && !chatsTab.classList.contains('hidden') && window.currentUser) {
             buildPCInterface();
         }
     }, 1500);
