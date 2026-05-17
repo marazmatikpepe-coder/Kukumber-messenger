@@ -2437,4 +2437,79 @@ window.openChannelProfile = window.openChannelProfile || openChannelProfile;
 window.openUserProfile = window.openUserProfile || openUserProfile;
 
 console.log('Профильные функции зарегистрированы глобально');
+// ========== ЭКСТРЕННЫЙ ФИКС ДЛЯ ТЕЛЕФОНА ==========
+// Переопределяем функции открытия профиля для телефона
+window.openGroupProfile = async function(chatId) {
+    console.log('openGroupProfile (телефон) вызван для:', chatId);
+    
+    try {
+        var chatSnap = await database.ref('chats/' + chatId).once('value');
+        var chatData = chatSnap.val();
+        
+        if (!chatData || chatData.type !== 'group') {
+            showNotification('Группа не найдена', 'error');
+            return;
+        }
+        
+        var membersCount = chatData.members ? Object.keys(chatData.members).length : 0;
+        var isMember = chatData.members && chatData.members[currentUser?.uid];
+        
+        // Простое сообщение вместо модального окна (для теста)
+        var message = '👥 ГРУППА: ' + (chatData.name || 'Без названия') + '\n';
+        message += '👥 Участников: ' + membersCount + '\n';
+        message += '📅 Создана: ' + new Date(chatData.createdAt).toLocaleDateString() + '\n';
+        message += '📝 ' + (chatData.description || 'Нет описания');
+        
+        if (isMember) {
+            message += '\n\n✅ Вы участник группы';
+        } else {
+            message += '\n\n❌ Вы не участник группы';
+        }
+        
+        alert(message);
+        
+    } catch(err) {
+        console.error(err);
+        alert('Ошибка загрузки группы');
+    }
+};
+
+window.openChannelProfile = async function(chatId) {
+    console.log('openChannelProfile (телефон) вызван для:', chatId);
+    
+    try {
+        var chatSnap = await database.ref('chats/' + chatId).once('value');
+        var chatData = chatSnap.val();
+        
+        if (!chatData || chatData.type !== 'channel') {
+            showNotification('Канал не найден', 'error');
+            return;
+        }
+        
+        var subscribersCount = chatData.subscribers ? Object.keys(chatData.subscribers).length : 0;
+        var isSubscribed = chatData.subscribers && chatData.subscribers[currentUser?.uid];
+        
+        // Простое сообщение вместо модального окна (для теста)
+        var message = '📢 КАНАЛ: ' + (chatData.name || 'Без названия') + '\n';
+        if (chatData.kname) message += '🔗 @' + chatData.kname + '\n';
+        message += '👥 Подписчиков: ' + subscribersCount + '\n';
+        message += '📅 Создан: ' + new Date(chatData.createdAt).toLocaleDateString() + '\n';
+        message += '📝 ' + (chatData.description || 'Нет описания') + '\n';
+        message += '🔒 ' + (chatData.privacy === 'public' ? 'Публичный' : 'Приватный');
+        
+        if (isSubscribed) {
+            message += '\n\n✅ Вы подписаны';
+        } else {
+            message += '\n\n❌ Вы не подписаны';
+        }
+        
+        alert(message);
+        
+    } catch(err) {
+        console.error(err);
+        alert('Ошибка загрузки канала');
+    }
+};
+
+console.log('✅ Телефонные профили групп/каналов установлены!');
 console.log('✅ Глобальный обработчик кликов по чатам установлен!');
