@@ -539,3 +539,67 @@ window.openUserProfile = function(userId) {
         }
     }
 };
+// ========== ПРИНУДИТЕЛЬНАЯ АВТОРИЗАЦИЯ ==========
+// Перехватываем ошибки Firebase
+window.addEventListener('load', function() {
+    console.log('Страница загружена, проверяем авторизацию...');
+    
+    // Проверяем, есть ли сохранённая сессия
+    setTimeout(function() {
+        if (!currentUser) {
+            console.log('Нет активного пользователя, проверяем Firebase...');
+            
+            // Пробуем получить текущего пользователя напрямую
+            var firebaseUser = auth.currentUser;
+            if (firebaseUser) {
+                console.log('Найден пользователь через auth.currentUser:', firebaseUser.uid);
+                currentUser = firebaseUser;
+                loadUserData();
+            } else {
+                console.log('Пользователь не найден, показываем экран входа');
+                showAuthScreen();
+            }
+        }
+    }, 1000);
+});
+
+// Форсированная проверка каждые 2 секунды (на случай, если Firebase долго инициализируется)
+var authCheckInterval = setInterval(function() {
+    if (auth && auth.currentUser) {
+        if (!currentUser) {
+            console.log('Интервал: найден пользователь!', auth.currentUser.uid);
+            currentUser = auth.currentUser;
+            loadUserData();
+            clearInterval(authCheckInterval);
+        }
+    } else if (document.getElementById('main-screen') && !document.getElementById('main-screen').classList.contains('hidden')) {
+        // Если main-screen виден, но пользователя нет - показываем вход
+        if (!currentUser && !auth.currentUser) {
+            showAuthScreen();
+        }
+    }
+}, 2000);
+
+// Исправление входа
+window.forceLogin = function(email, password) {
+    console.log('Принудительный вход:', email);
+    return auth.signInWithEmailAndPassword(email, password);
+};
+
+// Исправление регистрации
+window.forceRegister = function(username, email, password) {
+    console.log('Принудительная регистрация:', email);
+    return auth.createUserWithEmailAndPassword(email, password).then(function(userCredential) {
+        var user = userCredential.user;
+        return database.ref('users/' + user.uid).set({
+            username: username,
+            email: email,
+            avatar: '',
+            bio: '',
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            status: { online: true, lastSeen: firebase.database.ServerValue.TIMESTAMP }
+        }).then(function() {
+            return database.ref('usernames/' + username.toLowerCase()).set(user.uid);
+        });
+    });
+};
