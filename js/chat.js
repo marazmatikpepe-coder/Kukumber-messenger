@@ -201,13 +201,22 @@ function renderChatsList(chatsData) {
     
     chatsList.innerHTML = '';
     
-    // Рендерим каждый чат
-    chatsArray.forEach(function(chat) {
-        createChatItem(chat.id, chat.data, chatsList);
-    });
+    // Рендерим каждый чат (асинхронно из-за getUserData)
+    var pendingRenders = chatsArray.length;
+    var renderedCount = 0;
     
-    // Привязываем обработчики кликов
-    attachChatClickHandlers();
+    chatsArray.forEach(function(chat) {
+        createChatItem(chat.id, chat.data, chatsList).then(function() {
+            renderedCount++;
+            if (renderedCount === pendingRenders) {
+                // ВСЕ ЧАТЫ ОТРИСОВАНЫ - ТЕПЕРЬ ПРИВЯЗЫВАЕМ ОБРАБОТЧИКИ
+                setTimeout(function() {
+                    attachChatClickHandlers();
+                    console.log('Обработчики кликов привязаны после отрисовки всех чатов');
+                }, 100);
+            }
+        });
+    });
 }
 
 async function createChatItem(chatId, chatData, container) {
