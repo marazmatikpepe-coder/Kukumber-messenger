@@ -144,3 +144,120 @@ function logout() {
         showNotification('Ошибка выхода', 'error'); 
     });
 }
+// ========== ФОРСИРОВАННЫЙ ВХОД ==========
+// Переопределяем функции входа на случай ошибок
+window.login = async function() {
+    var email = document.getElementById('login-email').value.trim();
+    var password = document.getElementById('login-password').value;
+    
+    if (!email) { showNotification('Введите email!', 'error'); return; }
+    if (!password) { showNotification('Введите пароль!', 'error'); return; }
+    
+    var btn = document.querySelector('#login-form .btn-primary');
+    var originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Вход...';
+    
+    try {
+        var result = await auth.signInWithEmailAndPassword(email, password);
+        console.log('Успешный вход:', result.user.uid);
+        showNotification('Добро пожаловать!', 'success');
+        
+        // Очищаем поля
+        document.getElementById('login-email').value = '';
+        document.getElementById('login-password').value = '';
+        
+        // Принудительно обновляем currentUser
+        window.currentUser = result.user;
+        
+        // Загружаем данные пользователя
+        if (typeof loadUserData === 'function') {
+            loadUserData();
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('Ошибка входа:', error);
+        var errorMessage = 'Ошибка входа';
+        switch (error.code) {
+            case 'auth/user-not-found': errorMessage = 'Пользователь не найден!'; break;
+            case 'auth/wrong-password': errorMessage = 'Неверный пароль!'; break;
+            case 'auth/invalid-email': errorMessage = 'Некорректный email!'; break;
+            case 'auth/too-many-requests': errorMessage = 'Слишком много попыток. Попробуйте позже.'; break;
+            default: errorMessage = error.message;
+        }
+        showNotification(errorMessage, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
+};
+
+window.register = async function() {
+    var username = document.getElementById('reg-username').value.trim();
+    var email = document.getElementById('reg-email').value.trim();
+    var password = document.getElementById('reg-password').value;
+    var confirmPassword = document.getElementById('reg-password-confirm').value;
+    
+    if (!username) { showNotification('Введите имя пользователя!', 'error'); return; }
+    if (username.length < 3) { showNotification('Имя должно быть минимум 3 символа!', 'error'); return; }
+    if (!email) { showNotification('Введите email!', 'error'); return; }
+    if (!password) { showNotification('Введите пароль!', 'error'); return; }
+    if (password.length < 6) { showNotification('Пароль минимум 6 символов!', 'error'); return; }
+    if (password !== confirmPassword) { showNotification('Пароли не совпадают!', 'error'); return; }
+    
+    var btn = document.querySelector('#register-form .btn-primary');
+    var originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Создание...';
+    
+    try {
+        // Проверяем уникальность username
+        var usernameSnapshot = await database.ref('usernames/' + username.toLowerCase()).once('value');
+        if (usernameSnapshot.exists()) {
+            showNotification('Имя пользователя уже занято!', 'error');
+            btn.disabled = false;
+            btn.textContent = originalText;
+            return;
+        }
+        
+        var userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        var user = userCredential.user;
+        
+        await database.ref('users/' + user.uid).set({
+            username: username,
+            email: email,
+            avatar: '',
+            bio: '',
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            status: { online: true, lastSeen: firebase.database.ServerValue.TIMESTAMP }
+        });
+        
+        await database.ref('usernames/' + username.toLowerCase()).set(user.uid);
+        
+        showNotification('Регистрация успешна!', 'success');
+        
+        // Очищаем поля
+        document.getElementById('reg-username').value = '';
+        document.getElementById('reg-email').value = '';
+        document.getElementById('reg-password').value = '';
+        document.getElementById('reg-password-confirm').value = '';
+        
+        // Принудительно обновляем currentUser
+        window.currentUser = user;
+        
+    } catch (error) {
+        console.error(error);
+        var errorMessage = 'Ошибка регистрации';
+        switch (error.code) {
+            case 'auth/email-already-in-use': errorMessage = 'Email уже используется!'; break;
+            case 'auth/invalid-email': errorMessage = 'Некорректный email!'; break;
+            case 'auth/weak-password': errorMessage = 'Слабый пароль!'; break;
+            default: errorMessage = error.message;
+        }
+        showNotification(errorMessage, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
+};
