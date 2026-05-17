@@ -2389,3 +2389,40 @@ body.night-mode #message-input {
         font-size: 12px;
     }
 }
+/* НАСТРОЙКИ НА ТЕЛЕФОНЕ - ПОЛНЫЙ ЭКРАН */
+.settings-container {
+    min-height: 100%;
+    background: var(--background);
+}
+
+.settings-header h2 {
+    font-size: 24px;
+}
+
+.settings-profile {
+    margin: 12px;
+    border-radius: 16px;
+}
+
+.settings-section {
+    margin: 12px;
+    border-radius: 16px;
+}
+
+.settings-item {
+    padding: 14px 16px;
+}
+
+.settings-icon {
+    width: 28px;
+    font-size: 20px;
+}
+
+.settings-item span:nth-child(2) {
+    font-size: 15px;
+}
+
+/* ЧТОБЫ НЕ СЛИПАЛИСЬ */
+.settings-section + .settings-section {
+    margin-top: 12px;
+}
