@@ -1140,7 +1140,6 @@ setTimeout(function() {
 console.log('chat.js полностью загружен и готов к работе');
 // ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ОТКРЫТИЯ ЧАТА ==========
 // ПЕРЕЗАПИСЫВАЕМ ФУНКЦИЮ (вставьте этот код в chat.js)
-
 window.openChatWithData = async function(chatId, chatData) {
     console.log('=== openChatWithData ВЫЗВАНА ===', chatId, chatData?.type);
     
@@ -1159,6 +1158,16 @@ window.openChatWithData = async function(chatId, chatData) {
     window.currentChatData = chatData;
     window.currentChatData.chatId = chatId;
     
+    // Устанавливаем otherUserId для личных чатов
+    if (chatData.type === 'private' && chatData.participants) {
+        for (var i = 0; i < chatData.participants.length; i++) {
+            if (chatData.participants[i] !== window.currentUser?.uid) {
+                window.currentChatData.otherUserId = chatData.participants[i];
+                break;
+            }
+        }
+    }
+    
     // 1. Обновляем активный класс в списке чатов
     var chatItems = document.querySelectorAll('.chat-item');
     chatItems.forEach(function(item) {
@@ -1168,17 +1177,20 @@ window.openChatWithData = async function(chatId, chatData) {
         }
     });
     
-    // 2. ПОКАЗЫВАЕМ ОБЛАСТЬ ЧАТА (ЭТО ГЛАВНОЕ!)
+    // 2. ПОКАЗЫВАЕМ ОБЛАСТЬ ЧАТА - ПРЯМОЕ ИЗМЕНЕНИЕ STYLE
     var noChatElement = document.getElementById('no-chat-selected');
     var activeChatElement = document.getElementById('active-chat');
     
     if (noChatElement) {
         noChatElement.classList.add('hidden');
+        noChatElement.style.display = 'none';
         console.log('Скрыли no-chat-selected');
     }
+    
     if (activeChatElement) {
         activeChatElement.classList.remove('hidden');
-        console.log('Показали active-chat');
+        activeChatElement.style.display = 'flex';
+        console.log('Показали active-chat, display:', activeChatElement.style.display);
     }
     
     // 3. Очищаем контейнер сообщений
@@ -1186,6 +1198,7 @@ window.openChatWithData = async function(chatId, chatData) {
     if (messagesContainer) {
         messagesContainer.innerHTML = '';
         window.loadedMessageIds = new Set();
+        console.log('Очистили messages-container');
     }
     
     // 4. Обновляем шапку чата
@@ -1200,12 +1213,24 @@ window.openChatWithData = async function(chatId, chatData) {
     // 7. Настраиваем клик по шапке
     var chatUserInfo = document.querySelector('.chat-user-info');
     if (chatUserInfo) {
-        chatUserInfo.onclick = function() {
+        // Убираем старые обработчики
+        var newChatUserInfo = chatUserInfo.cloneNode(true);
+        chatUserInfo.parentNode.replaceChild(newChatUserInfo, chatUserInfo);
+        newChatUserInfo.onclick = function() {
             openChatProfileInfo();
         };
     }
     
+    // 8. ПРИНУДИТЕЛЬНАЯ ПРОКРУТКА
+    setTimeout(function() {
+        if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    }, 200);
+    
     console.log('Чат успешно открыт:', chatId);
+    console.log('active-chat hidden?', activeChatElement?.classList.contains('hidden'));
+    console.log('active-chat display:', activeChatElement?.style.display);
 };
 
 // ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ОБНОВЛЕНИЯ ШАПКИ
