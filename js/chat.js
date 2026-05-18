@@ -1345,3 +1345,11 @@ document.addEventListener('click', function(e) {
 }, true);
 
 console.log('chat.js полностью загружен и готов к работе');
+// Проверяем, что функции из chat-profile.js загрузились
+setTimeout(function() {
+    if (typeof window.openGroupProfile === 'function') {
+        console.log('✅ openGroupProfile загружена из chat-profile.js');
+    } else {
+        console.error('❌ openGroupProfile НЕ загружена! Проверьте порядок подключения скриптов');
+    }
+}, 2000);
