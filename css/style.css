@@ -2426,3 +2426,120 @@ body.night-mode #message-input {
 .settings-section + .settings-section {
     margin-top: 12px;
 }
+/* ========== ТЁМНАЯ ТЕМА ДЛЯ ПРОФИЛЯ ГРУППЫ ========== */
+body.night-mode .group-profile-container {
+    background: #1e1e1e !important;
+    color: #e0e0e0 !important;
+}
+
+body.night-mode #group-profile-header {
+    background: #1e1e1e !important;
+    border-bottom-color: #3a3a3a !important;
+}
+
+body.night-mode #group-profile-header h3,
+body.night-mode #group-profile-header button {
+    color: #e0e0e0 !important;
+}
+
+body.night-mode #group-profile-main {
+    background: #121212 !important;
+}
+
+body.night-mode .group-banner {
+    border-radius: 28px 28px 0 0;
+}
+
+body.night-mode .group-avatar {
+    border-color: #1e1e1e !important;
+    background: #2a2a2a !important;
+}
+
+body.night-mode #group-name-display {
+    color: #ffffff !important;
+}
+
+body.night-mode .group-tab-btn {
+    background: #1e1e1e !important;
+    color: #a0a0a0 !important;
+}
+
+body.night-mode .group-tab-btn.active {
+    color: var(--forest) !important;
+    border-bottom-color: var(--forest) !important;
+}
+
+body.night-mode #members-tab,
+body.night-mode #info-tab {
+    background: #121212 !important;
+}
+
+body.night-mode .member-item {
+    background: #1e1e1e !important;
+    border-bottom-color: #3a3a3a !important;
+}
+
+body.night-mode .member-item .avatar {
+    background: #2a2a2a !important;
+}
+
+body.night-mode .member-item div {
+    color: #e0e0e0 !important;
+}
+
+body.night-mode #member-permissions-modal {
+    background: #1e1e1e !important;
+}
+
+body.night-mode #member-permissions-modal > div:first-child {
+    background: #1e1e1e !important;
+    border-bottom-color: #3a3a3a !important;
+}
+
+body.night-mode #member-permissions-modal h3,
+body.night-mode #member-permissions-modal button {
+    color: #e0e0e0 !important;
+}
+
+body.night-mode .permission-item {
+    border-bottom-color: #3a3a3a !important;
+    color: #e0e0e0 !important;
+}
+
+body.night-mode .permission-item span {
+    color: #e0e0e0 !important;
+}
+
+body.night-mode #member-role-select {
+    background: #2a2a2a !important;
+    border-color: #3a3a3a !important;
+    color: #e0e0e0 !important;
+}
+
+body.night-mode .switch .slider {
+    background-color: #3a3a3a !important;
+}
+
+body.night-mode .switch input:checked + .slider {
+    background-color: var(--forest) !important;
+}
+
+body.night-mode #info-tab > div {
+    background: #1e1e1e !important;
+}
+
+body.night-mode #info-tab span {
+    color: #e0e0e0 !important;
+}
+
+body.night-mode #edit-group-settings-btn {
+    background: #2a2a2a !important;
+    border-color: #3a3a3a !important;
+    color: #e0e0e0 !important;
+}
+
+body.night-mode .group-profile-container .btn-secondary {
+    background: #2a2a2a !important;
+    border-color: #3a3a3a !important;
+    color: #e0e0e0 !important;
+}
