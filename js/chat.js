@@ -3964,3 +3964,176 @@ if (originalOpenGroupProfile) {
 }
 
 console.log('✅ Исправление аватарок в профилях применено');
+// ========== ИСПРАВЛЕНИЕ ОТОБРАЖЕНИЯ АВАТАРОК В МОДАЛЬНЫХ ОКНАХ ==========
+
+// Универсальная функция установки аватарки
+function setAvatarCorrectly(element, avatarUrl, defaultType) {
+    if (!element) return false;
+    
+    // Очищаем всё
+    element.style.backgroundImage = '';
+    element.style.backgroundSize = '';
+    element.style.backgroundPosition = '';
+    element.textContent = '';
+    
+    // Удаляем все классы дефолтных аватарок
+    element.classList.remove('default-avatar-user', 'default-avatar-group', 'default-avatar-channel');
+    
+    if (avatarUrl && avatarUrl.trim() !== '' && avatarUrl !== 'null' && avatarUrl !== 'undefined') {
+        // Есть URL аватарки - устанавливаем фон
+        element.style.backgroundImage = `url('${avatarUrl}')`;
+        element.style.backgroundSize = 'cover';
+        element.style.backgroundPosition = 'center';
+        element.style.backgroundColor = 'transparent';
+        element.textContent = '';
+        return true;
+    } else {
+        // Нет аватарки - ставим дефолтную иконку
+        element.classList.add(`default-avatar-${defaultType}`);
+        element.style.backgroundColor = 'var(--sage, #9DC183)';
+        return false;
+    }
+}
+
+// Исправление аватара пользователя в профиле
+window.fixUserProfileAvatar = async function(userId) {
+    const avatarDiv = document.querySelector('#user-profile-modal .profile-avatar');
+    if (!avatarDiv) return;
+    
+    try {
+        const userSnap = await database.ref('users/' + userId).once('value');
+        const userData = userSnap.val();
+        if (userData) {
+            setAvatarCorrectly(avatarDiv, userData.avatar, 'user');
+        }
+    } catch(e) {
+        console.error('Ошибка загрузки аватара:', e);
+        setAvatarCorrectly(avatarDiv, null, 'user');
+    }
+};
+
+// Исправление аватара группы в профиле
+window.fixGroupProfileAvatar = async function(groupId) {
+    const avatarDiv = document.querySelector('#group-profile-modal .group-avatar');
+    if (!avatarDiv) return;
+    
+    try {
+        const groupSnap = await database.ref('chats/' + groupId).once('value');
+        const groupData = groupSnap.val();
+        if (groupData) {
+            setAvatarCorrectly(avatarDiv, groupData.avatar, 'group');
+        }
+    } catch(e) {
+        console.error('Ошибка загрузки аватара группы:', e);
+        setAvatarCorrectly(avatarDiv, null, 'group');
+    }
+};
+
+// Исправление аватара канала в профиле
+window.fixChannelProfileAvatar = async function(channelId) {
+    const avatarDiv = document.querySelector('#channel-profile-modal .avatar');
+    if (!avatarDiv) return;
+    
+    try {
+        const channelSnap = await database.ref('chats/' + channelId).once('value');
+        const channelData = channelSnap.val();
+        if (channelData) {
+            setAvatarCorrectly(avatarDiv, channelData.avatar, 'channel');
+        }
+    } catch(e) {
+        console.error('Ошибка загрузки аватара канала:', e);
+        setAvatarCorrectly(avatarDiv, null, 'channel');
+    }
+};
+
+// Исправление аватарок участников в списке
+window.fixMemberListAvatars = async function() {
+    const memberItems = document.querySelectorAll('#group-profile-modal .member-item');
+    
+    for (const item of memberItems) {
+        const memberId = item.getAttribute('data-member-id');
+        const avatarDiv = item.querySelector('.avatar');
+        
+        if (memberId && avatarDiv && !avatarDiv.hasAttribute('data-avatar-fixed')) {
+            avatarDiv.setAttribute('data-avatar-fixed', 'true');
+            
+            try {
+                const userSnap = await database.ref('users/' + memberId).once('value');
+                const userData = userSnap.val();
+                if (userData) {
+                    setAvatarCorrectly(avatarDiv, userData.avatar, 'user');
+                } else {
+                    setAvatarCorrectly(avatarDiv, null, 'user');
+                }
+            } catch(e) {
+                setAvatarCorrectly(avatarDiv, null, 'user');
+            }
+        }
+    }
+};
+
+// Перехватываем открытие профиля пользователя
+const originalOpenUserProfile = window.openUserProfile;
+if (originalOpenUserProfile) {
+    window.openUserProfile = async function(userId) {
+        await originalOpenUserProfile(userId);
+        setTimeout(() => window.fixUserProfileAvatar(userId), 300);
+    };
+}
+
+// Перехватываем открытие профиля группы
+const originalOpenGroupProfile = window.openGroupProfile;
+if (originalOpenGroupProfile) {
+    window.openGroupProfile = async function(groupId) {
+        await originalOpenGroupProfile(groupId);
+        setTimeout(() => {
+            window.fixGroupProfileAvatar(groupId);
+            window.fixMemberListAvatars();
+        }, 500);
+    };
+}
+
+// Перехватываем открытие профиля канала
+const originalOpenChannelProfile = window.openChannelProfile;
+if (originalOpenChannelProfile) {
+    window.openChannelProfile = async function(channelId) {
+        await originalOpenChannelProfile(channelId);
+        setTimeout(() => window.fixChannelProfileAvatar(channelId), 300);
+    };
+}
+
+// Наблюдатель за появлением модальных окон
+const modalObserver = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+        if (mutation.addedNodes.length) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1) {
+                    // Профиль пользователя
+                    if (node.id === 'user-profile-modal') {
+                        const userId = window.viewingProfileUserId;
+                        if (userId) setTimeout(() => window.fixUserProfileAvatar(userId), 300);
+                    }
+                    // Профиль группы
+                    if (node.id === 'group-profile-modal') {
+                        const groupId = window.currentGroupId;
+                        if (groupId) {
+                            setTimeout(() => {
+                                window.fixGroupProfileAvatar(groupId);
+                                window.fixMemberListAvatars();
+                            }, 500);
+                        }
+                    }
+                    // Профиль канала
+                    if (node.id === 'channel-profile-modal') {
+                        const channelId = window.currentChannelId;
+                        if (channelId) setTimeout(() => window.fixChannelProfileAvatar(channelId), 300);
+                    }
+                }
+            });
+        }
+    });
+});
+
+modalObserver.observe(document.body, { childList: true, subtree: true });
+
+console.log('✅ Исправление аватарок в модальных окнах активировано');
