@@ -210,7 +210,7 @@ function renderChatsList(chatsData) {
     });
 }
 
-// ========== СОЗДАНИЕ ЭЛЕМЕНТА ЧАТА ==========
+// ========== СОЗДАНИЕ ЭЛЕМЕНТА ЧАТА (ИСПРАВЛЕНАЯ ВЕРСИЯ) ==========
 async function createChatItem(chatId, chatData, container) {
     var div = document.createElement('div');
     div.className = 'chat-item';
@@ -235,14 +235,12 @@ async function createChatItem(chatId, chatData, container) {
     if (chatData.type === 'group') {
         name = chatData.name || 'Группа';
         avatarUrl = chatData.avatar || '';
-        avatarContent = avatarUrl ? '' : '👥';
         badge = '<span class="chat-type-badge">👥</span>';
         render();
     } 
     else if (chatData.type === 'channel') {
         name = chatData.name || 'Канал';
         avatarUrl = chatData.avatar || '';
-        avatarContent = avatarUrl ? '' : '📢';
         badge = '<span class="chat-type-badge">📢</span>';
         render();
     } 
@@ -263,7 +261,6 @@ async function createChatItem(chatId, chatData, container) {
             name = userData.username;
             avatarUrl = userData.avatar;
             isOnline = userData.status.online === true;
-            avatarContent = avatarUrl ? '' : '👤';
             render();
         } else {
             name = 'Пользователь';
@@ -272,12 +269,32 @@ async function createChatItem(chatId, chatData, container) {
     }
     
     function render() {
-        var avatarStyle = avatarUrl ? 'background-image: url(' + avatarUrl + '); background-size: cover; background-position: center;' : '';
-        var avatarClass = (!avatarUrl && chatData.type !== 'group' && chatData.type !== 'channel') ? 'default-avatar-user' : '';
+        // ВАЖНО: если есть avatarUrl - НЕ показываем эмодзи, только фон
+        var hasAvatar = avatarUrl && avatarUrl !== '';
+        
+        // Стиль для фона
+        var avatarStyle = hasAvatar ? 'background-image: url(' + avatarUrl + '); background-size: cover; background-position: center;' : '';
+        
+        // Определяем класс для дефолтной аватарки (если нет картинки)
+        var defaultClass = '';
+        if (!hasAvatar) {
+            if (chatData.type === 'group') {
+                defaultClass = 'default-avatar-group';
+                avatarContent = '';
+            } else if (chatData.type === 'channel') {
+                defaultClass = 'default-avatar-channel';
+                avatarContent = '';
+            } else {
+                defaultClass = 'default-avatar-user';
+                avatarContent = '';
+            }
+        } else {
+            avatarContent = ''; // Если есть картинка - текст пустой
+        }
         
         div.innerHTML = `
             <div class="chat-item-avatar">
-                <div class="avatar ${avatarClass}" style="${avatarStyle}">${avatarContent}</div>
+                <div class="avatar ${defaultClass}" style="${avatarStyle}">${avatarContent}</div>
                 ${isOnline ? '<div class="online-indicator"></div>' : ''}
                 ${badge}
             </div>
@@ -295,7 +312,6 @@ async function createChatItem(chatId, chatData, container) {
     
     return Promise.resolve();
 }
-
 // ========== ПРИВЯЗКА ОБРАБОТЧИКОВ КЛИКОВ ==========
 function attachChatClickHandlers() {
     var chatItems = document.querySelectorAll('.chat-item');
