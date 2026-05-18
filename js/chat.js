@@ -374,7 +374,7 @@ async function openChatById(chatId) {
     }
 }
 
-// ========== ОТКРЫТИЕ ЧАТА С ДАННЫМИ ==========
+// ========== ОТКРЫТИЕ ЧАТА С ДАННЫМИ (ИСПРАВЛЕННАЯ ВЕРСИЯ) ==========
 async function openChatWithData(chatId, chatData) {
     console.log('openChatWithData:', chatId, chatData.type);
     
@@ -407,17 +407,19 @@ async function openChatWithData(chatId, chatData) {
     if (noChatElement) noChatElement.classList.add('hidden');
     if (activeChatElement) activeChatElement.classList.remove('hidden');
     
-    // Обновляем шапку чата
+    // ОБНОВЛЯЕМ ШАПКУ (с полным сбросом)
     await updateChatHeader(chatId, chatData);
+    
+    // НАСТРАИВАЕМ КЛИК ПО ШАПКЕ
+    setTimeout(function() {
+        setupChatHeaderClick();
+    }, 100);
     
     // Загружаем сообщения
     loadMessages(chatId);
     
     // Настраиваем слушатель печати
     setupTypingListener(chatId);
-    
-    // Настраиваем обработчик клика по шапке
-    setupChatHeaderClick();
 }
 
 // ========== ОБНОВЛЕНИЕ ШАПКИ ЧАТА (ИСПРАВЛЕННАЯ ВЕРСИЯ) ==========
