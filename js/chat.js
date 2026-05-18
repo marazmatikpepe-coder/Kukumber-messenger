@@ -4137,3 +4137,186 @@ const modalObserver = new MutationObserver(function(mutations) {
 modalObserver.observe(document.body, { childList: true, subtree: true });
 
 console.log('✅ Исправление аватарок в модальных окнах активировано');
+// ========== ВОССТАНОВЛЕНИЕ РАБОТЫ ЧАТОВ ==========
+
+// Простая и надёжная загрузка чатов
+window.loadChats = function() {
+    console.log('loadChats() вызвана (восстановленная)');
+    
+    if (!window.currentUser || !window.currentUser.uid) {
+        console.log('Нет пользователя');
+        return;
+    }
+    
+    var container = document.getElementById('chats-list');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="empty-chats">🔄 Загрузка...</div>';
+    
+    database.ref('userChats/' + window.currentUser.uid).once('value', function(snapshot) {
+        var userChats = snapshot.val();
+        
+        if (!userChats) {
+            container.innerHTML = '<div class="empty-chats">💬 Нет чатов</div>';
+            return;
+        }
+        
+        var chatIds = Object.keys(userChats);
+        var chatsHtml = '';
+        var processed = 0;
+        
+        chatIds.forEach(function(chatId) {
+            database.ref('chats/' + chatId).once('value', function(chatSnap) {
+                var chat = chatSnap.val();
+                if (chat) {
+                    // Получаем имя для личного чата
+                    if (chat.type === 'private') {
+                        var otherId = chat.participants.find(id => id !== window.currentUser.uid);
+                        if (otherId) {
+                            database.ref('users/' + otherId + '/username').once('value', function(nameSnap) {
+                                var name = nameSnap.val() || 'Пользователь';
+                                var preview = chat.lastMessage || 'Нет сообщений';
+                                if (preview.length > 40) preview = preview.substring(0, 37) + '...';
+                                
+                                chatsHtml += `
+                                    <div class="chat-item" data-chat-id="${chatId}">
+                                        <div class="chat-item-avatar">
+                                            <div class="avatar default-avatar-user"></div>
+                                        </div>
+                                        <div class="chat-item-info">
+                                            <div class="chat-item-header">
+                                                <span class="chat-item-name">${escapeHtml(name)}</span>
+                                                <span class="chat-item-time">${formatTime(chat.lastMessageTime)}</span>
+                                            </div>
+                                            <div class="chat-item-preview">${escapeHtml(preview)}</div>
+                                        </div>
+                                    </div>
+                                `;
+                                processed++;
+                                if (processed === chatIds.length) {
+                                    container.innerHTML = chatsHtml;
+                                    attachSimpleChatClicks();
+                                }
+                            });
+                            return;
+                        }
+                    } else {
+                        var name = chat.name || (chat.type === 'group' ? 'Группа' : 'Канал');
+                        var preview = chat.lastMessage || 'Нет сообщений';
+                        if (preview.length > 40) preview = preview.substring(0, 37) + '...';
+                        var avatarClass = chat.type === 'group' ? 'default-avatar-group' : 'default-avatar-channel';
+                        
+                        chatsHtml += `
+                            <div class="chat-item" data-chat-id="${chatId}">
+                                <div class="chat-item-avatar">
+                                    <div class="avatar ${avatarClass}"></div>
+                                </div>
+                                <div class="chat-item-info">
+                                    <div class="chat-item-header">
+                                        <span class="chat-item-name">${escapeHtml(name)}</span>
+                                        <span class="chat-item-time">${formatTime(chat.lastMessageTime)}</span>
+                                    </div>
+                                    <div class="chat-item-preview">${escapeHtml(preview)}</div>
+                                </div>
+                            </div>
+                        `;
+                        processed++;
+                        if (processed === chatIds.length) {
+                            container.innerHTML = chatsHtml;
+                            attachSimpleChatClicks();
+                        }
+                    }
+                } else {
+                    processed++;
+                    if (processed === chatIds.length && chatsHtml === '') {
+                        container.innerHTML = chatsHtml || '<div class="empty-chats">💬 Нет чатов</div>';
+                        if (chatsHtml) attachSimpleChatClicks();
+                    }
+                }
+            });
+        });
+    });
+};
+
+// Простая функция открытия чата
+window.openChatById = function(chatId) {
+    console.log('openChatById:', chatId);
+    
+    if (!chatId) return;
+    
+    database.ref('chats/' + chatId).once('value', function(snap) {
+        var chatData = snap.val();
+        if (!chatData) {
+            alert('Чат не найден');
+            return;
+        }
+        
+        window.currentChatId = chatId;
+        window.currentChatData = chatData;
+        
+        // Показываем область чата
+        var noChat = document.getElementById('no-chat-selected');
+        var activeChat = document.getElementById('active-chat');
+        if (noChat) noChat.classList.add('hidden');
+        if (activeChat) activeChat.classList.remove('hidden');
+        
+        // Обновляем шапку
+        var nameEl = document.getElementById('chat-username');
+        if (nameEl) {
+            if (chatData.type === 'private') {
+                var otherId = chatData.participants.find(id => id !== window.currentUser.uid);
+                if (otherId) {
+                    database.ref('users/' + otherId + '/username').once('value', function(nameSnap) {
+                        nameEl.textContent = nameSnap.val() || 'Пользователь';
+                    });
+                }
+            } else {
+                nameEl.textContent = chatData.name || (chatData.type === 'group' ? 'Группа' : 'Канал');
+            }
+        }
+        
+        // Очищаем и загружаем сообщения
+        var msgContainer = document.getElementById('messages-container');
+        if (msgContainer) msgContainer.innerHTML = '<div style="text-align:center;padding:20px;">Загрузка сообщений...</div>';
+        
+        database.ref('messages/' + chatId).orderByChild('timestamp').limitToLast(50).once('value', function(messagesSnap) {
+            var messages = messagesSnap.val();
+            if (msgContainer) msgContainer.innerHTML = '';
+            if (messages) {
+                var msgArray = [];
+                for (var id in messages) {
+                    msgArray.push({id: id, data: messages[id]});
+                }
+                msgArray.sort((a,b) => (a.data.timestamp||0) - (b.data.timestamp||0));
+                msgArray.forEach(function(msg) {
+                    var isSent = msg.data.senderId === window.currentUser.uid;
+                    var msgDiv = document.createElement('div');
+                    msgDiv.className = 'message ' + (isSent ? 'sent' : 'received');
+                    msgDiv.innerHTML = '<div class="message-text">' + escapeHtml(msg.data.text || 'Медиа') + '</div><div class="message-time">' + formatTime(msg.data.timestamp) + '</div>';
+                    if (msgContainer) msgContainer.appendChild(msgDiv);
+                });
+            }
+            if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
+        });
+    });
+};
+
+// Привязка кликов
+function attachSimpleChatClicks() {
+    document.querySelectorAll('.chat-item').forEach(function(item) {
+        item.onclick = function(e) {
+            e.preventDefault();
+            var chatId = this.getAttribute('data-chat-id');
+            if (chatId) window.openChatById(chatId);
+        };
+    });
+}
+
+// Загружаем чаты при старте
+setTimeout(function() {
+    if (window.currentUser && window.currentUser.uid) {
+        window.loadChats();
+    }
+}, 500);
+
+console.log('✅ Чаты восстановлены!');
