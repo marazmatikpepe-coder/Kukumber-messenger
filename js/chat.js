@@ -420,13 +420,22 @@ async function openChatWithData(chatId, chatData) {
     setupChatHeaderClick();
 }
 
-// ========== ОБНОВЛЕНИЕ ШАПКИ ЧАТА ==========
+// ========== ОБНОВЛЕНИЕ ШАПКИ ЧАТА (ИСПРАВЛЕННАЯ ВЕРСИЯ) ==========
 async function updateChatHeader(chatId, chatData) {
     var chatUsername = document.getElementById('chat-username');
     var chatStatus = document.getElementById('chat-status');
     var chatAvatar = document.getElementById('chat-avatar');
     
     if (!chatUsername) return;
+    
+    // СБРАСЫВАЕМ АВАТАРКУ ПЕРЕД УСТАНОВКОЙ НОВОЙ (ВАЖНО!)
+    if (chatAvatar) {
+        chatAvatar.style.backgroundImage = '';
+        chatAvatar.style.background = '';
+        chatAvatar.textContent = '';
+        // Удаляем все классы дефолтных аватарок
+        chatAvatar.classList.remove('default-avatar-user', 'default-avatar-group', 'default-avatar-channel');
+    }
     
     if (chatData.type === 'group') {
         chatUsername.textContent = chatData.name || 'Группа';
@@ -435,11 +444,14 @@ async function updateChatHeader(chatId, chatData) {
             chatStatus.textContent = membersCount + ' участников';
         }
         if (chatAvatar) {
-            if (chatData.avatar) {
+            if (chatData.avatar && chatData.avatar !== '') {
+                // Есть картинка - показываем её, без эмодзи
                 chatAvatar.style.backgroundImage = 'url(' + chatData.avatar + ')';
                 chatAvatar.style.backgroundSize = 'cover';
+                chatAvatar.style.backgroundPosition = 'center';
                 chatAvatar.textContent = '';
             } else {
+                // Нет картинки - показываем эмодзи и дефолтный класс
                 chatAvatar.style.backgroundImage = '';
                 chatAvatar.textContent = '👥';
                 chatAvatar.classList.add('default-avatar-group');
@@ -453,9 +465,10 @@ async function updateChatHeader(chatId, chatData) {
             chatStatus.textContent = subsCount + ' подписчиков';
         }
         if (chatAvatar) {
-            if (chatData.avatar) {
+            if (chatData.avatar && chatData.avatar !== '') {
                 chatAvatar.style.backgroundImage = 'url(' + chatData.avatar + ')';
                 chatAvatar.style.backgroundSize = 'cover';
+                chatAvatar.style.backgroundPosition = 'center';
                 chatAvatar.textContent = '';
             } else {
                 chatAvatar.style.backgroundImage = '';
@@ -491,11 +504,14 @@ async function updateChatHeader(chatId, chatData) {
             }
             
             if (chatAvatar) {
-                if (userData.avatar) {
+                if (userData.avatar && userData.avatar !== '') {
+                    // Есть картинка - показываем её, без эмодзи
                     chatAvatar.style.backgroundImage = 'url(' + userData.avatar + ')';
                     chatAvatar.style.backgroundSize = 'cover';
+                    chatAvatar.style.backgroundPosition = 'center';
                     chatAvatar.textContent = '';
                 } else {
+                    // Нет картинки - показываем эмодзи и дефолтный класс
                     chatAvatar.style.backgroundImage = '';
                     chatAvatar.textContent = '👤';
                     chatAvatar.classList.add('default-avatar-user');
@@ -504,10 +520,16 @@ async function updateChatHeader(chatId, chatData) {
         } else {
             chatUsername.textContent = 'Пользователь';
             if (chatStatus) chatStatus.textContent = 'неизвестно';
+            if (chatAvatar) {
+                chatAvatar.style.backgroundImage = '';
+                chatAvatar.textContent = '👤';
+                chatAvatar.classList.add('default-avatar-user');
+            }
         }
     }
+    
+    console.log('Шапка чата обновлена для типа:', chatData.type);
 }
-
 // ========== НАСТРОЙКА КЛИКА ПО ШАПКЕ ==========
 function setupChatHeaderClick() {
     var chatUserInfo = document.querySelector('.chat-user-info');
