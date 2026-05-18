@@ -2608,3 +2608,43 @@ body.night-mode .group-profile-container .btn-secondary {
 .avatar[style*="background-image"] {
     text-indent: -9999px;
 }
+/* ========== ФИКС АВАТАРОК В МОДАЛЬНЫХ ОКНАХ ========== */
+#user-profile-modal .profile-avatar,
+#group-profile-modal .group-avatar,
+#channel-profile-modal .avatar {
+    width: 90px !important;
+    height: 90px !important;
+    border-radius: 50% !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+}
+
+#group-profile-modal .member-item .avatar {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    background-size: cover !important;
+    background-position: center !important;
+    flex-shrink: 0 !important;
+}
+
+/* Дефолтные аватарки для модалок */
+.default-avatar-user {
+    background-image: url('https://i.ibb.co/W4xM0wf7/image.png') !important;
+    background-size: cover !important;
+}
+
+.default-avatar-group {
+    background-image: url('https://i.ibb.co/0RWPwqwQ/image.png') !important;
+    background-size: cover !important;
+}
+
+.default-avatar-channel {
+    background-image: url('https://i.ibb.co/3ydBsv59/image.png') !important;
+    background-size: cover !important;
+}
