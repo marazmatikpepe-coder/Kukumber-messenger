@@ -3880,3 +3880,87 @@ window.bindGroupProfileEvents = function(chatId, chatData, isMember, isAdmin, is
 };
 
 console.log('✅ Кнопки редактирования группы привязаны!');
+// ========== ИСПРАВЛЕНИЕ ЗАГРУЗКИ АВАТАРОК В ПРОФИЛЕ ГРУППЫ ==========
+
+// Функция для установки аватарки с правильными классами
+function setAvatarWithDefault(element, avatarUrl, type) {
+    if (!element) return;
+    
+    // Очищаем предыдущие классы
+    element.classList.remove('default-avatar-user', 'default-avatar-group', 'default-avatar-channel');
+    
+    if (avatarUrl && avatarUrl.trim() !== '') {
+        element.style.backgroundImage = `url(${avatarUrl})`;
+        element.style.backgroundSize = 'cover';
+        element.style.backgroundPosition = 'center';
+        element.textContent = '';
+        // Убираем классы дефолтных аватарок
+        element.classList.remove('default-avatar-user', 'default-avatar-group', 'default-avatar-channel');
+    } else {
+        element.style.backgroundImage = '';
+        element.classList.add(`default-avatar-${type}`);
+        element.textContent = '';
+    }
+}
+
+// Переопределяем отображение аватарок в списке участников
+function fixMemberAvatars() {
+    const memberItems = document.querySelectorAll('.member-item');
+    memberItems.forEach(async (item) => {
+        const avatarDiv = item.querySelector('.avatar');
+        if (avatarDiv && !avatarDiv.hasAttribute('data-fixed')) {
+            avatarDiv.setAttribute('data-fixed', 'true');
+            
+            // Пробуем получить ID участника
+            const memberId = item.getAttribute('data-member-id');
+            if (memberId) {
+                try {
+                    const userSnap = await database.ref('users/' + memberId).once('value');
+                    const userData = userSnap.val();
+                    if (userData) {
+                        setAvatarWithDefault(avatarDiv, userData.avatar, 'user');
+                    }
+                } catch(e) {}
+            }
+        }
+    });
+}
+
+// Запускаем исправление аватарок после загрузки списка участников
+const originalLoadGroupMembersList = window.loadGroupMembersList;
+if (originalLoadGroupMembersList) {
+    window.loadGroupMembersList = async function(chatId, chatData) {
+        await originalLoadGroupMembersList(chatId, chatData);
+        setTimeout(fixMemberAvatars, 500);
+    };
+}
+
+// Исправление аватарок в профиле группы
+function fixGroupProfileAvatars(chatData) {
+    // Аватар группы
+    const groupAvatar = document.querySelector('.group-avatar');
+    if (groupAvatar) {
+        setAvatarWithDefault(groupAvatar, chatData?.avatar, 'group');
+    }
+    
+    // Баннер группы
+    const bannerDiv = document.querySelector('.group-banner');
+    if (bannerDiv && chatData?.banner) {
+        bannerDiv.style.backgroundImage = `url(${chatData.banner})`;
+        bannerDiv.style.backgroundSize = 'cover';
+        bannerDiv.style.backgroundPosition = 'center';
+    }
+}
+
+// Вызываем исправление после открытия профиля
+const originalOpenGroupProfile = window.openGroupProfile;
+if (originalOpenGroupProfile) {
+    window.openGroupProfile = async function(chatId) {
+        await originalOpenGroupProfile(chatId);
+        const chatSnap = await database.ref('chats/' + chatId).once('value');
+        const chatData = chatSnap.val();
+        setTimeout(() => fixGroupProfileAvatars(chatData), 500);
+    };
+}
+
+console.log('✅ Исправление аватарок в профилях применено');
