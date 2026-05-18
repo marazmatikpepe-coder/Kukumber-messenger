@@ -2543,3 +2543,68 @@ body.night-mode .group-profile-container .btn-secondary {
     border-color: #3a3a3a !important;
     color: #e0e0e0 !important;
 }
+/* ========== ИСПРАВЛЕНИЕ АВАТАРОК В ПРОФИЛЯХ ========== */
+.avatar {
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-color: var(--sage, #9DC183) !important;
+}
+
+.group-avatar {
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+}
+
+.profile-avatar {
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+}
+
+/* Аватарки в списке участников */
+.member-item .avatar {
+    width: 45px !important;
+    height: 45px !important;
+    border-radius: 50% !important;
+    flex-shrink: 0 !important;
+}
+
+/* Аватарки в списке чатов */
+.chat-item-avatar .avatar {
+    background-size: cover !important;
+    background-position: center !important;
+}
+
+/* Дефолтные аватарки для пользователей */
+.default-avatar-user {
+    background-image: url('https://i.ibb.co/W4xM0wf7/image.png') !important;
+    background-size: cover !important;
+    background-position: center !important;
+}
+
+/* Дефолтные аватарки для групп */
+.default-avatar-group {
+    background-image: url('https://i.ibb.co/0RWPwqwQ/image.png') !important;
+    background-size: cover !important;
+    background-position: center !important;
+}
+
+/* Дефолтные аватарки для каналов */
+.default-avatar-channel {
+    background-image: url('https://i.ibb.co/3ydBsv59/image.png') !important;
+    background-size: cover !important;
+    background-position: center !important;
+}
+
+/* Убираем текстовое содержимое если есть фон */
+.avatar:not([style*="background-image"]) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatar[style*="background-image"] {
+    text-indent: -9999px;
+}
