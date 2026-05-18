@@ -546,14 +546,12 @@ function setupChatHeaderClick() {
     };
 }
 
-// ========== ОТКРЫТИЕ ПРОФИЛЯ ПРИ КЛИКЕ НА ШАПКУ ЧАТА ==========
+// ========== ОТКРЫТИЕ ПРОФИЛЯ ПРИ КЛИКЕ НА ШАПКУ ЧАТА (ИСПРАВЛЕННАЯ) ==========
 function openChatProfile() {
     console.log('=== openChatProfile ВЫЗВАНА ===');
     console.log('currentChatData:', window.currentChatData);
-    console.log('currentChatId:', window.currentChatId);
     
     if (!window.currentChatData) {
-        console.log('Нет данных чата');
         showNotification('Сначала откройте чат', 'error');
         return;
     }
@@ -561,39 +559,10 @@ function openChatProfile() {
     var chatType = window.currentChatData.type;
     console.log('Тип чата:', chatType);
     
-    if (chatType === 'group') {
-        console.log('Пытаемся открыть профиль группы, ID:', window.currentChatId);
-        
-        // Пробуем разные варианты вызова
-        if (typeof window.openGroupProfile === 'function') {
-            console.log('Вызываем window.openGroupProfile');
-            window.openGroupProfile(window.currentChatId);
-        } else if (typeof openGroupProfile === 'function') {
-            console.log('Вызываем openGroupProfile');
-            openGroupProfile(window.currentChatId);
-        } else {
-            console.error('Функция openGroupProfile НЕ НАЙДЕНА!');
-            showNotification('Функция профиля группы не загружена', 'error');
-            
-            // Временно: показываем alert с информацией о группе
-            var groupName = window.currentChatData.name || 'Группа';
-            var membersCount = window.currentChatData.members ? Object.keys(window.currentChatData.members).length : 0;
-            alert('👥 ГРУППА: ' + groupName + '\n👥 Участников: ' + membersCount + '\n📝 ' + (window.currentChatData.description || 'Нет описания'));
-        }
-    } 
-    else if (chatType === 'channel') {
-        console.log('Открываем профиль канала');
-        if (typeof window.openChannelProfile === 'function') {
-            window.openChannelProfile(window.currentChatId);
-        } else if (typeof openChannelProfile === 'function') {
-            openChannelProfile(window.currentChatId);
-        } else {
-            showNotification('Профиль канала в разработке', 'info');
-        }
-    } 
-    else if (chatType === 'private') {
-        console.log('Открываем профиль пользователя');
+    if (chatType === 'private') {
+        // Личный чат - открываем профиль пользователя
         var otherUserId = window.currentChatData.otherUserId;
+        
         if (!otherUserId && window.currentChatData.participants) {
             for (var i = 0; i < window.currentChatData.participants.length; i++) {
                 if (window.currentChatData.participants[i] !== window.currentUser.uid) {
@@ -603,16 +572,38 @@ function openChatProfile() {
             }
         }
         
+        console.log('otherUserId:', otherUserId);
+        
         if (otherUserId) {
+            // ВЫЗЫВАЕМ ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ
             if (typeof window.openUserProfile === 'function') {
                 window.openUserProfile(otherUserId);
             } else {
-                showNotification('Профиль пользователя', 'info');
+                console.error('openUserProfile не найдена');
+                showNotification('Профиль пользователя временно недоступен', 'error');
             }
+        } else {
+            showNotification('Не удалось определить пользователя', 'error');
+        }
+    } 
+    else if (chatType === 'group') {
+        console.log('Открываем профиль группы:', window.currentChatId);
+        if (typeof window.openGroupProfile === 'function') {
+            window.openGroupProfile(window.currentChatId);
+        } else {
+            console.error('openGroupProfile не найдена');
+            showNotification('Профиль группы временно недоступен', 'error');
+        }
+    } 
+    else if (chatType === 'channel') {
+        console.log('Открываем профиль канала:', window.currentChatId);
+        if (typeof window.openChannelProfile === 'function') {
+            window.openChannelProfile(window.currentChatId);
+        } else {
+            showNotification('Профиль канала временно недоступен', 'error');
         }
     }
 }
-
 // ========== НАСТРОЙКА КЛИКА ПО ШАПКЕ (УСИЛЕННАЯ) ==========
 function setupChatHeaderClick() {
     console.log('setupChatHeaderClick: ищем элемент шапки');
