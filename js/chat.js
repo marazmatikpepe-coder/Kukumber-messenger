@@ -1,4 +1,4 @@
-// KUKUMBER MESSENGER - CHAT.JS (ПОЛНОСТЬЮ ПЕРЕПИСАН, ВСЁ РАБОТАЕТ)
+// KUKUMBER MESSENGER - CHAT.JS (ПОЛНОСТЬЮ ПЕРЕПИСАН, ИСПРАВЛЕНА ЗАГРУЗКА ЧАТОВ)
 
 // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
 var currentUser = null;
@@ -103,23 +103,11 @@ async function getUserData(userId) {
     return { username: 'Пользователь', avatar: '', status: { online: false } };
 }
 
-function getUsername(userId) {
-    return getUserData(userId).then(data => data.username);
-}
-
-function getUserAvatar(userId) {
-    return getUserData(userId).then(data => data.avatar);
-}
-
-function getUserStatus(userId) {
-    return getUserData(userId).then(data => data.status);
-}
-
-// ========== ЗАГРУЗКА СПИСКА ЧАТОВ ==========
+// ========== ЗАГРУЗКА СПИСКА ЧАТОВ (ГЛАВНАЯ ФУНКЦИЯ) ==========
 function loadChats() {
     console.log('loadChats() вызвана');
     
-    if (!currentUser || !currentUser.uid) {
+    if (!window.currentUser || !window.currentUser.uid) {
         console.log('Нет авторизованного пользователя');
         return;
     }
@@ -137,9 +125,8 @@ function loadChats() {
         chatsListener.off();
     }
     
-    // Слушаем изменения в userChats
-    chatsListener = database.ref('userChats/' + currentUser.uid);
-    chatsListener.on('value', async function(snapshot) {
+    // ПОЛУЧАЕМ СПИСОК ID ЧАТОВ ПОЛЬЗОВАТЕЛЯ
+    database.ref('userChats/' + window.currentUser.uid).once('value', function(snapshot) {
         var userChats = snapshot.val();
         
         if (!userChats || Object.keys(userChats).length === 0) {
@@ -148,33 +135,37 @@ function loadChats() {
         }
         
         var chatIds = Object.keys(userChats);
+        console.log('Найдено чатов:', chatIds.length);
+        
+        // ЗАГРУЖАЕМ ДАННЫЕ КАЖДОГО ЧАТА
         var chatsData = {};
         var loadedCount = 0;
         
+        if (chatIds.length === 0) {
+            chatsList.innerHTML = '<div class="empty-chats">💬 Нет чатов</div>';
+            return;
+        }
+        
         chatsList.innerHTML = '<div class="empty-chats">🔄 Загрузка чатов...</div>';
         
-        for (var i = 0; i < chatIds.length; i++) {
-            var chatId = chatIds[i];
-            try {
-                var chatSnap = await database.ref('chats/' + chatId).once('value');
+        chatIds.forEach(function(chatId) {
+            database.ref('chats/' + chatId).once('value', function(chatSnap) {
                 var chat = chatSnap.val();
                 if (chat) {
                     chatsData[chatId] = chat;
                 }
-            } catch (err) {
-                console.error('Ошибка загрузки чата', chatId, err);
-            }
-            loadedCount++;
-        }
-        
-        renderChatsList(chatsData);
-        
-    }, function(error) {
-        console.error('Ошибка загрузки чатов:', error);
-        chatsList.innerHTML = '<div class="empty-chats">❌ Ошибка загрузки чатов</div>';
+                loadedCount++;
+                
+                // Когда все чаты загружены - рендерим
+                if (loadedCount === chatIds.length) {
+                    renderChatsList(chatsData);
+                }
+            });
+        });
     });
 }
 
+// ========== ОТРИСОВКА СПИСКА ЧАТОВ ==========
 function renderChatsList(chatsData) {
     var chatsList = document.getElementById('chats-list');
     if (!chatsList) return;
@@ -201,7 +192,7 @@ function renderChatsList(chatsData) {
     
     chatsList.innerHTML = '';
     
-    // Рендерим каждый чат (асинхронно из-за getUserData)
+    // Рендерим каждый чат
     var pendingRenders = chatsArray.length;
     var renderedCount = 0;
     
@@ -209,22 +200,23 @@ function renderChatsList(chatsData) {
         createChatItem(chat.id, chat.data, chatsList).then(function() {
             renderedCount++;
             if (renderedCount === pendingRenders) {
-                // ВСЕ ЧАТЫ ОТРИСОВАНЫ - ТЕПЕРЬ ПРИВЯЗЫВАЕМ ОБРАБОТЧИКИ
+                // ВСЕ ЧАТЫ ОТРИСОВАНЫ - ПРИВЯЗЫВАЕМ ОБРАБОТЧИКИ
                 setTimeout(function() {
                     attachChatClickHandlers();
-                    console.log('Обработчики кликов привязаны после отрисовки всех чатов');
+                    console.log('Обработчики кликов привязаны');
                 }, 100);
             }
         });
     });
 }
 
+// ========== СОЗДАНИЕ ЭЛЕМЕНТА ЧАТА ==========
 async function createChatItem(chatId, chatData, container) {
     var div = document.createElement('div');
     div.className = 'chat-item';
     div.setAttribute('data-chat-id', chatId);
     
-    if (currentChatId === chatId) {
+    if (window.currentChatId === chatId) {
         div.classList.add('active');
     }
     
@@ -236,7 +228,7 @@ async function createChatItem(chatId, chatData, container) {
     var preview = chatData.lastMessage || 'Нет сообщений';
     var time = chatData.lastMessageTime ? formatTime(chatData.lastMessageTime) : '';
     
-    if (preview.length > 50) {
+    if (preview && preview.length > 50) {
         preview = preview.substring(0, 47) + '...';
     }
     
@@ -259,7 +251,7 @@ async function createChatItem(chatId, chatData, container) {
         var otherUserId = null;
         if (chatData.participants) {
             for (var i = 0; i < chatData.participants.length; i++) {
-                if (chatData.participants[i] !== currentUser.uid) {
+                if (chatData.participants[i] !== window.currentUser.uid) {
                     otherUserId = chatData.participants[i];
                     break;
                 }
@@ -281,10 +273,11 @@ async function createChatItem(chatId, chatData, container) {
     
     function render() {
         var avatarStyle = avatarUrl ? 'background-image: url(' + avatarUrl + '); background-size: cover; background-position: center;' : '';
+        var avatarClass = (!avatarUrl && chatData.type !== 'group' && chatData.type !== 'channel') ? 'default-avatar-user' : '';
         
         div.innerHTML = `
             <div class="chat-item-avatar">
-                <div class="avatar" style="${avatarStyle}">${avatarContent}</div>
+                <div class="avatar ${avatarClass}" style="${avatarStyle}">${avatarContent}</div>
                 ${isOnline ? '<div class="online-indicator"></div>' : ''}
                 ${badge}
             </div>
@@ -300,16 +293,16 @@ async function createChatItem(chatId, chatData, container) {
         container.appendChild(div);
     }
     
-    // Возвращаем Promise, чтобы знать, когда всё отрисовано
     return Promise.resolve();
 }
+
+// ========== ПРИВЯЗКА ОБРАБОТЧИКОВ КЛИКОВ ==========
 function attachChatClickHandlers() {
     var chatItems = document.querySelectorAll('.chat-item');
     console.log('Привязка обработчиков к чатам, найдено:', chatItems.length);
     
     chatItems.forEach(function(item) {
         // Убираем старые обработчики
-        var oldClick = item.onclick;
         item.onclick = null;
         
         var chatId = item.getAttribute('data-chat-id');
@@ -327,7 +320,7 @@ function attachChatClickHandlers() {
     });
 }
 
-// ========== ОТКРЫТИЕ ЧАТА ==========
+// ========== ОТКРЫТИЕ ЧАТА ПО ID ==========
 async function openChatById(chatId) {
     console.log('openChatById:', chatId);
     
@@ -336,7 +329,7 @@ async function openChatById(chatId) {
         return;
     }
     
-    if (!currentUser || !currentUser.uid) {
+    if (!window.currentUser || !window.currentUser.uid) {
         console.error('Нет пользователя');
         return;
     }
@@ -365,12 +358,23 @@ async function openChatById(chatId) {
     }
 }
 
+// ========== ОТКРЫТИЕ ЧАТА С ДАННЫМИ ==========
 async function openChatWithData(chatId, chatData) {
     console.log('openChatWithData:', chatId, chatData.type);
     
-    currentChatId = chatId;
-    currentChatData = chatData;
-    currentChatData.chatId = chatId;
+    window.currentChatId = chatId;
+    window.currentChatData = chatData;
+    window.currentChatData.chatId = chatId;
+    
+    // Устанавливаем otherUserId для личных чатов
+    if (chatData.type === 'private' && chatData.participants) {
+        for (var i = 0; i < chatData.participants.length; i++) {
+            if (chatData.participants[i] !== window.currentUser.uid) {
+                window.currentChatData.otherUserId = chatData.participants[i];
+                break;
+            }
+        }
+    }
     
     // Обновляем активный класс в списке чатов
     document.querySelectorAll('.chat-item').forEach(function(item) {
@@ -400,6 +404,7 @@ async function openChatWithData(chatId, chatData) {
     setupChatHeaderClick();
 }
 
+// ========== ОБНОВЛЕНИЕ ШАПКИ ЧАТА ==========
 async function updateChatHeader(chatId, chatData) {
     var chatUsername = document.getElementById('chat-username');
     var chatStatus = document.getElementById('chat-status');
@@ -421,6 +426,7 @@ async function updateChatHeader(chatId, chatData) {
             } else {
                 chatAvatar.style.backgroundImage = '';
                 chatAvatar.textContent = '👥';
+                chatAvatar.classList.add('default-avatar-group');
             }
         }
     } 
@@ -438,6 +444,7 @@ async function updateChatHeader(chatId, chatData) {
             } else {
                 chatAvatar.style.backgroundImage = '';
                 chatAvatar.textContent = '📢';
+                chatAvatar.classList.add('default-avatar-channel');
             }
         }
     } 
@@ -446,7 +453,7 @@ async function updateChatHeader(chatId, chatData) {
         var otherUserId = null;
         if (chatData.participants) {
             for (var i = 0; i < chatData.participants.length; i++) {
-                if (chatData.participants[i] !== currentUser.uid) {
+                if (chatData.participants[i] !== window.currentUser.uid) {
                     otherUserId = chatData.participants[i];
                     break;
                 }
@@ -454,7 +461,7 @@ async function updateChatHeader(chatId, chatData) {
         }
         
         if (otherUserId) {
-            currentChatData.otherUserId = otherUserId;
+            window.currentChatData.otherUserId = otherUserId;
             var userData = await getUserData(otherUserId);
             
             chatUsername.textContent = userData.username;
@@ -475,6 +482,7 @@ async function updateChatHeader(chatId, chatData) {
                 } else {
                     chatAvatar.style.backgroundImage = '';
                     chatAvatar.textContent = '👤';
+                    chatAvatar.classList.add('default-avatar-user');
                 }
             }
         } else {
@@ -484,6 +492,7 @@ async function updateChatHeader(chatId, chatData) {
     }
 }
 
+// ========== НАСТРОЙКА КЛИКА ПО ШАПКЕ ==========
 function setupChatHeaderClick() {
     var chatUserInfo = document.querySelector('.chat-user-info');
     if (!chatUserInfo) return;
@@ -497,38 +506,44 @@ function setupChatHeaderClick() {
     };
 }
 
+// ========== ОТКРЫТИЕ ПРОФИЛЯ ИЗ ШАПКИ ==========
 function openChatProfile() {
-    if (!currentChatData) return;
+    if (!window.currentChatData) return;
     
-    if (currentChatData.type === 'private' && currentChatData.otherUserId) {
-        // Открываем профиль пользователя
+    if (window.currentChatData.type === 'private' && window.currentChatData.otherUserId) {
         if (typeof window.openUserProfile === 'function') {
-            window.openUserProfile(currentChatData.otherUserId);
+            window.openUserProfile(window.currentChatData.otherUserId);
         } else if (typeof openUserProfile === 'function') {
-            openUserProfile(currentChatData.otherUserId);
+            openUserProfile(window.currentChatData.otherUserId);
         } else {
             showNotification('Профиль пользователя', 'info');
-            console.log('Открыть профиль:', currentChatData.otherUserId);
         }
     } 
-    else if (currentChatData.type === 'group') {
-        showNotification('Информация о группе', 'info');
-        console.log('Открыть инфо о группе:', currentChatId);
+    else if (window.currentChatData.type === 'group') {
+        if (typeof window.openGroupProfile === 'function') {
+            window.openGroupProfile(window.currentChatId);
+        } else {
+            showNotification('Информация о группе', 'info');
+        }
     } 
-    else if (currentChatData.type === 'channel') {
-        showNotification('Информация о канале', 'info');
-        console.log('Открыть инфо о канале:', currentChatId);
+    else if (window.currentChatData.type === 'channel') {
+        if (typeof window.openChannelProfile === 'function') {
+            window.openChannelProfile(window.currentChatId);
+        } else {
+            showNotification('Информация о канале', 'info');
+        }
     }
 }
 
+// ========== ЗАКРЫТИЕ ЧАТА ==========
 function closeChat() {
     if (messagesListener) {
         messagesListener.off();
         messagesListener = null;
     }
     
-    currentChatId = null;
-    currentChatData = null;
+    window.currentChatId = null;
+    window.currentChatData = null;
     loadedMessageIds.clear();
     
     var noChatElement = document.getElementById('no-chat-selected');
@@ -591,11 +606,12 @@ function loadMessages(chatId) {
     });
 }
 
+// ========== ДОБАВЛЕНИЕ СООБЩЕНИЯ ==========
 function appendMessage(message) {
     var container = document.getElementById('messages-container');
     if (!container) return;
     
-    var isSent = message.senderId === currentUser.uid;
+    var isSent = message.senderId === window.currentUser.uid;
     var messageDiv = document.createElement('div');
     messageDiv.className = 'message ' + (isSent ? 'sent' : 'received');
     messageDiv.setAttribute('data-message-id', message.id);
@@ -654,7 +670,7 @@ function appendMessage(message) {
     
     // Добавляем имя отправителя для групповых чатов
     var senderNameHtml = '';
-    if (currentChatData && currentChatData.type !== 'private' && !isSent && message.senderId) {
+    if (window.currentChatData && window.currentChatData.type !== 'private' && !isSent && message.senderId) {
         var senderName = userCache.names[message.senderId]?.value || 'Пользователь';
         senderNameHtml = '<div class="message-sender">' + escapeHtml(senderName) + '</div>';
     }
@@ -699,20 +715,20 @@ function sendMessage() {
     if (!input) return;
     
     var text = input.value.trim();
-    if (!text || !currentChatId) return;
+    if (!text || !window.currentChatId) return;
     
     var message = {
         type: 'text',
         text: text,
-        senderId: currentUser.uid,
+        senderId: window.currentUser.uid,
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
     
     input.value = '';
     
-    database.ref('messages/' + currentChatId).push(message).then(function() {
+    database.ref('messages/' + window.currentChatId).push(message).then(function() {
         var lastMsg = text.length > 100 ? text.substring(0, 97) + '...' : text;
-        database.ref('chats/' + currentChatId).update({
+        database.ref('chats/' + window.currentChatId).update({
             lastMessage: lastMsg,
             lastMessageTime: firebase.database.ServerValue.TIMESTAMP
         });
@@ -736,11 +752,11 @@ function handleMessageKeyPress(e) {
 }
 
 function onTyping() {
-    if (!currentChatId) return;
-    database.ref('typing/' + currentChatId + '/' + currentUser.uid).set(true);
+    if (!window.currentChatId) return;
+    database.ref('typing/' + window.currentChatId + '/' + window.currentUser.uid).set(true);
     if (typingTimeout) clearTimeout(typingTimeout);
     typingTimeout = setTimeout(function() {
-        database.ref('typing/' + currentChatId + '/' + currentUser.uid).remove();
+        database.ref('typing/' + window.currentChatId + '/' + window.currentUser.uid).remove();
     }, 1000);
 }
 
@@ -755,7 +771,7 @@ function setupTypingListener(chatId) {
         
         var typingUsers = [];
         for (var uid in data) {
-            if (uid !== currentUser.uid && data[uid] === true) {
+            if (uid !== window.currentUser.uid && data[uid] === true) {
                 typingUsers.push(uid);
             }
         }
@@ -764,7 +780,9 @@ function setupTypingListener(chatId) {
             statusEl.innerHTML = 'печатает...';
         } else {
             // Восстанавливаем обычный статус
-            updateChatHeader(currentChatId, currentChatData);
+            if (window.currentChatData) {
+                updateChatHeader(window.currentChatId, window.currentChatData);
+            }
         }
     });
 }
@@ -798,7 +816,7 @@ async function searchUsersGlobal(query) {
     var searchQuery = query.replace('@', '');
     
     for (var uid in users) {
-        if (uid === currentUser.uid) continue;
+        if (uid === window.currentUser.uid) continue;
         var user = users[uid];
         var username = (user.username || '').toLowerCase();
         var userTag = (user.userTag || '').toLowerCase().replace('@', '');
@@ -858,47 +876,6 @@ function openCreateMenu() {
     var menu = document.getElementById('create-menu-modal');
     if (menu) {
         menu.classList.remove('hidden');
-    } else {
-        // Если меню нет в DOM, создаём
-        var modalHtml = `
-            <div id="create-menu-modal" class="modal" style="z-index: 10002;">
-                <div class="modal-content" style="max-width: 400px; border-radius: 28px; overflow: hidden;">
-                    <div class="modal-header">
-                        <h3>Создать</h3>
-                        <button onclick="closeCreateMenu()" class="btn-close">×</button>
-                    </div>
-                    <div style="padding: 8px 0 20px 0;">
-                        <div class="create-menu-item" onclick="openNewChatFromMenu()">
-                            <div class="create-menu-icon">💬</div>
-                            <div class="create-menu-info">
-                                <div class="create-menu-title">Новый чат</div>
-                                <div class="create-menu-desc">Начать диалог с пользователем</div>
-                            </div>
-                            <span class="create-menu-arrow">›</span>
-                        </div>
-                        <div class="create-menu-item" onclick="openCreateGroupWizard()">
-                            <div class="create-menu-icon">👥</div>
-                            <div class="create-menu-info">
-                                <div class="create-menu-title">Группа</div>
-                                <div class="create-menu-desc">Для общения с друзьями</div>
-                            </div>
-                            <span class="create-menu-arrow">›</span>
-                        </div>
-                        <div class="create-menu-item" onclick="openCreateChannelWizard()">
-                            <div class="create-menu-icon">📢</div>
-                            <div class="create-menu-info">
-                                <div class="create-menu-title">Канал</div>
-                                <div class="create-menu-desc">Для публикаций и вещания</div>
-                            </div>
-                            <span class="create-menu-arrow">›</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        var newMenu = document.getElementById('create-menu-modal');
-        if (newMenu) newMenu.classList.remove('hidden');
     }
 }
 
@@ -907,15 +884,9 @@ function closeCreateMenu() {
     if (menu) menu.classList.add('hidden');
 }
 
-// Функции для создания группы и канала (временно показываем уведомление)
-function openCreateGroupWizard() {
+function openNewChatFromMenu() {
     closeCreateMenu();
-    showNotification('Создание группы скоро будет доступно', 'info');
-}
-
-function openCreateChannelWizard() {
-    closeCreateMenu();
-    showNotification('Создание канала скоро будет доступно', 'info');
+    showNewChatDialog();
 }
 
 function showNewChatDialog() {
@@ -1006,20 +977,20 @@ function renderNewChatUsers(users, container) {
 async function createNewChat(otherUserId, otherUser) {
     showNotification('Создание чата...', 'info');
     
-    var chatId = generateChatId(currentUser.uid, otherUserId);
+    var chatId = generateChatId(window.currentUser.uid, otherUserId);
     var chatSnapshot = await database.ref('chats/' + chatId).once('value');
     
     if (!chatSnapshot.exists()) {
         await database.ref('chats/' + chatId).set({
             type: 'private',
-            participants: [currentUser.uid, otherUserId],
+            participants: [window.currentUser.uid, otherUserId],
             createdAt: firebase.database.ServerValue.TIMESTAMP,
             lastMessage: 'Чат создан',
             lastMessageTime: firebase.database.ServerValue.TIMESTAMP
         });
         
         await Promise.all([
-            database.ref('userChats/' + currentUser.uid + '/' + chatId).set(true),
+            database.ref('userChats/' + window.currentUser.uid + '/' + chatId).set(true),
             database.ref('userChats/' + otherUserId + '/' + chatId).set(true)
         ]);
         
@@ -1069,10 +1040,17 @@ function openUserByUsername(username) {
     console.log('Поиск пользователя по username:', username);
     showNotification('Поиск пользователя...', 'info');
 }
-function openNewChatFromMenu() {
+
+function openCreateGroupWizard() {
     closeCreateMenu();
-    showNewChatDialog();
+    showNotification('Создание группы скоро будет доступно', 'info');
 }
+
+function openCreateChannelWizard() {
+    closeCreateMenu();
+    showNotification('Создание канала скоро будет доступно', 'info');
+}
+
 // ========== ИНИЦИАЛИЗАЦИЯ ==========
 function initChat() {
     console.log('Chat.js инициализирован');
@@ -1097,21 +1075,8 @@ function initChat() {
     window.searchUsersForNewChat = searchUsersForNewChat;
     window.startPrivateChat = startPrivateChat;
     window.openChatProfile = openChatProfile;
-    
-    // Добавляем новые функции
     window.openCreateGroupWizard = openCreateGroupWizard;
     window.openCreateChannelWizard = openCreateChannelWizard;
-    window.createGroup = createGroup;
-    window.createChannel = createChannel;
-    window.closeGroupModal = closeGroupModal;
-    window.closeChannelModal = closeChannelModal;
-    window.openGroupProfileModal = openGroupProfileModal;
-    window.openChannelProfileModal = openChannelProfileModal;
-    window.closeGroupProfileModal = closeGroupProfileModal;
-    window.closeChannelProfileModal = closeChannelProfileModal;
-    window.leaveGroupChat = leaveGroupChat;
-    window.subscribeToChannel = subscribeToChannel;
-    window.unsubscribeFromChannel = unsubscribeFromChannel;
     
     // Наблюдатель за изменением списка чатов
     var observer = new MutationObserver(function() {
@@ -1125,1278 +1090,19 @@ function initChat() {
     
     // Загружаем чаты при старте
     setTimeout(function() {
-        if (currentUser && currentUser.uid) {
+        if (window.currentUser && window.currentUser.uid) {
             loadChats();
         }
     }, 1000);
 }
 
-// Запускаем инициализацию после загрузки DOM
-// Запускаем инициализацию после загрузки DOM
+// Запускаем инициализацию
 setTimeout(function() {
     initChat();
 }, 1000);
 
-console.log('chat.js полностью загружен и готов к работе');
-// ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ОТКРЫТИЯ ЧАТА ==========
-// ПЕРЕЗАПИСЫВАЕМ ФУНКЦИЮ (вставьте этот код в chat.js)
-window.openChatWithData = async function(chatId, chatData) {
-    console.log('=== openChatWithData ВЫЗВАНА ===', chatId, chatData?.type);
-    
-    if (!chatId) {
-        console.error('Нет ID чата');
-        return;
-    }
-    
-    if (!chatData) {
-        console.error('Нет данных чата');
-        return;
-    }
-    
-    // Сохраняем глобальные переменные
-    window.currentChatId = chatId;
-    window.currentChatData = chatData;
-    window.currentChatData.chatId = chatId;
-    
-    // Устанавливаем otherUserId для личных чатов
-    if (chatData.type === 'private' && chatData.participants) {
-        for (var i = 0; i < chatData.participants.length; i++) {
-            if (chatData.participants[i] !== window.currentUser?.uid) {
-                window.currentChatData.otherUserId = chatData.participants[i];
-                break;
-            }
-        }
-    }
-    
-    // 1. Обновляем активный класс в списке чатов
-    var chatItems = document.querySelectorAll('.chat-item');
-    chatItems.forEach(function(item) {
-        item.classList.remove('active');
-        if (item.getAttribute('data-chat-id') === chatId) {
-            item.classList.add('active');
-        }
-    });
-    
-    // 2. ПОКАЗЫВАЕМ ОБЛАСТЬ ЧАТА - ПРЯМОЕ ИЗМЕНЕНИЕ STYLE
-    var noChatElement = document.getElementById('no-chat-selected');
-    var activeChatElement = document.getElementById('active-chat');
-    
-    if (noChatElement) {
-        noChatElement.classList.add('hidden');
-        noChatElement.style.display = 'none';
-        console.log('Скрыли no-chat-selected');
-    }
-    
-    if (activeChatElement) {
-        activeChatElement.classList.remove('hidden');
-        activeChatElement.style.display = 'flex';
-        console.log('Показали active-chat, display:', activeChatElement.style.display);
-    }
-    
-    // 3. Очищаем контейнер сообщений
-    var messagesContainer = document.getElementById('messages-container');
-    if (messagesContainer) {
-        messagesContainer.innerHTML = '';
-        window.loadedMessageIds = new Set();
-        console.log('Очистили messages-container');
-    }
-    
-    // 4. Обновляем шапку чата
-    await updateChatHeaderUI(chatId, chatData);
-    
-    // 5. Загружаем сообщения
-    loadMessagesDirect(chatId);
-    
-    // 6. Настраиваем слушатель печати
-    setupTypingListenerDirect(chatId);
-    
-    // 7. Настраиваем клик по шапке
-    var chatUserInfo = document.querySelector('.chat-user-info');
-    if (chatUserInfo) {
-        // Убираем старые обработчики
-        var newChatUserInfo = chatUserInfo.cloneNode(true);
-        chatUserInfo.parentNode.replaceChild(newChatUserInfo, chatUserInfo);
-        newChatUserInfo.onclick = function() {
-            openChatProfileInfo();
-        };
-    }
-    
-    // 8. ПРИНУДИТЕЛЬНАЯ ПРОКРУТКА
-    setTimeout(function() {
-        if (messagesContainer) {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-    }, 200);
-    
-    console.log('Чат успешно открыт:', chatId);
-    console.log('active-chat hidden?', activeChatElement?.classList.contains('hidden'));
-    console.log('active-chat display:', activeChatElement?.style.display);
-};
-
-// ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ОБНОВЛЕНИЯ ШАПКИ
-async function updateChatHeaderUI(chatId, chatData) {
-    var chatUsername = document.getElementById('chat-username');
-    var chatStatus = document.getElementById('chat-status');
-    var chatAvatar = document.getElementById('chat-avatar');
-    
-    if (!chatUsername) return;
-    
-    if (chatData.type === 'group') {
-        chatUsername.textContent = chatData.name || 'Группа';
-        if (chatStatus) {
-            var membersCount = chatData.members ? Object.keys(chatData.members).length : 0;
-            chatStatus.textContent = membersCount + ' участников';
-        }
-        if (chatAvatar) {
-            if (chatData.avatar) {
-                chatAvatar.style.backgroundImage = 'url(' + chatData.avatar + ')';
-                chatAvatar.style.backgroundSize = 'cover';
-                chatAvatar.textContent = '';
-            } else {
-                chatAvatar.style.backgroundImage = '';
-                chatAvatar.textContent = '👥';
-            }
-        }
-    } 
-    else if (chatData.type === 'channel') {
-        chatUsername.textContent = chatData.name || 'Канал';
-        if (chatStatus) {
-            var subsCount = chatData.subscribers ? Object.keys(chatData.subscribers).length : 0;
-            chatStatus.textContent = subsCount + ' подписчиков';
-        }
-        if (chatAvatar) {
-            if (chatData.avatar) {
-                chatAvatar.style.backgroundImage = 'url(' + chatData.avatar + ')';
-                chatAvatar.style.backgroundSize = 'cover';
-                chatAvatar.textContent = '';
-            } else {
-                chatAvatar.style.backgroundImage = '';
-                chatAvatar.textContent = '📢';
-            }
-        }
-    } 
-    else {
-        // Личный чат
-        var otherUserId = null;
-        if (chatData.participants) {
-            for (var i = 0; i < chatData.participants.length; i++) {
-                if (chatData.participants[i] !== window.currentUser?.uid) {
-                    otherUserId = chatData.participants[i];
-                    break;
-                }
-            }
-        }
-        
-        if (otherUserId) {
-            chatData.otherUserId = otherUserId;
-            
-            try {
-                var userSnap = await database.ref('users/' + otherUserId).once('value');
-                var userData = userSnap.val();
-                
-                if (userData) {
-                    chatUsername.textContent = userData.username || 'Пользователь';
-                    
-                    if (chatStatus) {
-                        var statusData = userData.status || {};
-                        if (statusData.online) {
-                            chatStatus.innerHTML = 'в сети';
-                        } else {
-                            chatStatus.innerHTML = formatLastSeen(statusData.lastSeen);
-                        }
-                    }
-                    
-                    if (chatAvatar) {
-                        if (userData.avatar) {
-                            chatAvatar.style.backgroundImage = 'url(' + userData.avatar + ')';
-                            chatAvatar.style.backgroundSize = 'cover';
-                            chatAvatar.textContent = '';
-                        } else {
-                            chatAvatar.style.backgroundImage = '';
-                            chatAvatar.textContent = '👤';
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error('Ошибка загрузки данных пользователя:', err);
-                chatUsername.textContent = 'Пользователь';
-            }
-        } else {
-            chatUsername.textContent = 'Пользователь';
-            if (chatStatus) chatStatus.textContent = 'неизвестно';
-        }
-    }
-}
-
-// ФУНКЦИЯ ЗАГРУЗКИ СООБЩЕНИЙ
-function loadMessagesDirect(chatId) {
-    var container = document.getElementById('messages-container');
-    if (!container) return;
-    
-    // Отписываемся от старого слушателя
-    if (window.messagesListener) {
-        window.messagesListener.off();
-    }
-    
-    // Подписываемся на новые сообщения
-    window.messagesListener = database.ref('messages/' + chatId)
-        .orderByChild('timestamp')
-        .limitToLast(50);
-    
-    window.messagesListener.on('child_added', function(snapshot) {
-        var message = snapshot.val();
-        var messageId = snapshot.key;
-        
-        if (window.loadedMessageIds && window.loadedMessageIds.has(messageId)) return;
-        if (!window.loadedMessageIds) window.loadedMessageIds = new Set();
-        window.loadedMessageIds.add(messageId);
-        
-        message.id = messageId;
-        appendMessageToContainer(message);
-    });
-}
-
-// ФУНКЦИЯ ДОБАВЛЕНИЯ СООБЩЕНИЯ В КОНТЕЙНЕР
-function appendMessageToContainer(message) {
-    var container = document.getElementById('messages-container');
-    if (!container) return;
-    
-    var isSent = message.senderId === window.currentUser?.uid;
-    var messageDiv = document.createElement('div');
-    messageDiv.className = 'message ' + (isSent ? 'sent' : 'received');
-    messageDiv.setAttribute('data-message-id', message.id);
-    
-    var content = '';
-    
-    if (message.type === 'image') {
-        content = '<div class="message-image" onclick="openLightbox(\'' + message.imageUrl + '\')"><img src="' + message.imageUrl + '" loading="lazy" style="max-width:250px; max-height:250px; border-radius:12px;"></div>';
-        if (message.caption) content += '<div class="message-text">' + escapeHtml(message.caption) + '</div>';
-    } 
-    else if (message.type === 'gif') {
-        content = '<div class="gif-message" onclick="openLightbox(\'' + message.gifUrl + '\')"><img src="' + message.gifUrl + '" loading="lazy" style="max-width:250px; max-height:250px; border-radius:12px;"><span class="gif-badge">GIF</span></div>';
-    }
-    else if (message.type === 'audio') {
-        content = '<div class="audio-message"><button onclick="playAudio(\'' + message.audioUrl + '\')">▶️</button><span>Голосовое сообщение</span></div>';
-    }
-    else if (message.type === 'video') {
-        content = '<div class="video-message"><video src="' + message.videoUrl + '" controls style="max-width:250px; max-height:300px; border-radius:12px;"></video></div>';
-    }
-    else if (message.type === 'file') {
-        content = '<div class="file-message">📎 <a href="' + message.fileUrl + '" target="_blank">' + escapeHtml(message.fileName) + '</a></div>';
-    }
-    else {
-        var textContent = formatMessageTextDirect(message.text || '');
-        if (message.edited) textContent += ' <span style="font-size:10px; opacity:0.6;">(ред.)</span>';
-        content = '<div class="message-text" style="word-break:break-word; white-space:normal;">' + textContent + '</div>';
-    }
-    
-    messageDiv.innerHTML = '<div class="message-content">' + content + '<div class="message-time">' + formatTime(message.timestamp) + '</div></div>';
-    
-    container.appendChild(messageDiv);
-    container.scrollTop = container.scrollHeight;
-}
-
-function formatMessageTextDirect(text) {
-    if (!text) return '';
-    text = escapeHtml(text);
-    text = text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" style="color: #228B22;">$1</a>');
-    text = text.replace(/@(\w+)/g, '<span style="color:#228B22;">@$1</span>');
-    return text;
-}
-
-function setupTypingListenerDirect(chatId) {
-    var typingRef = database.ref('typing/' + chatId);
-    typingRef.off();
-    
-    typingRef.on('value', function(snapshot) {
-        var data = snapshot.val();
-        var statusEl = document.getElementById('chat-status');
-        if (!statusEl) return;
-        
-        var typingUsers = [];
-        for (var uid in data) {
-            if (uid !== window.currentUser?.uid && data[uid] === true) {
-                typingUsers.push(uid);
-            }
-        }
-        
-        if (typingUsers.length > 0) {
-            statusEl.innerHTML = 'печатает...';
-        } else if (window.currentChatData) {
-            updateChatHeaderUI(window.currentChatId, window.currentChatData);
-        }
-    });
-}
-
-function openChatProfileInfo() {
-    if (!window.currentChatData) return;
-    
-    console.log('openChatProfileInfo: тип чата', window.currentChatData.type);
-    
-    if (window.currentChatData.type === 'private' && window.currentChatData.otherUserId) {
-        if (typeof window.openUserProfile === 'function') {
-            window.openUserProfile(window.currentChatData.otherUserId);
-        } else if (typeof openUserProfile === 'function') {
-            openUserProfile(window.currentChatData.otherUserId);
-        } else {
-            showNotification('Профиль пользователя', 'info');
-        }
-    } else if (window.currentChatData.type === 'group') {
-        // Открываем профиль группы через модальное окно
-        if (typeof window.openGroupProfile === 'function') {
-            window.openGroupProfile(window.currentChatId);
-        } else {
-            showNotification('Информация о группе', 'info');
-        }
-    } else if (window.currentChatData.type === 'channel') {
-        // Открываем профиль канала через модальное окно
-        if (typeof window.openChannelProfile === 'function') {
-            window.openChannelProfile(window.currentChatId);
-        } else {
-            showNotification('Информация о канале', 'info');
-        }
-    }
-}
-
-// ПЕРЕЗАПИСЫВАЕМ ОСНОВНУЮ ФУНКЦИЮ openChatById
-window.openChatById = async function(chatId) {
-    console.log('openChatById:', chatId);
-    
-    if (!chatId) {
-        console.error('Нет ID чата');
-        return;
-    }
-    
-    if (!window.currentUser || !window.currentUser.uid) {
-        console.error('Нет пользователя');
-        return;
-    }
-    
-    // Закрываем боковую панель на мобильных
-    if (window.innerWidth <= 768) {
-        var sidebar = document.getElementById('sidebar');
-        if (sidebar && sidebar.classList.contains('open')) {
-            sidebar.classList.remove('open');
-        }
-    }
-    
-    try {
-        var chatSnap = await database.ref('chats/' + chatId).once('value');
-        var chatData = chatSnap.val();
-        
-        if (!chatData) {
-            alert('Чат не найден');
-            return;
-        }
-        
-        window.openChatWithData(chatId, chatData);
-    } catch (err) {
-        console.error('Ошибка открытия чата:', err);
-        alert('Ошибка открытия чата');
-    }
-};
-
-// ПЕРЕЗАПИСЫВАЕМ closeChat
-window.closeChat = function() {
-    console.log('closeChat вызвана');
-    
-    if (window.messagesListener) {
-        window.messagesListener.off();
-        window.messagesListener = null;
-    }
-    
-    window.currentChatId = null;
-    window.currentChatData = null;
-    
-    var noChatElement = document.getElementById('no-chat-selected');
-    var activeChatElement = document.getElementById('active-chat');
-    
-    if (noChatElement) noChatElement.classList.remove('hidden');
-    if (activeChatElement) activeChatElement.classList.add('hidden');
-    
-    var messagesContainer = document.getElementById('messages-container');
-    if (messagesContainer) messagesContainer.innerHTML = '';
-};
-
-console.log('Исправленные функции чата загружены!');
-// ========== СОЗДАНИЕ ГРУППЫ ==========
-function openCreateGroupWizard() {
-    closeCreateMenu();
-    
-    // Создаём модальное окно для создания группы
-    var modalHtml = `
-        <div id="create-group-modal" class="modal" style="z-index: 10002;">
-            <div class="modal-content" style="max-width: 500px; border-radius: 20px;">
-                <div class="modal-header">
-                    <h3>👥 Создание группы</h3>
-                    <button onclick="closeGroupModal()" class="btn-close">×</button>
-                </div>
-                <div style="padding: 20px;">
-                    <div class="avatar-upload" style="text-align:center; margin-bottom:15px;">
-                        <div id="group-avatar-preview" class="avatar-preview" style="width:80px; height:80px; margin:0 auto; border-radius:50%; background:#f0f0f0; display:flex; align-items:center; justify-content:center; font-size:40px; cursor:pointer;">👥</div>
-                        <input type="file" id="group-avatar-input" accept="image/*" style="display:none;">
-                        <button onclick="document.getElementById('group-avatar-input').click()" class="btn-small" style="margin-top:8px;">Загрузить фото</button>
-                    </div>
-                    
-                    <input type="text" id="group-name-input" placeholder="Название группы *" style="width:100%; padding:12px; margin-bottom:15px; border:2px solid var(--border); border-radius:12px;">
-                    
-                    <textarea id="group-desc-input" placeholder="Описание группы (необязательно)" rows="3" style="width:100%; padding:12px; margin-bottom:15px; border:2px solid var(--border); border-radius:12px;"></textarea>
-                    
-                    <div class="channel-type-options">
-                        <label style="display:flex; align-items:center; gap:10px; padding:10px; border:2px solid var(--border); border-radius:12px; margin-bottom:10px; cursor:pointer;">
-                            <input type="radio" name="group-type" value="public" checked> 🌍 Публичная
-                            <small style="margin-left:10px; color:#999;">Может найти любой</small>
-                        </label>
-                        <label style="display:flex; align-items:center; gap:10px; padding:10px; border:2px solid var(--border); border-radius:12px; cursor:pointer;">
-                            <input type="radio" name="group-type" value="private"> 🔒 Приватная
-                            <small style="margin-left:10px; color:#999;">Только по ссылке-приглашению</small>
-                        </label>
-                    </div>
-                    
-                    <button onclick="createGroup()" class="btn-primary" style="margin-top:20px; width:100%;">Создать группу</button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    var oldModal = document.getElementById('create-group-modal');
-    if (oldModal) oldModal.remove();
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    
-    // Обработчик загрузки аватара
-    var avatarInput = document.getElementById('group-avatar-input');
-    if (avatarInput) {
-        avatarInput.onchange = function(e) {
-            var file = e.target.files[0];
-            if (file && file.type.startsWith('image/')) {
-                var reader = new FileReader();
-                reader.onload = function(ev) {
-                    var preview = document.getElementById('group-avatar-preview');
-                    if (preview) {
-                        preview.style.backgroundImage = 'url(' + ev.target.result + ')';
-                        preview.style.backgroundSize = 'cover';
-                        preview.textContent = '';
-                    }
-                    window.groupAvatarFile = file;
-                };
-                reader.readAsDataURL(file);
-            }
-        };
-    }
-}
-
-function closeGroupModal() {
-    var modal = document.getElementById('create-group-modal');
-    if (modal) modal.remove();
-}
-
-async function createGroup() {
-    var groupName = document.getElementById('group-name-input').value.trim();
-    if (!groupName) {
-        showNotification('Введите название группы', 'error');
-        return;
-    }
-    
-    var groupDesc = document.getElementById('group-desc-input').value.trim();
-    var groupType = document.querySelector('input[name="group-type"]:checked').value;
-    
-    showNotification('Создание группы...', 'info');
-    
-    try {
-        // Загружаем аватар если есть
-        var avatarUrl = '';
-        if (window.groupAvatarFile) {
-            avatarUrl = await uploadToImgBB(window.groupAvatarFile);
-        }
-        
-        var groupId = 'group_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        
-        var groupData = {
-            type: 'group',
-            name: groupName,
-            description: groupDesc,
-            avatar: avatarUrl,
-            privacy: groupType,
-            createdAt: firebase.database.ServerValue.TIMESTAMP,
-            createdBy: currentUser.uid,
-            lastMessage: 'Группа создана',
-            lastMessageTime: firebase.database.ServerValue.TIMESTAMP,
-            members: {},
-            admins: {}
-        };
-        
-        // Добавляем создателя как участника и админа
-        groupData.members[currentUser.uid] = true;
-        groupData.admins[currentUser.uid] = true;
-        
-        await database.ref('chats/' + groupId).set(groupData);
-        await database.ref('userChats/' + currentUser.uid + '/' + groupId).set(true);
-        
-        showNotification('Группа создана!', 'success');
-        closeGroupModal();
-        loadChats();
-        
-        // Открываем созданную группу
-        openChatWithData(groupId, groupData);
-        
-    } catch (err) {
-        console.error(err);
-        showNotification('Ошибка создания группы', 'error');
-    }
-}
-
-// ========== СОЗДАНИЕ КАНАЛА ==========
-function openCreateChannelWizard() {
-    closeCreateMenu();
-    
-    var modalHtml = `
-        <div id="create-channel-modal" class="modal" style="z-index: 10002;">
-            <div class="modal-content" style="max-width: 500px; border-radius: 20px;">
-                <div class="modal-header">
-                    <h3>📢 Создание канала</h3>
-                    <button onclick="closeChannelModal()" class="btn-close">×</button>
-                </div>
-                <div style="padding: 20px;">
-                    <div class="avatar-upload" style="text-align:center; margin-bottom:15px;">
-                        <div id="channel-avatar-preview" class="avatar-preview" style="width:80px; height:80px; margin:0 auto; border-radius:50%; background:#f0f0f0; display:flex; align-items:center; justify-content:center; font-size:40px; cursor:pointer;">📢</div>
-                        <input type="file" id="channel-avatar-input" accept="image/*" style="display:none;">
-                        <button onclick="document.getElementById('channel-avatar-input').click()" class="btn-small" style="margin-top:8px;">Загрузить фото</button>
-                    </div>
-                    
-                    <input type="text" id="channel-name-input" placeholder="Название канала *" style="width:100%; padding:12px; margin-bottom:15px; border:2px solid var(--border); border-radius:12px;">
-                    
-                    <input type="text" id="channel-kname-input" placeholder="K-name (уникальная ссылка)" style="width:100%; padding:12px; margin-bottom:15px; border:2px solid var(--border); border-radius:12px;">
-                    <small style="display:block; margin-top:-10px; margin-bottom:15px; color:#999;">Только латиница, цифры и _</small>
-                    
-                    <textarea id="channel-desc-input" placeholder="Описание канала" rows="3" style="width:100%; padding:12px; margin-bottom:15px; border:2px solid var(--border); border-radius:12px;"></textarea>
-                    
-                    <div class="channel-type-options">
-                        <label style="display:flex; align-items:center; gap:10px; padding:10px; border:2px solid var(--border); border-radius:12px; margin-bottom:10px; cursor:pointer;">
-                            <input type="radio" name="channel-type" value="public" checked> 🌍 Публичный
-                        </label>
-                        <label style="display:flex; align-items:center; gap:10px; padding:10px; border:2px solid var(--border); border-radius:12px; cursor:pointer;">
-                            <input type="radio" name="channel-type" value="private"> 🔒 Приватный
-                        </label>
-                    </div>
-                    
-                    <button onclick="createChannel()" class="btn-primary" style="margin-top:20px; width:100%;">Создать канал</button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    var oldModal = document.getElementById('create-channel-modal');
-    if (oldModal) oldModal.remove();
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    
-    var avatarInput = document.getElementById('channel-avatar-input');
-    if (avatarInput) {
-        avatarInput.onchange = function(e) {
-            var file = e.target.files[0];
-            if (file && file.type.startsWith('image/')) {
-                var reader = new FileReader();
-                reader.onload = function(ev) {
-                    var preview = document.getElementById('channel-avatar-preview');
-                    if (preview) {
-                        preview.style.backgroundImage = 'url(' + ev.target.result + ')';
-                        preview.style.backgroundSize = 'cover';
-                        preview.textContent = '';
-                    }
-                    window.channelAvatarFile = file;
-                };
-                reader.readAsDataURL(file);
-            }
-        };
-    }
-}
-
-function closeChannelModal() {
-    var modal = document.getElementById('create-channel-modal');
-    if (modal) modal.remove();
-}
-
-async function createChannel() {
-    var channelName = document.getElementById('channel-name-input').value.trim();
-    if (!channelName) {
-        showNotification('Введите название канала', 'error');
-        return;
-    }
-    
-    var channelKname = document.getElementById('channel-kname-input').value.trim().toLowerCase();
-    var channelDesc = document.getElementById('channel-desc-input').value.trim();
-    var channelType = document.querySelector('input[name="channel-type"]:checked').value;
-    
-    // Проверка K-name
-    if (channelKname) {
-        var knamePattern = /^[a-z0-9_]+$/;
-        if (!knamePattern.test(channelKname)) {
-            showNotification('K-name может содержать только латиницу, цифры и _', 'error');
-            return;
-        }
-        
-        // Проверка уникальности
-        var existing = await database.ref('channelKnames/' + channelKname).once('value');
-        if (existing.exists()) {
-            showNotification('K-name уже занят', 'error');
-            return;
-        }
-    }
-    
-    showNotification('Создание канала...', 'info');
-    
-    try {
-        var avatarUrl = '';
-        if (window.channelAvatarFile) {
-            avatarUrl = await uploadToImgBB(window.channelAvatarFile);
-        }
-        
-        var channelId = 'channel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        
-        var channelData = {
-            type: 'channel',
-            name: channelName,
-            kname: channelKname || null,
-            description: channelDesc,
-            avatar: avatarUrl,
-            privacy: channelType,
-            createdAt: firebase.database.ServerValue.TIMESTAMP,
-            createdBy: currentUser.uid,
-            lastMessage: 'Канал создан',
-            lastMessageTime: firebase.database.ServerValue.TIMESTAMP,
-            subscribers: {},
-            admins: {}
-        };
-        
-        // Добавляем создателя как админа
-        channelData.admins[currentUser.uid] = true;
-        channelData.subscribers[currentUser.uid] = true;
-        
-        await database.ref('chats/' + channelId).set(channelData);
-        await database.ref('userChats/' + currentUser.uid + '/' + channelId).set(true);
-        
-        if (channelKname) {
-            await database.ref('channelKnames/' + channelKname).set(channelId);
-        }
-        
-        showNotification('Канал создан!', 'success');
-        closeChannelModal();
-        loadChats();
-        
-        openChatWithData(channelId, channelData);
-        
-    } catch (err) {
-        console.error(err);
-        showNotification('Ошибка создания канала', 'error');
-    }
-}
-// ========== ОТКРЫТИЕ ПРОФИЛЯ ПРИ КЛИКЕ НА ШАПКУ ЧАТА ==========
-
-// Функция для открытия профиля (человек, группа, канал)
-function openChatProfile() {
-    if (!currentChatData) {
-        console.log('Нет данных чата');
-        return;
-    }
-    
-    console.log('Открытие профиля для чата:', currentChatData.type, currentChatId);
-    
-    if (currentChatData.type === 'private') {
-        // Личный чат - открываем профиль пользователя
-        var otherUserId = currentChatData.otherUserId;
-        if (!otherUserId && currentChatData.participants) {
-            for (var i = 0; i < currentChatData.participants.length; i++) {
-                if (currentChatData.participants[i] !== currentUser.uid) {
-                    otherUserId = currentChatData.participants[i];
-                    break;
-                }
-            }
-        }
-        
-        if (otherUserId) {
-            if (typeof window.openUserProfile === 'function') {
-                window.openUserProfile(otherUserId);
-            } else if (typeof openUserProfile === 'function') {
-                openUserProfile(otherUserId);
-            } else {
-                showNotification('Профиль пользователя', 'info');
-                console.log('Нужно открыть профиль пользователя:', otherUserId);
-            }
-        }
-    } 
-    else if (currentChatData.type === 'group') {
-        // Открываем профиль группы через модальное окно
-        if (typeof window.openGroupProfile === 'function') {
-            window.openGroupProfile(currentChatId);
-        } else {
-            showNotification('Информация о группе', 'info');
-        }
-    } 
-    else if (currentChatData.type === 'channel') {
-        // Открываем профиль канала через модальное окно
-        if (typeof window.openChannelProfile === 'function') {
-            window.openChannelProfile(currentChatId);
-        } else {
-            showNotification('Информация о канале', 'info');
-        }
-    }
-}
-// ========== ПРОФИЛЬ ГРУППЫ ==========
-function openGroupProfileModal(groupId, groupData) {
-    var modalHtml = `
-        <div id="group-profile-modal" class="modal" style="z-index: 10003;">
-            <div class="modal-content" style="max-width: 450px; border-radius: 24px;">
-                <div class="modal-header">
-                    <h3>👥 Информация о группе</h3>
-                    <button onclick="closeGroupProfileModal()" class="btn-close">×</button>
-                </div>
-                <div style="padding: 20px; text-align: center;">
-                    <div class="avatar" style="width: 80px; height: 80px; margin: 0 auto 15px; font-size: 40px; ${groupData.avatar ? 'background-image: url(' + groupData.avatar + '); background-size: cover;' : ''}">
-                        ${groupData.avatar ? '' : '👥'}
-                    </div>
-                    <h2 style="margin-bottom: 5px;">${escapeHtml(groupData.name || 'Группа')}</h2>
-                    <p style="color: #666; margin-bottom: 15px;">${escapeHtml(groupData.description || 'Нет описания')}</p>
-                    <div style="background: #f5f5f5; border-radius: 12px; padding: 10px; margin-bottom: 10px;">
-                        <span>👥 Участников: ${groupData.members ? Object.keys(groupData.members).length : 0}</span>
-                    </div>
-                    <div style="background: #f5f5f5; border-radius: 12px; padding: 10px; margin-bottom: 10px;">
-                        <span>📅 Создана: ${new Date(groupData.createdAt).toLocaleDateString()}</span>
-                    </div>
-                </div>
-                <div style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
-                    <button onclick="closeGroupProfileModal()" class="btn-secondary" style="flex:1;">Закрыть</button>
-                    <button onclick="leaveGroupChat()" class="btn-danger" style="flex:1;">Покинуть группу</button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    var oldModal = document.getElementById('group-profile-modal');
-    if (oldModal) oldModal.remove();
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-}
-
-function closeGroupProfileModal() {
-    var modal = document.getElementById('group-profile-modal');
-    if (modal) modal.remove();
-}
-
-async function leaveGroupChat() {
-    if (!currentChatId || !currentChatData || currentChatData.type !== 'group') return;
-    
-    if (!confirm('Вы уверены, что хотите покинуть группу?')) return;
-    
-    try {
-        // Удаляем пользователя из участников
-        await database.ref('chats/' + currentChatId + '/members/' + currentUser.uid).remove();
-        // Удаляем чат из списка пользователя
-        await database.ref('userChats/' + currentUser.uid + '/' + currentChatId).remove();
-        
-        showNotification('Вы покинули группу', 'success');
-        closeGroupProfileModal();
-        closeChat();
-        loadChats();
-    } catch (err) {
-        showNotification('Ошибка', 'error');
-    }
-}
-
-// ========== ПРОФИЛЬ КАНАЛА ==========
-function openChannelProfileModal(channelId, channelData) {
-    var isSubscribed = channelData.subscribers && channelData.subscribers[currentUser.uid];
-    var isAdmin = channelData.admins && channelData.admins[currentUser.uid];
-    
-    var modalHtml = `
-        <div id="channel-profile-modal" class="modal" style="z-index: 10003;">
-            <div class="modal-content" style="max-width: 450px; border-radius: 24px;">
-                <div class="modal-header">
-                    <h3>📢 Информация о канале</h3>
-                    <button onclick="closeChannelProfileModal()" class="btn-close">×</button>
-                </div>
-                <div style="padding: 20px; text-align: center;">
-                    <div class="avatar" style="width: 80px; height: 80px; margin: 0 auto 15px; font-size: 40px; ${channelData.avatar ? 'background-image: url(' + channelData.avatar + '); background-size: cover;' : ''}">
-                        ${channelData.avatar ? '' : '📢'}
-                    </div>
-                    <h2 style="margin-bottom: 5px;">${escapeHtml(channelData.name || 'Канал')}</h2>
-                    ${channelData.kname ? '<p style="color: #228B22; margin-bottom: 5px;">@' + escapeHtml(channelData.kname) + '</p>' : ''}
-                    <p style="color: #666; margin-bottom: 15px;">${escapeHtml(channelData.description || 'Нет описания')}</p>
-                    <div style="background: #f5f5f5; border-radius: 12px; padding: 10px; margin-bottom: 10px;">
-                        <span>👥 Подписчиков: ${channelData.subscribers ? Object.keys(channelData.subscribers).length : 0}</span>
-                    </div>
-                    <div style="background: #f5f5f5; border-radius: 12px; padding: 10px; margin-bottom: 10px;">
-                        <span>${channelData.privacy === 'public' ? '🌍 Публичный' : '🔒 Приватный'}</span>
-                    </div>
-                </div>
-                <div style="padding: 15px; border-top: 1px solid #eee; display: flex; gap: 10px;">
-                    ${!isSubscribed ? '<button onclick="subscribeToChannel()" class="btn-primary" style="flex:1;">📢 Подписаться</button>' : ''}
-                    ${isSubscribed ? '<button onclick="unsubscribeFromChannel()" class="btn-danger" style="flex:1;">🔕 Отписаться</button>' : ''}
-                    <button onclick="closeChannelProfileModal()" class="btn-secondary" style="flex:1;">Закрыть</button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    var oldModal = document.getElementById('channel-profile-modal');
-    if (oldModal) oldModal.remove();
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-}
-
-function closeChannelProfileModal() {
-    var modal = document.getElementById('channel-profile-modal');
-    if (modal) modal.remove();
-}
-
-async function subscribeToChannel() {
-    if (!currentChatId || !currentChatData || currentChatData.type !== 'channel') return;
-    
-    try {
-        await database.ref('chats/' + currentChatId + '/subscribers/' + currentUser.uid).set(true);
-        await database.ref('userChats/' + currentUser.uid + '/' + currentChatId).set(true);
-        showNotification('Вы подписались на канал', 'success');
-        closeChannelProfileModal();
-        
-        // Обновляем данные чата
-        currentChatData.subscribers = currentChatData.subscribers || {};
-        currentChatData.subscribers[currentUser.uid] = true;
-    } catch (err) {
-        showNotification('Ошибка', 'error');
-    }
-}
-
-async function unsubscribeFromChannel() {
-    if (!currentChatId || !currentChatData || currentChatData.type !== 'channel') return;
-    
-    if (!confirm('Отписаться от канала?')) return;
-    
-    try {
-        await database.ref('chats/' + currentChatId + '/subscribers/' + currentUser.uid).remove();
-        await database.ref('userChats/' + currentUser.uid + '/' + currentChatId).remove();
-        showNotification('Вы отписались от канала', 'info');
-        closeChannelProfileModal();
-        closeChat();
-        loadChats();
-    } catch (err) {
-        showNotification('Ошибка', 'error');
-    }
-}
-// ========== РАСШИРЕННЫЙ ПРОФИЛЬ ГРУППЫ (ЗАМЕНЯЕТ СТАРЫЙ) ==========
-window.openGroupProfile = async function(chatId) {
-    console.log('openGroupProfile вызван для:', chatId);
-    
-    if (!chatId) {
-        showNotification('ID группы не указан', 'error');
-        return;
-    }
-    
-    try {
-        const chatSnap = await database.ref('chats/' + chatId).once('value');
-        const chatData = chatSnap.val();
-        
-        if (!chatData || chatData.type !== 'group') {
-            showNotification('Группа не найдена', 'error');
-            return;
-        }
-        
-        // Удаляем старое модальное окно
-        const oldModal = document.getElementById('group-profile-modal');
-        if (oldModal) oldModal.remove();
-        
-        // Получаем данные о создателе
-        let creatorName = 'Неизвестно';
-        if (chatData.createdBy) {
-            try {
-                const creatorSnap = await database.ref('users/' + chatData.createdBy).once('value');
-                const creatorData = creatorSnap.val();
-                if (creatorData) creatorName = creatorData.username;
-            } catch(e) {}
-        }
-        
-        const membersCount = chatData.members ? Object.keys(chatData.members).length : 0;
-        const isMember = chatData.members && chatData.members[currentUser?.uid];
-        const isCreator = chatData.createdBy === currentUser?.uid;
-        
-        // Формируем список участников
-        let membersListHtml = '';
-        if (chatData.members) {
-            const memberIds = Object.keys(chatData.members).slice(0, 15);
-            for (const memberId of memberIds) {
-                try {
-                    const userSnap = await database.ref('users/' + memberId).once('value');
-                    const userData = userSnap.val();
-                    const avatarStyle = userData?.avatar ? `background-image: url(${userData.avatar}); background-size: cover;` : '';
-                    const avatarContent = userData?.avatar ? '' : '👤';
-                    const isUserAdmin = chatData.admins && chatData.admins[memberId];
-                    const isUserCreator = chatData.createdBy === memberId;
-                    
-                    membersListHtml += `
-                        <div class="member-item" style="display: flex; align-items: center; gap: 12px; padding: 10px; border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.openUserProfile('${memberId}')">
-                            <div class="avatar" style="width: 40px; height: 40px; ${avatarStyle}">${avatarContent}</div>
-                            <div style="flex:1;">
-                                <div style="font-weight: 500;">${escapeHtml(userData?.username || 'Пользователь')}</div>
-                                ${isUserCreator ? '<span style="font-size: 11px; color: gold;">владелец</span>' : (isUserAdmin ? '<span style="font-size: 11px; color: var(--forest);">администратор</span>' : '')}
-                            </div>
-                        </div>
-                    `;
-                } catch(e) {}
-            }
-            
-            if (memberIds.length < membersCount) {
-                membersListHtml += `<div style="padding: 10px; text-align: center; color: var(--text-muted);">и еще ${membersCount - memberIds.length} участников...</div>`;
-            }
-        }
-        
-        const modal = document.createElement('div');
-        modal.id = 'group-profile-modal';
-        modal.className = 'modal';
-        modal.style.zIndex = '10003';
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width: 450px; border-radius: 24px; overflow: hidden;">
-                <div class="modal-header" style="position: sticky; top: 0; background: white; z-index: 10;">
-                    <h3>👥 Информация о группе</h3>
-                    <button onclick="closeGroupProfileModal()" class="btn-close">×</button>
-                </div>
-                <div style="padding: 20px; text-align: center; border-bottom: 1px solid var(--border);">
-                    <div class="avatar" style="width: 80px; height: 80px; margin: 0 auto 15px; font-size: 40px; ${chatData.avatar ? 'background-image: url(' + chatData.avatar + '); background-size: cover;' : ''}">
-                        ${chatData.avatar ? '' : '👥'}
-                    </div>
-                    <h2 style="margin-bottom: 5px;">${escapeHtml(chatData.name || 'Группа')}</h2>
-                    <p style="color: #666; margin-bottom: 15px;">${escapeHtml(chatData.description || 'Нет описания')}</p>
-                    <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; flex-wrap: wrap;">
-                        <div style="background: var(--background); border-radius: 12px; padding: 8px 15px;">
-                            <span>👥 ${membersCount} участников</span>
-                        </div>
-                        <div style="background: var(--background); border-radius: 12px; padding: 8px 15px;">
-                            <span>👑 ${escapeHtml(creatorName)}</span>
-                        </div>
-                    </div>
-                    <div style="background: var(--background); border-radius: 12px; padding: 8px 15px;">
-                        <span>📅 Создана: ${new Date(chatData.createdAt).toLocaleDateString()}</span>
-                    </div>
-                </div>
-                
-                <div style="padding: 15px;">
-                    <h4 style="margin-bottom: 10px;">Участники</h4>
-                    <div style="max-height: 300px; overflow-y: auto;">
-                        ${membersListHtml || '<div class="profile-empty">Нет участников</div>'}
-                    </div>
-                </div>
-                
-                <div style="padding: 15px; border-top: 1px solid var(--border); display: flex; gap: 10px;">
-                    ${!isMember ? '<button onclick="joinGroupChat()" class="btn-primary" style="flex:1;">➕ Присоединиться</button>' : ''}
-                    ${isMember && !isCreator ? '<button onclick="leaveGroupChat()" class="btn-danger" style="flex:1;">🚪 Покинуть группу</button>' : ''}
-                    ${isCreator ? '<button onclick="deleteGroupChat()" class="btn-danger" style="flex:1;">🗑️ Удалить группу</button>' : ''}
-                    <button onclick="closeGroupProfileModal()" class="btn-secondary" style="flex:1;">Закрыть</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        modal.classList.remove('hidden');
-        
-        window.currentGroupId = chatId;
-        window.currentGroupData = chatData;
-        
-    } catch (err) {
-        console.error('Ошибка открытия профиля группы:', err);
-        showNotification('Ошибка загрузки группы', 'error');
-    }
-};
-
-// ========== РАСШИРЕННЫЙ ПРОФИЛЬ КАНАЛА (ЗАМЕНЯЕТ СТАРЫЙ) ==========
-window.openChannelProfile = async function(chatId) {
-    console.log('openChannelProfile вызван для:', chatId);
-    
-    if (!chatId) {
-        showNotification('ID канала не указан', 'error');
-        return;
-    }
-    
-    try {
-        const chatSnap = await database.ref('chats/' + chatId).once('value');
-        const chatData = chatSnap.val();
-        
-        if (!chatData || chatData.type !== 'channel') {
-            showNotification('Канал не найден', 'error');
-            return;
-        }
-        
-        const oldModal = document.getElementById('channel-profile-modal');
-        if (oldModal) oldModal.remove();
-        
-        let creatorName = 'Неизвестно';
-        if (chatData.createdBy) {
-            try {
-                const creatorSnap = await database.ref('users/' + chatData.createdBy).once('value');
-                const creatorData = creatorSnap.val();
-                if (creatorData) creatorName = creatorData.username;
-            } catch(e) {}
-        }
-        
-        const subscribersCount = chatData.subscribers ? Object.keys(chatData.subscribers).length : 0;
-        const isSubscribed = chatData.subscribers && chatData.subscribers[currentUser?.uid];
-        const isCreator = chatData.createdBy === currentUser?.uid;
-        
-        let adminsListHtml = '';
-        if (chatData.admins) {
-            const adminIds = Object.keys(chatData.admins);
-            for (const adminId of adminIds) {
-                try {
-                    const userSnap = await database.ref('users/' + adminId).once('value');
-                    const userData = userSnap.val();
-                    const avatarStyle = userData?.avatar ? `background-image: url(${userData.avatar}); background-size: cover;` : '';
-                    const avatarContent = userData?.avatar ? '' : '👤';
-                    
-                    adminsListHtml += `
-                        <div class="member-item" style="display: flex; align-items: center; gap: 12px; padding: 10px; border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.openUserProfile('${adminId}')">
-                            <div class="avatar" style="width: 40px; height: 40px; ${avatarStyle}">${avatarContent}</div>
-                            <div style="flex:1;">
-                                <div style="font-weight: 500;">${escapeHtml(userData?.username || 'Пользователь')}</div>
-                                ${adminId === chatData.createdBy ? '<span style="font-size: 11px; color: gold;">владелец</span>' : '<span style="font-size: 11px; color: var(--forest);">администратор</span>'}
-                            </div>
-                        </div>
-                    `;
-                } catch(e) {}
-            }
-        }
-        
-        const modal = document.createElement('div');
-        modal.id = 'channel-profile-modal';
-        modal.className = 'modal';
-        modal.style.zIndex = '10003';
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width: 450px; border-radius: 24px; overflow: hidden;">
-                <div class="modal-header" style="position: sticky; top: 0; background: white; z-index: 10;">
-                    <h3>📢 Информация о канале</h3>
-                    <button onclick="closeChannelProfileModal()" class="btn-close">×</button>
-                </div>
-                <div style="padding: 20px; text-align: center; border-bottom: 1px solid var(--border);">
-                    <div class="avatar" style="width: 80px; height: 80px; margin: 0 auto 15px; font-size: 40px; ${chatData.avatar ? 'background-image: url(' + chatData.avatar + '); background-size: cover;' : ''}">
-                        ${chatData.avatar ? '' : '📢'}
-                    </div>
-                    <h2 style="margin-bottom: 5px;">${escapeHtml(chatData.name || 'Канал')}</h2>
-                    ${chatData.kname ? '<p style="color: var(--forest); margin-bottom: 5px;">@' + escapeHtml(chatData.kname) + '</p>' : ''}
-                    <p style="color: #666; margin-bottom: 15px;">${escapeHtml(chatData.description || 'Нет описания')}</p>
-                    <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; flex-wrap: wrap;">
-                        <div style="background: var(--background); border-radius: 12px; padding: 8px 15px;">
-                            <span>👥 ${subscribersCount} подписчиков</span>
-                        </div>
-                        <div style="background: var(--background); border-radius: 12px; padding: 8px 15px;">
-                            <span>👑 ${escapeHtml(creatorName)}</span>
-                        </div>
-                    </div>
-                    <div style="background: var(--background); border-radius: 12px; padding: 8px 15px;">
-                        <span>${chatData.privacy === 'public' ? '🌍 Публичный' : '🔒 Приватный'}</span>
-                    </div>
-                </div>
-                
-                <div style="padding: 15px;">
-                    <h4 style="margin-bottom: 10px;">👑 Администраторы</h4>
-                    <div style="max-height: 300px; overflow-y: auto;">
-                        ${adminsListHtml || '<div class="profile-empty">Нет администраторов</div>'}
-                    </div>
-                </div>
-                
-                <div style="padding: 15px; border-top: 1px solid var(--border); display: flex; gap: 10px;">
-                    ${!isSubscribed ? '<button onclick="subscribeToChannelFromProfile()" class="btn-primary" style="flex:1;">📢 Подписаться</button>' : ''}
-                    ${isSubscribed ? '<button onclick="unsubscribeFromChannelFromProfile()" class="btn-danger" style="flex:1;">🔕 Отписаться</button>' : ''}
-                    ${isCreator ? '<button onclick="deleteChannelChat()" class="btn-danger" style="flex:1;">🗑️ Удалить канал</button>' : ''}
-                    <button onclick="closeChannelProfileModal()" class="btn-secondary" style="flex:1;">Закрыть</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        modal.classList.remove('hidden');
-        
-        window.currentChannelId = chatId;
-        window.currentChannelData = chatData;
-        
-    } catch (err) {
-        console.error('Ошибка открытия профиля канала:', err);
-        showNotification('Ошибка загрузки канала', 'error');
-    }
-};
-
-// ========== ДЕЙСТВИЯ С ГРУППОЙ ==========
-window.joinGroupChat = async function() {
-    const groupId = window.currentGroupId;
-    if (!groupId) return;
-    
-    try {
-        await database.ref('chats/' + groupId + '/members/' + currentUser.uid).set(true);
-        await database.ref('userChats/' + currentUser.uid + '/' + groupId).set(true);
-        showNotification('Вы присоединились к группе', 'success');
-        closeGroupProfileModal();
-        
-        if (typeof loadChats === 'function') loadChats();
-        
-        const chatData = await database.ref('chats/' + groupId).once('value');
-        if (typeof openChatWithData === 'function') {
-            openChatWithData(groupId, chatData.val());
-        }
-    } catch (err) {
-        showNotification('Ошибка', 'error');
-    }
-};
-
-window.leaveGroupChat = async function() {
-    const groupId = window.currentGroupId;
-    if (!groupId) return;
-    
-    if (!confirm('Вы уверены, что хотите покинуть группу?')) return;
-    
-    try {
-        await database.ref('chats/' + groupId + '/members/' + currentUser.uid).remove();
-        await database.ref('userChats/' + currentUser.uid + '/' + groupId).remove();
-        showNotification('Вы покинули группу', 'success');
-        closeGroupProfileModal();
-        
-        if (typeof closeChat === 'function') closeChat();
-        if (typeof loadChats === 'function') loadChats();
-    } catch (err) {
-        showNotification('Ошибка', 'error');
-    }
-};
-
-window.deleteGroupChat = async function() {
-    const groupId = window.currentGroupId;
-    if (!groupId) return;
-    
-    if (!confirm('ВНИМАНИЕ! Вы собираетесь УДАЛИТЬ группу навсегда. Уверены?')) return;
-    
-    try {
-        await database.ref('messages/' + groupId).remove();
-        await database.ref('chats/' + groupId).remove();
-        
-        const members = window.currentGroupData?.members || {};
-        for (const memberId in members) {
-            await database.ref('userChats/' + memberId + '/' + groupId).remove();
-        }
-        
-        showNotification('Группа удалена', 'success');
-        closeGroupProfileModal();
-        
-        if (typeof closeChat === 'function') closeChat();
-        if (typeof loadChats === 'function') loadChats();
-    } catch (err) {
-        showNotification('Ошибка удаления', 'error');
-    }
-};
-
-// ========== ДЕЙСТВИЯ С КАНАЛОМ ==========
-window.subscribeToChannelFromProfile = async function() {
-    const channelId = window.currentChannelId;
-    if (!channelId) return;
-    
-    try {
-        await database.ref('chats/' + channelId + '/subscribers/' + currentUser.uid).set(true);
-        await database.ref('userChats/' + currentUser.uid + '/' + channelId).set(true);
-        showNotification('Вы подписались на канал', 'success');
-        closeChannelProfileModal();
-        
-        if (typeof loadChats === 'function') loadChats();
-        
-        const chatData = await database.ref('chats/' + channelId).once('value');
-        if (typeof openChatWithData === 'function') {
-            openChatWithData(channelId, chatData.val());
-        }
-    } catch (err) {
-        showNotification('Ошибка', 'error');
-    }
-};
-
-window.unsubscribeFromChannelFromProfile = async function() {
-    const channelId = window.currentChannelId;
-    if (!channelId) return;
-    
-    if (!confirm('Отписаться от канала?')) return;
-    
-    try {
-        await database.ref('chats/' + channelId + '/subscribers/' + currentUser.uid).remove();
-        await database.ref('userChats/' + currentUser.uid + '/' + channelId).remove();
-        showNotification('Вы отписались от канала', 'info');
-        closeChannelProfileModal();
-        
-        if (typeof closeChat === 'function') closeChat();
-        if (typeof loadChats === 'function') loadChats();
-    } catch (err) {
-        showNotification('Ошибка', 'error');
-    }
-};
-
-window.deleteChannelChat = async function() {
-    const channelId = window.currentChannelId;
-    if (!channelId) return;
-    
-    if (!confirm('ВНИМАНИЕ! Вы собираетесь УДАЛИТЬ канал навсегда. Уверены?')) return;
-    
-    try {
-        await database.ref('messages/' + channelId).remove();
-        await database.ref('chats/' + channelId).remove();
-        
-        const subscribers = window.currentChannelData?.subscribers || {};
-        for (const subscriberId in subscribers) {
-            await database.ref('userChats/' + subscriberId + '/' + channelId).remove();
-        }
-        
-        if (window.currentChannelData?.kname) {
-            await database.ref('channelKnames/' + window.currentChannelData.kname).remove();
-        }
-        
-        showNotification('Канал удален', 'success');
-        closeChannelProfileModal();
-        
-        if (typeof closeChat === 'function') closeChat();
-        if (typeof loadChats === 'function') loadChats();
-    } catch (err) {
-        showNotification('Ошибка удаления', 'error');
-    }
-};
-
-// ========== ПЕРЕОПРЕДЕЛЯЕМ openChatProfile ДЛЯ ВСЕХ ТИПОВ ЧАТОВ ==========
-window.openChatProfile = function() {
-    if (!window.currentChatData) {
-        console.log('Нет данных чата');
-        return;
-    }
-    
-    console.log('openChatProfile: тип чата', window.currentChatData.type);
-    
-    if (window.currentChatData.type === 'group') {
-        window.openGroupProfile(window.currentChatId);
-    } 
-    else if (window.currentChatData.type === 'channel') {
-        window.openChannelProfile(window.currentChatId);
-    }
-    else if (window.currentChatData.type === 'private') {
-        let otherUserId = window.currentChatData.otherUserId;
-        if (!otherUserId && window.currentChatData.participants) {
-            for (const uid of window.currentChatData.participants) {
-                if (uid !== window.currentUser?.uid) {
-                    otherUserId = uid;
-                    break;
-                }
-            }
-        }
-        if (otherUserId && typeof window.openUserProfile === 'function') {
-            window.openUserProfile(otherUserId);
-        } else if (otherUserId && typeof openUserProfile === 'function') {
-            openUserProfile(otherUserId);
-        } else {
-            showNotification('Профиль пользователя', 'info');
-            console.log('Нужно открыть профиль пользователя:', otherUserId);
-        }
-    }
-};
-
-console.log('Расширенные функции профиля группы/канала добавлены!');
-// ========== СУПЕР-ПРОСТОЕ ИСПРАВЛЕНИЕ ОТКРЫТИЯ ЧАТОВ ==========
-// Перехватываем все клики по документу
+// Глобальный обработчик кликов по чатам
 document.addEventListener('click', function(e) {
-    // Находим ближайший элемент чата
     var chatItem = e.target.closest('.chat-item');
     if (!chatItem) return;
     
@@ -2406,7 +1112,7 @@ document.addEventListener('click', function(e) {
     var chatId = chatItem.getAttribute('data-chat-id');
     if (!chatId) return;
     
-    console.log('ГЛОБАЛЬНЫЙ КЛИК по чату:', chatId);
+    console.log('Глобальный клик по чату:', chatId);
     
     // Принудительно показываем область чата
     var noChat = document.getElementById('no-chat-selected');
@@ -2425,1898 +1131,9 @@ document.addEventListener('click', function(e) {
     // Открываем чат
     if (typeof window.openChatById === 'function') {
         window.openChatById(chatId);
-    } else if (typeof openChatById === 'function') {
-        openChatById(chatId);
     }
     
     return false;
-}, true); // true = захват события на фазе погружения
-// Убеждаемся, что функции профилей доступны глобально
-window.openGroupProfile = window.openGroupProfile || openGroupProfile;
-window.openChannelProfile = window.openChannelProfile || openChannelProfile;
-window.openUserProfile = window.openUserProfile || openUserProfile;
+}, true);
 
-console.log('Профильные функции зарегистрированы глобально');
-// ========== ЭКСТРЕННЫЙ ФИКС ДЛЯ ТЕЛЕФОНА ==========
-// Переопределяем функции открытия профиля для телефона
-window.openGroupProfile = async function(chatId) {
-    console.log('openGroupProfile (телефон) вызван для:', chatId);
-    
-    try {
-        var chatSnap = await database.ref('chats/' + chatId).once('value');
-        var chatData = chatSnap.val();
-        
-        if (!chatData || chatData.type !== 'group') {
-            showNotification('Группа не найдена', 'error');
-            return;
-        }
-        
-        var membersCount = chatData.members ? Object.keys(chatData.members).length : 0;
-        var isMember = chatData.members && chatData.members[currentUser?.uid];
-        
-        // Простое сообщение вместо модального окна (для теста)
-        var message = '👥 ГРУППА: ' + (chatData.name || 'Без названия') + '\n';
-        message += '👥 Участников: ' + membersCount + '\n';
-        message += '📅 Создана: ' + new Date(chatData.createdAt).toLocaleDateString() + '\n';
-        message += '📝 ' + (chatData.description || 'Нет описания');
-        
-        if (isMember) {
-            message += '\n\n✅ Вы участник группы';
-        } else {
-            message += '\n\n❌ Вы не участник группы';
-        }
-        
-        alert(message);
-        
-    } catch(err) {
-        console.error(err);
-        alert('Ошибка загрузки группы');
-    }
-};
-
-window.openChannelProfile = async function(chatId) {
-    console.log('openChannelProfile (телефон) вызван для:', chatId);
-    
-    try {
-        var chatSnap = await database.ref('chats/' + chatId).once('value');
-        var chatData = chatSnap.val();
-        
-        if (!chatData || chatData.type !== 'channel') {
-            showNotification('Канал не найден', 'error');
-            return;
-        }
-        
-        var subscribersCount = chatData.subscribers ? Object.keys(chatData.subscribers).length : 0;
-        var isSubscribed = chatData.subscribers && chatData.subscribers[currentUser?.uid];
-        
-        // Простое сообщение вместо модального окна (для теста)
-        var message = '📢 КАНАЛ: ' + (chatData.name || 'Без названия') + '\n';
-        if (chatData.kname) message += '🔗 @' + chatData.kname + '\n';
-        message += '👥 Подписчиков: ' + subscribersCount + '\n';
-        message += '📅 Создан: ' + new Date(chatData.createdAt).toLocaleDateString() + '\n';
-        message += '📝 ' + (chatData.description || 'Нет описания') + '\n';
-        message += '🔒 ' + (chatData.privacy === 'public' ? 'Публичный' : 'Приватный');
-        
-        if (isSubscribed) {
-            message += '\n\n✅ Вы подписаны';
-        } else {
-            message += '\n\n❌ Вы не подписаны';
-        }
-        
-        alert(message);
-        
-    } catch(err) {
-        console.error(err);
-        alert('Ошибка загрузки канала');
-    }
-};
-
-console.log('✅ Телефонные профили групп/каналов установлены!');
-console.log('✅ Глобальный обработчик кликов по чатам установлен!');
-// ========== ФИНАЛЬНЫЙ ФИКС ДЛЯ ТЕЛЕФОНА - КЛИК ПО ШАПКЕ ==========
-// Ждём загрузки страницы
-setTimeout(function() {
-    console.log('Фикс шапки: запущен');
-    
-    // Функция для установки обработчика на шапку
-    function fixChatHeaderClick() {
-        var chatUserInfo = document.querySelector('.chat-user-info');
-        if (!chatUserInfo) {
-            // Пробуем другие селекторы
-            chatUserInfo = document.querySelector('#active-chat .chat-user-info');
-        }
-        if (!chatUserInfo) {
-            chatUserInfo = document.querySelector('.chat-header .chat-user-info');
-        }
-        
-        if (chatUserInfo && !chatUserInfo.hasAttribute('data-fixed')) {
-            console.log('Фикс шапки: устанавливаю обработчик');
-            chatUserInfo.setAttribute('data-fixed', 'true');
-            chatUserInfo.style.cursor = 'pointer';
-            
-            chatUserInfo.onclick = function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('КЛИК ПО ШАПКЕ!');
-                
-                var chatData = window.currentChatData;
-                if (!chatData) {
-                    alert('Сначала откройте чат');
-                    return;
-                }
-                
-                if (chatData.type === 'group') {
-                    var name = chatData.name || 'Группа';
-                    var members = chatData.members ? Object.keys(chatData.members).length : 0;
-                    alert('👥 ГРУППА: ' + name + '\n👥 Участников: ' + members + '\n📝 ' + (chatData.description || 'Нет описания'));
-                } 
-                else if (chatData.type === 'channel') {
-                    var name = chatData.name || 'Канал';
-                    var subs = chatData.subscribers ? Object.keys(chatData.subscribers).length : 0;
-                    alert('📢 КАНАЛ: ' + name + '\n👥 Подписчиков: ' + subs + '\n📝 ' + (chatData.description || 'Нет описания'));
-                } 
-                else if (chatData.type === 'private') {
-                    alert('👤 Пользователь');
-                }
-            };
-        }
-    }
-    
-    // Запускаем сразу
-    fixChatHeaderClick();
-    
-    // Запускаем каждые 2 секунды (на случай, если чат откроется позже)
-    setInterval(fixChatHeaderClick, 2000);
-    
-    // Также следим за открытием чата через MutationObserver
-    var observer = new MutationObserver(function() {
-        fixChatHeaderClick();
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    
-    console.log('✅ Фикс шапки: обработчик готов');
-}, 1000);
-// ========== ПОЛНОСТЬЮ РАБОЧИЙ ПРОФИЛЬ ГРУППЫ ДЛЯ ТЕЛЕФОНА ==========
-window.openGroupProfile = async function(chatId) {
-    console.log('openGroupProfile вызван для:', chatId);
-    
-    if (!chatId) {
-        showNotification('ID группы не указан', 'error');
-        return;
-    }
-    
-    try {
-        const chatSnap = await database.ref('chats/' + chatId).once('value');
-        const chatData = chatSnap.val();
-        
-        if (!chatData || chatData.type !== 'group') {
-            showNotification('Группа не найдена', 'error');
-            return;
-        }
-        
-        // Закрываем старое окно
-        const oldModal = document.getElementById('group-profile-modal');
-        if (oldModal) oldModal.remove();
-        
-        // Получаем данные о создателе
-        let creatorName = 'Неизвестно';
-        if (chatData.createdBy) {
-            try {
-                const creatorSnap = await database.ref('users/' + chatData.createdBy).once('value');
-                const creatorData = creatorSnap.val();
-                if (creatorData) creatorName = creatorData.username;
-            } catch(e) {}
-        }
-        
-        const membersCount = chatData.members ? Object.keys(chatData.members).length : 0;
-        const isMember = chatData.members && chatData.members[currentUser?.uid];
-        const isCreator = chatData.createdBy === currentUser?.uid;
-        
-        // Сохраняем для действий
-        window.currentGroupId = chatId;
-        window.currentGroupData = chatData;
-        
-        // Формируем HTML модального окна
-        const modal = document.createElement('div');
-        modal.id = 'group-profile-modal';
-        modal.className = 'modal';
-        modal.style.zIndex = '10003';
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width: 450px; border-radius: 24px; overflow: hidden; max-height: 80vh; display: flex; flex-direction: column;">
-                <div class="modal-header" style="position: sticky; top: 0; background: white; z-index: 10; flex-shrink: 0;">
-                    <h3>👥 Информация о группе</h3>
-                    <button onclick="closeGroupProfileModal()" class="btn-close">×</button>
-                </div>
-                <div style="padding: 20px; text-align: center; border-bottom: 1px solid var(--border); flex-shrink: 0;">
-                    <div class="avatar" style="width: 80px; height: 80px; margin: 0 auto 15px; font-size: 40px; ${chatData.avatar ? 'background-image: url(' + chatData.avatar + '); background-size: cover;' : ''}">
-                        ${chatData.avatar ? '' : '👥'}
-                    </div>
-                    <h2 style="margin-bottom: 5px;">${escapeHtml(chatData.name || 'Группа')}</h2>
-                    <p style="color: #666; margin-bottom: 15px;">${escapeHtml(chatData.description || 'Нет описания')}</p>
-                    <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; flex-wrap: wrap;">
-                        <div style="background: var(--background); border-radius: 12px; padding: 8px 15px;">
-                            <span>👥 ${membersCount} участников</span>
-                        </div>
-                        <div style="background: var(--background); border-radius: 12px; padding: 8px 15px;">
-                            <span>👑 ${escapeHtml(creatorName)}</span>
-                        </div>
-                    </div>
-                    <div style="background: var(--background); border-radius: 12px; padding: 8px 15px;">
-                        <span>📅 Создана: ${new Date(chatData.createdAt).toLocaleDateString()}</span>
-                    </div>
-                </div>
-                
-                <div style="padding: 15px; overflow-y: auto; flex: 1;">
-                    <h4 style="margin-bottom: 10px;">👥 Участники</h4>
-                    <div id="group-members-list" style="max-height: 250px; overflow-y: auto;">
-                        <div class="profile-loading">Загрузка участников...</div>
-                    </div>
-                </div>
-                
-                <div style="padding: 15px; border-top: 1px solid var(--border); display: flex; gap: 10px; flex-shrink: 0;">
-                    ${!isMember ? '<button id="join-group-btn" class="btn-primary" style="flex:1;">➕ Присоединиться</button>' : ''}
-                    ${isMember && !isCreator ? '<button id="leave-group-btn" class="btn-danger" style="flex:1;">🚪 Покинуть группу</button>' : ''}
-                    ${isCreator ? '<button id="delete-group-btn" class="btn-danger" style="flex:1;">🗑️ Удалить группу</button>' : ''}
-                    <button onclick="closeGroupProfileModal()" class="btn-secondary" style="flex:1;">Закрыть</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        modal.classList.remove('hidden');
-        
-        // Загружаем список участников
-        const membersListDiv = document.getElementById('group-members-list');
-        if (membersListDiv && chatData.members) {
-            let membersHtml = '';
-            const memberIds = Object.keys(chatData.members).slice(0, 20);
-            
-            for (const memberId of memberIds) {
-                try {
-                    const userSnap = await database.ref('users/' + memberId).once('value');
-                    const userData = userSnap.val();
-                    const avatarStyle = userData?.avatar ? `background-image: url(${userData.avatar}); background-size: cover;` : '';
-                    const avatarContent = userData?.avatar ? '' : '👤';
-                    const isUserAdmin = chatData.admins && chatData.admins[memberId];
-                    const isUserCreator = chatData.createdBy === memberId;
-                    
-                    membersHtml += `
-                        <div class="member-item" style="display: flex; align-items: center; gap: 12px; padding: 10px; border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.openUserProfile('${memberId}')">
-                            <div class="avatar" style="width: 40px; height: 40px; ${avatarStyle}">${avatarContent}</div>
-                            <div style="flex:1;">
-                                <div style="font-weight: 500;">${escapeHtml(userData?.username || 'Пользователь')}</div>
-                                ${isUserCreator ? '<span style="font-size: 11px; color: gold;">владелец</span>' : (isUserAdmin ? '<span style="font-size: 11px; color: var(--forest);">администратор</span>' : '')}
-                            </div>
-                        </div>
-                    `;
-                } catch(e) {}
-            }
-            
-            if (memberIds.length < membersCount) {
-                membersHtml += `<div style="padding: 10px; text-align: center; color: var(--text-muted);">и еще ${membersCount - memberIds.length} участников...</div>`;
-            }
-            
-            membersListDiv.innerHTML = membersHtml || '<div class="profile-empty">Нет участников</div>';
-        }
-        
-        // Привязываем кнопки
-        if (!isMember) {
-            const joinBtn = document.getElementById('join-group-btn');
-            if (joinBtn) {
-                joinBtn.onclick = async function() {
-                    await database.ref('chats/' + chatId + '/members/' + currentUser.uid).set(true);
-                    await database.ref('userChats/' + currentUser.uid + '/' + chatId).set(true);
-                    showNotification('Вы присоединились к группе', 'success');
-                    closeGroupProfileModal();
-                    if (typeof loadChats === 'function') loadChats();
-                    const newChatData = await database.ref('chats/' + chatId).once('value');
-                    if (typeof openChatWithData === 'function') {
-                        openChatWithData(chatId, newChatData.val());
-                    }
-                };
-            }
-        }
-        
-        if (isMember && !isCreator) {
-            const leaveBtn = document.getElementById('leave-group-btn');
-            if (leaveBtn) {
-                leaveBtn.onclick = async function() {
-                    if (!confirm('Вы уверены, что хотите покинуть группу?')) return;
-                    await database.ref('chats/' + chatId + '/members/' + currentUser.uid).remove();
-                    await database.ref('userChats/' + currentUser.uid + '/' + chatId).remove();
-                    showNotification('Вы покинули группу', 'success');
-                    closeGroupProfileModal();
-                    if (typeof closeChat === 'function') closeChat();
-                    if (typeof loadChats === 'function') loadChats();
-                };
-            }
-        }
-        
-        if (isCreator) {
-            const deleteBtn = document.getElementById('delete-group-btn');
-            if (deleteBtn) {
-                deleteBtn.onclick = async function() {
-                    if (!confirm('ВНИМАНИЕ! Удалить группу навсегда? Это действие необратимо!')) return;
-                    await database.ref('messages/' + chatId).remove();
-                    await database.ref('chats/' + chatId).remove();
-                    const members = chatData.members || {};
-                    for (const memberId in members) {
-                        await database.ref('userChats/' + memberId + '/' + chatId).remove();
-                    }
-                    showNotification('Группа удалена', 'success');
-                    closeGroupProfileModal();
-                    if (typeof closeChat === 'function') closeChat();
-                    if (typeof loadChats === 'function') loadChats();
-                };
-            }
-        }
-        
-    } catch (err) {
-        console.error('Ошибка открытия профиля группы:', err);
-        showNotification('Ошибка загрузки группы', 'error');
-    }
-};
-
-// ========== ПОЛНОСТЬЮ РАБОЧИЙ ПРОФИЛЬ КАНАЛА ДЛЯ ТЕЛЕФОНА ==========
-window.openChannelProfile = async function(chatId) {
-    console.log('openChannelProfile вызван для:', chatId);
-    
-    if (!chatId) {
-        showNotification('ID канала не указан', 'error');
-        return;
-    }
-    
-    try {
-        const chatSnap = await database.ref('chats/' + chatId).once('value');
-        const chatData = chatSnap.val();
-        
-        if (!chatData || chatData.type !== 'channel') {
-            showNotification('Канал не найден', 'error');
-            return;
-        }
-        
-        // Закрываем старое окно
-        const oldModal = document.getElementById('channel-profile-modal');
-        if (oldModal) oldModal.remove();
-        
-        // Получаем данные о создателе
-        let creatorName = 'Неизвестно';
-        if (chatData.createdBy) {
-            try {
-                const creatorSnap = await database.ref('users/' + chatData.createdBy).once('value');
-                const creatorData = creatorSnap.val();
-                if (creatorData) creatorName = creatorData.username;
-            } catch(e) {}
-        }
-        
-        const subscribersCount = chatData.subscribers ? Object.keys(chatData.subscribers).length : 0;
-        const isSubscribed = chatData.subscribers && chatData.subscribers[currentUser?.uid];
-        const isCreator = chatData.createdBy === currentUser?.uid;
-        
-        // Сохраняем для действий
-        window.currentChannelId = chatId;
-        window.currentChannelData = chatData;
-        
-        // Формируем HTML модального окна
-        const modal = document.createElement('div');
-        modal.id = 'channel-profile-modal';
-        modal.className = 'modal';
-        modal.style.zIndex = '10003';
-        modal.innerHTML = `
-            <div class="modal-content" style="max-width: 450px; border-radius: 24px; overflow: hidden; max-height: 80vh; display: flex; flex-direction: column;">
-                <div class="modal-header" style="position: sticky; top: 0; background: white; z-index: 10; flex-shrink: 0;">
-                    <h3>📢 Информация о канале</h3>
-                    <button onclick="closeChannelProfileModal()" class="btn-close">×</button>
-                </div>
-                <div style="padding: 20px; text-align: center; border-bottom: 1px solid var(--border); flex-shrink: 0;">
-                    <div class="avatar" style="width: 80px; height: 80px; margin: 0 auto 15px; font-size: 40px; ${chatData.avatar ? 'background-image: url(' + chatData.avatar + '); background-size: cover;' : ''}">
-                        ${chatData.avatar ? '' : '📢'}
-                    </div>
-                    <h2 style="margin-bottom: 5px;">${escapeHtml(chatData.name || 'Канал')}</h2>
-                    ${chatData.kname ? '<p style="color: var(--forest); margin-bottom: 5px;">@' + escapeHtml(chatData.kname) + '</p>' : ''}
-                    <p style="color: #666; margin-bottom: 15px;">${escapeHtml(chatData.description || 'Нет описания')}</p>
-                    <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; flex-wrap: wrap;">
-                        <div style="background: var(--background); border-radius: 12px; padding: 8px 15px;">
-                            <span>👥 ${subscribersCount} подписчиков</span>
-                        </div>
-                        <div style="background: var(--background); border-radius: 12px; padding: 8px 15px;">
-                            <span>👑 ${escapeHtml(creatorName)}</span>
-                        </div>
-                    </div>
-                    <div style="background: var(--background); border-radius: 12px; padding: 8px 15px;">
-                        <span>${chatData.privacy === 'public' ? '🌍 Публичный' : '🔒 Приватный'}</span>
-                    </div>
-                </div>
-                
-                <div style="padding: 15px; overflow-y: auto; flex: 1;">
-                    <h4 style="margin-bottom: 10px;">👑 Администраторы</h4>
-                    <div id="channel-admins-list" style="max-height: 250px; overflow-y: auto;">
-                        <div class="profile-loading">Загрузка администраторов...</div>
-                    </div>
-                </div>
-                
-                <div style="padding: 15px; border-top: 1px solid var(--border); display: flex; gap: 10px; flex-shrink: 0;">
-                    ${!isSubscribed ? '<button id="subscribe-channel-btn" class="btn-primary" style="flex:1;">📢 Подписаться</button>' : ''}
-                    ${isSubscribed ? '<button id="unsubscribe-channel-btn" class="btn-danger" style="flex:1;">🔕 Отписаться</button>' : ''}
-                    ${isCreator ? '<button id="delete-channel-btn" class="btn-danger" style="flex:1;">🗑️ Удалить канал</button>' : ''}
-                    <button onclick="closeChannelProfileModal()" class="btn-secondary" style="flex:1;">Закрыть</button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        modal.classList.remove('hidden');
-        
-        // Загружаем список администраторов
-        const adminsListDiv = document.getElementById('channel-admins-list');
-        if (adminsListDiv && chatData.admins) {
-            let adminsHtml = '';
-            const adminIds = Object.keys(chatData.admins).slice(0, 20);
-            
-            for (const adminId of adminIds) {
-                try {
-                    const userSnap = await database.ref('users/' + adminId).once('value');
-                    const userData = userSnap.val();
-                    const avatarStyle = userData?.avatar ? `background-image: url(${userData.avatar}); background-size: cover;` : '';
-                    const avatarContent = userData?.avatar ? '' : '👤';
-                    const isUserCreator = chatData.createdBy === adminId;
-                    
-                    adminsHtml += `
-                        <div class="member-item" style="display: flex; align-items: center; gap: 12px; padding: 10px; border-bottom: 1px solid var(--border); cursor: pointer;" onclick="window.openUserProfile('${adminId}')">
-                            <div class="avatar" style="width: 40px; height: 40px; ${avatarStyle}">${avatarContent}</div>
-                            <div style="flex:1;">
-                                <div style="font-weight: 500;">${escapeHtml(userData?.username || 'Пользователь')}</div>
-                                ${isUserCreator ? '<span style="font-size: 11px; color: gold;">владелец</span>' : '<span style="font-size: 11px; color: var(--forest);">администратор</span>'}
-                            </div>
-                        </div>
-                    `;
-                } catch(e) {}
-            }
-            
-            adminsListDiv.innerHTML = adminsHtml || '<div class="profile-empty">Нет администраторов</div>';
-        }
-        
-        // Привязываем кнопки
-        if (!isSubscribed) {
-            const subscribeBtn = document.getElementById('subscribe-channel-btn');
-            if (subscribeBtn) {
-                subscribeBtn.onclick = async function() {
-                    await database.ref('chats/' + chatId + '/subscribers/' + currentUser.uid).set(true);
-                    await database.ref('userChats/' + currentUser.uid + '/' + chatId).set(true);
-                    showNotification('Вы подписались на канал', 'success');
-                    closeChannelProfileModal();
-                    if (typeof loadChats === 'function') loadChats();
-                    const newChatData = await database.ref('chats/' + chatId).once('value');
-                    if (typeof openChatWithData === 'function') {
-                        openChatWithData(chatId, newChatData.val());
-                    }
-                };
-            }
-        }
-        
-        if (isSubscribed) {
-            const unsubscribeBtn = document.getElementById('unsubscribe-channel-btn');
-            if (unsubscribeBtn) {
-                unsubscribeBtn.onclick = async function() {
-                    if (!confirm('Отписаться от канала?')) return;
-                    await database.ref('chats/' + chatId + '/subscribers/' + currentUser.uid).remove();
-                    await database.ref('userChats/' + currentUser.uid + '/' + chatId).remove();
-                    showNotification('Вы отписались от канала', 'info');
-                    closeChannelProfileModal();
-                    if (typeof closeChat === 'function') closeChat();
-                    if (typeof loadChats === 'function') loadChats();
-                };
-            }
-        }
-        
-        if (isCreator) {
-            const deleteBtn = document.getElementById('delete-channel-btn');
-            if (deleteBtn) {
-                deleteBtn.onclick = async function() {
-                    if (!confirm('ВНИМАНИЕ! Удалить канал навсегда? Это действие необратимо!')) return;
-                    await database.ref('messages/' + chatId).remove();
-                    await database.ref('chats/' + chatId).remove();
-                    const subscribers = chatData.subscribers || {};
-                    for (const subscriberId in subscribers) {
-                        await database.ref('userChats/' + subscriberId + '/' + chatId).remove();
-                    }
-                    if (chatData.kname) {
-                        await database.ref('channelKnames/' + chatData.kname).remove();
-                    }
-                    showNotification('Канал удален', 'success');
-                    closeChannelProfileModal();
-                    if (typeof closeChat === 'function') closeChat();
-                    if (typeof loadChats === 'function') loadChats();
-                };
-            }
-        }
-        
-    } catch (err) {
-        console.error('Ошибка открытия профиля канала:', err);
-        showNotification('Ошибка загрузки канала', 'error');
-    }
-};
-
-// Функции закрытия
-window.closeGroupProfileModal = function() {
-    const modal = document.getElementById('group-profile-modal');
-    if (modal) modal.remove();
-    window.currentGroupId = null;
-    window.currentGroupData = null;
-};
-
-window.closeChannelProfileModal = function() {
-    const modal = document.getElementById('channel-profile-modal');
-    if (modal) modal.remove();
-    window.currentChannelId = null;
-    window.currentChannelData = null;
-};
-
-// Усиленный обработчик клика по шапке
-function setupHeaderClickListener() {
-    const chatUserInfo = document.querySelector('.chat-user-info');
-    if (chatUserInfo && !chatUserInfo.hasAttribute('data-header-click')) {
-        chatUserInfo.setAttribute('data-header-click', 'true');
-        chatUserInfo.style.cursor = 'pointer';
-        
-        chatUserInfo.onclick = function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('КЛИК ПО ШАПКЕ! Тип:', window.currentChatData?.type);
-            
-            if (!window.currentChatData) {
-                showNotification('Сначала откройте чат', 'error');
-                return;
-            }
-            
-            if (window.currentChatData.type === 'group') {
-                window.openGroupProfile(window.currentChatId);
-            } else if (window.currentChatData.type === 'channel') {
-                window.openChannelProfile(window.currentChatId);
-            } else if (window.currentChatData.type === 'private') {
-                if (typeof window.openUserProfile === 'function') {
-                    window.openUserProfile(window.currentChatData.otherUserId);
-                } else {
-                    showNotification('Профиль пользователя', 'info');
-                }
-            }
-        };
-        
-        console.log('Обработчик шапки установлен');
-    }
-}
-
-// Запускаем установку обработчика
-setTimeout(setupHeaderClickListener, 1000);
-setInterval(setupHeaderClickListener, 3000);
-
-console.log('✅ Полностью рабочие профили групп и каналов установлены!');
-// ========== РАСШИРЕННЫЙ ПРОФИЛЬ ГРУППЫ (ПОЛНАЯ ВЕРСИЯ) ==========
-
-// Глобальная переменная для текущего редактируемого участника
-window.currentGroupMemberId = null;
-
-window.openGroupProfile = async function(chatId) {
-    console.log('openGroupProfile вызван для:', chatId);
-    
-    if (!chatId) {
-        showNotification('ID группы не указан', 'error');
-        return;
-    }
-    
-    try {
-        const chatSnap = await database.ref('chats/' + chatId).once('value');
-        const chatData = chatSnap.val();
-        
-        if (!chatData || chatData.type !== 'group') {
-            showNotification('Группа не найдена', 'error');
-            return;
-        }
-        
-        // Закрываем старое окно
-        const oldModal = document.getElementById('group-profile-modal');
-        if (oldModal) oldModal.remove();
-        
-        // Получаем данные о создателе
-        let creatorName = 'Неизвестно';
-        let creatorAvatar = '';
-        if (chatData.createdBy) {
-            try {
-                const creatorSnap = await database.ref('users/' + chatData.createdBy).once('value');
-                const creatorData = creatorSnap.val();
-                if (creatorData) {
-                    creatorName = creatorData.username;
-                    creatorAvatar = creatorData.avatar || '';
-                }
-            } catch(e) {}
-        }
-        
-        const membersCount = chatData.members ? Object.keys(chatData.members).length : 0;
-        const isMember = chatData.members && chatData.members[currentUser?.uid];
-        const isAdmin = chatData.admins && chatData.admins[currentUser?.uid];
-        const isCreator = chatData.createdBy === currentUser?.uid;
-        const canManageMembers = isCreator || (isAdmin && chatData.adminPermissions && chatData.adminPermissions[currentUser?.uid]?.manageMembers);
-        
-        // Сохраняем для действий
-        window.currentGroupId = chatId;
-        window.currentGroupData = chatData;
-        
-        // Баннер (если есть)
-        const bannerStyle = chatData.banner ? 
-            `background-image: url(${chatData.banner}); background-size: cover; background-position: center;` : 
-            'background: linear-gradient(135deg, #228B22, #556B2F);';
-        
-        // Формируем HTML модального окна
-        const modal = document.createElement('div');
-        modal.id = 'group-profile-modal';
-        modal.className = 'modal';
-        modal.style.zIndex = '10003';
-        modal.innerHTML = `
-            <div class="group-profile-container" style="max-width: 500px; width: 95%; background: white; border-radius: 28px; overflow: hidden; max-height: 85vh; display: flex; flex-direction: column; position: relative;">
-                <!-- Шапка с возвратом -->
-                <div id="group-profile-header" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee; background: white; flex-shrink: 0;">
-                    <button id="group-profile-back" style="background: none; border: none; font-size: 24px; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">←</button>
-                    <h3 id="group-profile-title" style="margin: 0; flex: 1; text-align: center;">Информация</h3>
-                    <button onclick="closeGroupProfileModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; width: 40px; height: 40px;">×</button>
-                </div>
-                
-                <!-- Основной контент -->
-                <div id="group-profile-main" style="flex: 1; overflow-y: auto;">
-                    <!-- Баннер -->
-                    <div class="group-banner" style="height: 140px; position: relative; ${bannerStyle}">
-                        ${(isAdmin || isCreator) ? '<button id="edit-banner-btn" style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;">✏️</button>' : ''}
-                    </div>
-                    
-                    <!-- Аватар -->
-                    <div style="display: flex; justify-content: center; margin-top: -50px; position: relative;">
-                        <div class="group-avatar" style="width: 90px; height: 90px; border-radius: 50%; background: var(--sage); border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 45px; ${chatData.avatar ? 'background-image: url(' + chatData.avatar + '); background-size: cover;' : ''}">
-                            ${chatData.avatar ? '' : '👥'}
-                            ${(isAdmin || isCreator) ? '<button id="edit-avatar-btn" style="position: absolute; bottom: 0; right: 0; background: var(--forest); border: none; color: white; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px;">✏️</button>' : ''}
-                        </div>
-                    </div>
-                    
-                    <!-- Информация -->
-                    <div style="text-align: center; padding: 15px;">
-                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;">
-                            <h2 id="group-name-display" style="margin: 0; cursor: ${(isAdmin || isCreator) ? 'pointer' : 'default'};">${escapeHtml(chatData.name || 'Группа')}</h2>
-                            ${(isAdmin || isCreator) ? '<span id="edit-name-icon" style="cursor: pointer; font-size: 16px;">✏️</span>' : ''}
-                        </div>
-                        ${chatData.kname ? `<p style="color: var(--forest); margin: 5px 0;">🔗 @${escapeHtml(chatData.kname)}</p>` : ''}
-                        
-                        <!-- Кнопка действия -->
-                        <button id="group-action-btn" style="margin: 10px auto; padding: 8px 24px; border-radius: 30px; border: none; font-weight: 600; cursor: pointer; background: ${isMember ? '#dc3545' : 'var(--forest)'}; color: white;">
-                            ${isMember ? '🚪 Выйти из группы' : '➕ Вступить в группу'}
-                        </button>
-                        
-                        <!-- Описание -->
-                        <div style="margin-top: 15px; text-align: left; background: var(--background); border-radius: 16px; padding: 12px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-weight: 600;">📝 Описание</span>
-                                ${(isAdmin || isCreator) ? '<button id="edit-desc-btn" style="background: none; border: none; cursor: pointer;">✏️</button>' : ''}
-                            </div>
-                            <p id="group-desc-display" style="margin: 8px 0 0 0; color: #666;">${escapeHtml(chatData.description || 'Нет описания')}</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Вкладки -->
-                    <div style="display: flex; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
-                        <button id="tab-members-btn" class="group-tab-btn active" style="flex: 1; padding: 12px; background: none; border: none; cursor: pointer; font-weight: 600; color: var(--forest); border-bottom: 2px solid var(--forest);">👥 Участники</button>
-                        <button id="tab-info-btn" class="group-tab-btn" style="flex: 1; padding: 12px; background: none; border: none; cursor: pointer;">ℹ️ Инфо</button>
-                    </div>
-                    
-                    <!-- Контент вкладок -->
-                    <div id="members-tab" style="padding: 10px;">
-                        <div id="members-list" style="max-height: 350px; overflow-y: auto;">
-                            <div class="profile-loading">Загрузка участников...</div>
-                        </div>
-                    </div>
-                    
-                    <div id="info-tab" style="padding: 15px; display: none;">
-                        <div style="background: var(--background); border-radius: 16px; padding: 15px; margin-bottom: 10px;">
-                            <div style="display: flex; justify-content: space-between;">
-                                <span>📅 Дата создания</span>
-                                <span>${new Date(chatData.createdAt).toLocaleDateString()}</span>
-                            </div>
-                        </div>
-                        <div style="background: var(--background); border-radius: 16px; padding: 15px; margin-bottom: 10px;">
-                            <div style="display: flex; justify-content: space-between;">
-                                <span>👥 Всего участников</span>
-                                <span>${membersCount}</span>
-                            </div>
-                        </div>
-                        <div style="background: var(--background); border-radius: 16px; padding: 15px; margin-bottom: 10px;">
-                            <div style="display: flex; justify-content: space-between;">
-                                <span>👑 Создатель</span>
-                                <span style="color: gold;">${escapeHtml(creatorName)}</span>
-                            </div>
-                        </div>
-                        <button id="share-group-btn" style="width: 100%; padding: 12px; background: var(--forest); color: white; border: none; border-radius: 16px; margin-top: 10px; cursor: pointer;">🔗 Поделиться группой</button>
-                        ${(isAdmin || isCreator) ? '<button id="edit-group-settings-btn" style="width: 100%; padding: 12px; background: var(--background); border: 1px solid var(--border); border-radius: 16px; margin-top: 10px; cursor: pointer;">⚙️ Изменить инфо группы</button>' : ''}
-                    </div>
-                </div>
-                
-                <!-- Модалка разрешений участника (изначально скрыта) -->
-                <div id="member-permissions-modal" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 20; overflow-y: auto;">
-                    <div style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee;">
-                        <button id="perms-back-btn" style="background: none; border: none; font-size: 24px; cursor: pointer;">←</button>
-                        <h3 style="margin: 0; flex: 1; text-align: center;" id="perms-member-name">Разрешения</h3>
-                        <button id="perms-close-btn" style="background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
-                    </div>
-                    <div style="padding: 20px;">
-                        <div style="margin-bottom: 20px;">
-                            <label style="font-weight: 600;">Должность</label>
-                            <select id="member-role-select" style="width: 100%; padding: 12px; margin-top: 8px; border: 2px solid var(--border); border-radius: 12px;">
-                                <option value="member">Участник</option>
-                                ${(isCreator || (isAdmin && canManageMembers)) ? '<option value="admin">Администратор</option>' : ''}
-                                ${isCreator ? '<option value="owner">Владелец</option>' : ''}
-                            </select>
-                        </div>
-                        
-                        <div style="margin-bottom: 20px;">
-                            <div style="font-weight: 600; margin-bottom: 10px;">Разрешения</div>
-                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-                                <span>✏️ Писать в группу</span>
-                                <label class="switch"><input type="checkbox" id="perm-send-messages" checked><span class="slider"></span></label>
-                            </div>
-                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-                                <span>🔗 Отправлять ссылки</span>
-                                <label class="switch"><input type="checkbox" id="perm-send-links" checked><span class="slider"></span></label>
-                            </div>
-                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-                                <span>📷 Отправлять фото</span>
-                                <label class="switch"><input type="checkbox" id="perm-send-photos" checked><span class="slider"></span></label>
-                            </div>
-                            ${(isCreator || (isAdmin && canManageMembers)) ? `
-                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-                                <span>👑 Менять инфо группы</span>
-                                <label class="switch"><input type="checkbox" id="perm-edit-info"><span class="slider"></span></label>
-                            </div>
-                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-                                <span>👥 Менять должность участников</span>
-                                <label class="switch"><input type="checkbox" id="perm-manage-roles"><span class="slider"></span></label>
-                            </div>
-                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-                                <span>🚪 Выгонять участников</span>
-                                <label class="switch"><input type="checkbox" id="perm-kick-members"><span class="slider"></span></label>
-                            </div>
-                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-                                <span>➕ Добавлять участников</span>
-                                <label class="switch"><input type="checkbox" id="perm-add-members"><span class="slider"></span></label>
-                            </div>
-                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-                                <span>🗑️ Удалять чужие сообщения</span>
-                                <label class="switch"><input type="checkbox" id="perm-delete-messages"><span class="slider"></span></label>
-                            </div>
-                            ` : ''}
-                        </div>
-                        
-                        <button id="save-permissions-btn" style="width: 100%; padding: 14px; background: var(--forest); color: white; border: none; border-radius: 16px; cursor: pointer;">💾 Сохранить</button>
-                        ${(isCreator || (isAdmin && canManageMembers)) ? '<button id="kick-member-btn" style="width: 100%; padding: 14px; background: #dc3545; color: white; border: none; border-radius: 16px; margin-top: 10px; cursor: pointer;">🚫 Выгнать из группы</button>' : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        modal.classList.remove('hidden');
-        
-        // Загружаем список участников
-        await loadGroupMembersList(chatId, chatData);
-        
-        // Привязываем обработчики
-        bindGroupProfileEvents(chatId, chatData, isMember, isAdmin, isCreator, canManageMembers);
-        
-    } catch (err) {
-        console.error('Ошибка открытия профиля группы:', err);
-        showNotification('Ошибка загрузки группы', 'error');
-    }
-};
-
-// Загрузка списка участников
-async function loadGroupMembersList(chatId, chatData) {
-    const container = document.getElementById('members-list');
-    if (!container) return;
-    
-    if (!chatData.members) {
-        container.innerHTML = '<div class="profile-empty">Нет участников</div>';
-        return;
-    }
-    
-    const memberIds = Object.keys(chatData.members);
-    const isAdmin = chatData.admins && chatData.admins[currentUser?.uid];
-    const isCreator = chatData.createdBy === currentUser?.uid;
-    const canManage = isCreator || (isAdmin && chatData.adminPermissions?.[currentUser?.uid]?.manageMembers);
-    
-    let ownerHtml = '';
-    let adminsHtml = '';
-    let membersHtml = '';
-    let bannedHtml = '';
-    
-    for (const memberId of memberIds) {
-        try {
-            const userSnap = await database.ref('users/' + memberId).once('value');
-            const userData = userSnap.val();
-            const isUserCreator = chatData.createdBy === memberId;
-            const isUserAdmin = chatData.admins && chatData.admins[memberId] && !isUserCreator;
-            const isBanned = chatData.banned && chatData.banned[memberId];
-            
-            const avatarStyle = userData?.avatar ? `background-image: url(${userData.avatar}); background-size: cover;` : '';
-            const avatarContent = userData?.avatar ? '' : '👤';
-            
-            const memberHtml = `
-                <div class="member-item" data-member-id="${memberId}" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid var(--border); ${canManage ? 'cursor: pointer;' : ''}">
-                    <div class="avatar" style="width: 45px; height: 45px; ${avatarStyle}">${avatarContent}</div>
-                    <div style="flex:1;">
-                        <div style="font-weight: 500;">${escapeHtml(userData?.username || 'Пользователь')}</div>
-                        <div style="font-size: 11px;">
-                            ${isUserCreator ? '<span style="color: gold;">👑 владелец</span>' : (isUserAdmin ? '<span style="color: var(--forest);">⭐ администратор</span>' : 'участник')}
-                            ${isBanned ? '<span style="color: #ff4444; margin-left: 8px;">🚫 в ЧС</span>' : ''}
-                        </div>
-                    </div>
-                    ${canManage && !isUserCreator ? '<span style="color: var(--text-muted);">›</span>' : ''}
-                </div>
-            `;
-            
-            if (isUserCreator) {
-                ownerHtml = memberHtml;
-            } else if (isUserAdmin) {
-                adminsHtml += memberHtml;
-            } else if (isBanned) {
-                bannedHtml += memberHtml;
-            } else {
-                membersHtml += memberHtml;
-            }
-        } catch(e) {}
-    }
-    
-    let finalHtml = '';
-    if (ownerHtml) finalHtml += '<div style="margin-bottom: 10px;"><div style="font-weight: 600; margin-bottom: 8px;">👑 Владелец</div>' + ownerHtml + '</div>';
-    if (adminsHtml) finalHtml += '<div style="margin-bottom: 10px;"><div style="font-weight: 600; margin-bottom: 8px;">⭐ Администраторы</div>' + adminsHtml + '</div>';
-    if (membersHtml) finalHtml += '<div style="margin-bottom: 10px;"><div style="font-weight: 600; margin-bottom: 8px;">👥 Участники</div>' + membersHtml + '</div>';
-    if (bannedHtml) finalHtml += '<div style="margin-bottom: 10px;"><div style="font-weight: 600; margin-bottom: 8px;">🚫 Черный список</div>' + bannedHtml + '</div>';
-    
-    container.innerHTML = finalHtml || '<div class="profile-empty">Нет участников</div>';
-    
-    // Добавляем обработчики кликов на участников
-    if (canManage) {
-        document.querySelectorAll('.member-item[data-member-id]').forEach(item => {
-            item.onclick = () => openMemberPermissions(item.getAttribute('data-member-id'), chatId, chatData);
-        });
-    }
-}
-
-// Открытие окна разрешений участника
-async function openMemberPermissions(memberId, chatId, chatData) {
-    window.currentGroupMemberId = memberId;
-    
-    const permsModal = document.getElementById('member-permissions-modal');
-    const mainContent = document.getElementById('group-profile-main');
-    
-    if (!permsModal || !mainContent) return;
-    
-    // Получаем данные участника
-    const userSnap = await database.ref('users/' + memberId).once('value');
-    const userData = userSnap.val();
-    
-    const isCreator = chatData.createdBy === currentUser?.uid;
-    const isAdmin = chatData.admins && chatData.admins[currentUser?.uid];
-    const isTargetCreator = chatData.createdBy === memberId;
-    const isTargetAdmin = chatData.admins && chatData.admins[memberId];
-    
-    const memberName = userData?.username || 'Пользователь';
-    document.getElementById('perms-member-name').textContent = memberName;
-    
-    // Устанавливаем текущую роль
-    const roleSelect = document.getElementById('member-role-select');
-    if (roleSelect) {
-        if (isTargetCreator) roleSelect.value = 'owner';
-        else if (isTargetAdmin) roleSelect.value = 'admin';
-        else roleSelect.value = 'member';
-        roleSelect.disabled = isTargetCreator || (isTargetAdmin && !isCreator);
-    }
-    
-    // Загружаем разрешения
-    const permissions = chatData.userPermissions?.[memberId] || {};
-    document.getElementById('perm-send-messages').checked = permissions.sendMessages !== false;
-    document.getElementById('perm-send-links').checked = permissions.sendLinks !== false;
-    document.getElementById('perm-send-photos').checked = permissions.sendPhotos !== false;
-    
-    if (document.getElementById('perm-edit-info')) {
-        document.getElementById('perm-edit-info').checked = permissions.editInfo === true;
-        document.getElementById('perm-manage-roles').checked = permissions.manageRoles === true;
-        document.getElementById('perm-kick-members').checked = permissions.kickMembers === true;
-        document.getElementById('perm-add-members').checked = permissions.addMembers === true;
-        document.getElementById('perm-delete-messages').checked = permissions.deleteMessages === true;
-    }
-    
-    // Показываем модалку
-    mainContent.style.display = 'none';
-    permsModal.style.display = 'block';
-}
-
-// Привязка событий профиля группы
-function bindGroupProfileEvents(chatId, chatData, isMember, isAdmin, isCreator, canManageMembers) {
-    // Кнопка действия (вступить/выйти)
-    const actionBtn = document.getElementById('group-action-btn');
-    if (actionBtn) {
-        actionBtn.onclick = async () => {
-            if (isMember) {
-                if (!confirm('Вы уверены, что хотите покинуть группу?')) return;
-                await database.ref('chats/' + chatId + '/members/' + currentUser.uid).remove();
-                await database.ref('userChats/' + currentUser.uid + '/' + chatId).remove();
-                showNotification('Вы покинули группу', 'success');
-                closeGroupProfileModal();
-                if (typeof closeChat === 'function') closeChat();
-                if (typeof loadChats === 'function') loadChats();
-            } else {
-                await database.ref('chats/' + chatId + '/members/' + currentUser.uid).set(true);
-                await database.ref('userChats/' + currentUser.uid + '/' + chatId).set(true);
-                showNotification('Вы присоединились к группе', 'success');
-                closeGroupProfileModal();
-                if (typeof loadChats === 'function') loadChats();
-                const newChatData = await database.ref('chats/' + chatId).once('value');
-                if (typeof openChatWithData === 'function') {
-                    openChatWithData(chatId, newChatData.val());
-                }
-            }
-        };
-    }
-    
-    // Переключение вкладок
-    const membersTab = document.getElementById('members-tab');
-    const infoTab = document.getElementById('info-tab');
-    const tabMembersBtn = document.getElementById('tab-members-btn');
-    const tabInfoBtn = document.getElementById('tab-info-btn');
-    
-    if (tabMembersBtn) {
-        tabMembersBtn.onclick = () => {
-            if (membersTab) membersTab.style.display = 'block';
-            if (infoTab) infoTab.style.display = 'none';
-            tabMembersBtn.classList.add('active');
-            tabMembersBtn.style.color = 'var(--forest)';
-            tabMembersBtn.style.borderBottom = '2px solid var(--forest)';
-            if (tabInfoBtn) {
-                tabInfoBtn.classList.remove('active');
-                tabInfoBtn.style.color = '';
-                tabInfoBtn.style.borderBottom = 'none';
-            }
-        };
-    }
-    
-    if (tabInfoBtn) {
-        tabInfoBtn.onclick = () => {
-            if (membersTab) membersTab.style.display = 'none';
-            if (infoTab) infoTab.style.display = 'block';
-            tabInfoBtn.classList.add('active');
-            tabInfoBtn.style.color = 'var(--forest)';
-            tabInfoBtn.style.borderBottom = '2px solid var(--forest)';
-            if (tabMembersBtn) {
-                tabMembersBtn.classList.remove('active');
-                tabMembersBtn.style.color = '';
-                tabMembersBtn.style.borderBottom = 'none';
-            }
-        };
-    }
-    
-    // Кнопка назад в модалке разрешений
-    const backBtn = document.getElementById('perms-back-btn');
-    const permsModal = document.getElementById('member-permissions-modal');
-    const mainContent = document.getElementById('group-profile-main');
-    
-    if (backBtn) {
-        backBtn.onclick = () => {
-            if (permsModal) permsModal.style.display = 'none';
-            if (mainContent) mainContent.style.display = 'block';
-        };
-    }
-    
-    const permsCloseBtn = document.getElementById('perms-close-btn');
-    if (permsCloseBtn) {
-        permsCloseBtn.onclick = () => {
-            if (permsModal) permsModal.style.display = 'none';
-            if (mainContent) mainContent.style.display = 'block';
-        };
-    }
-    
-    // Кнопка сохранения разрешений
-    const savePermsBtn = document.getElementById('save-permissions-btn');
-    if (savePermsBtn && window.currentGroupMemberId) {
-        savePermsBtn.onclick = async () => {
-            const memberId = window.currentGroupMemberId;
-            const roleSelect = document.getElementById('member-role-select');
-            const newRole = roleSelect?.value;
-            
-            const permissions = {
-                sendMessages: document.getElementById('perm-send-messages')?.checked || false,
-                sendLinks: document.getElementById('perm-send-links')?.checked || false,
-                sendPhotos: document.getElementById('perm-send-photos')?.checked || false,
-                editInfo: document.getElementById('perm-edit-info')?.checked || false,
-                manageRoles: document.getElementById('perm-manage-roles')?.checked || false,
-                kickMembers: document.getElementById('perm-kick-members')?.checked || false,
-                addMembers: document.getElementById('perm-add-members')?.checked || false,
-                deleteMessages: document.getElementById('perm-delete-messages')?.checked || false
-            };
-            
-            // Обновляем роль
-            if (newRole === 'admin') {
-                await database.ref('chats/' + chatId + '/admins/' + memberId).set(true);
-                await database.ref('chats/' + chatId + '/userPermissions/' + memberId).set(permissions);
-            } else if (newRole === 'member') {
-                await database.ref('chats/' + chatId + '/admins/' + memberId).remove();
-                await database.ref('chats/' + chatId + '/userPermissions/' + memberId).set(permissions);
-            }
-            
-            showNotification('Разрешения сохранены', 'success');
-            
-            // Закрываем модалку и обновляем список
-            if (permsModal) permsModal.style.display = 'none';
-            if (mainContent) mainContent.style.display = 'block';
-            await loadGroupMembersList(chatId, chatData);
-        };
-    }
-    
-    // Кнопка выгона участника
-    const kickBtn = document.getElementById('kick-member-btn');
-    if (kickBtn && window.currentGroupMemberId) {
-        kickBtn.onclick = async () => {
-            const memberId = window.currentGroupMemberId;
-            if (!confirm('Выгнать этого участника из группы?')) return;
-            
-            await database.ref('chats/' + chatId + '/members/' + memberId).remove();
-            await database.ref('chats/' + chatId + '/banned/' + memberId).set(true);
-            await database.ref('userChats/' + memberId + '/' + chatId).remove();
-            
-            showNotification('Участник выгнан', 'success');
-            
-            if (permsModal) permsModal.style.display = 'none';
-            if (mainContent) mainContent.style.display = 'block';
-            await loadGroupMembersList(chatId, chatData);
-        };
-    }
-    
-    // Поделиться группой
-    const shareBtn = document.getElementById('share-group-btn');
-    if (shareBtn) {
-        shareBtn.onclick = () => {
-            const groupLink = `${window.location.origin}/Kukumber-messenger/?group=${chatId}`;
-            if (navigator.share) {
-                navigator.share({ title: chatData.name, text: 'Присоединяйся к группе!', url: groupLink });
-            } else {
-                navigator.clipboard.writeText(groupLink);
-                showNotification('Ссылка скопирована!', 'success');
-            }
-        };
-    }
-    
-    // Кнопка возврата в профиле группы
-    const backButton = document.getElementById('group-profile-back');
-    if (backButton) {
-        backButton.onclick = () => closeGroupProfileModal();
-    }
-}
-
-// Функция закрытия профиля группы
-window.closeGroupProfileModal = function() {
-    const modal = document.getElementById('group-profile-modal');
-    if (modal) modal.remove();
-    window.currentGroupId = null;
-    window.currentGroupData = null;
-    window.currentGroupMemberId = null;
-};
-
-console.log('✅ Расширенный профиль группы загружен!');
-// ========== ПРИМЕНЕНИЕ ТЁМНОЙ ТЕМЫ К ПРОФИЛЮ ГРУППЫ ==========
-function applyThemeToGroupProfile() {
-    const isNightMode = document.body.classList.contains('night-mode');
-    const modal = document.getElementById('group-profile-modal');
-    if (!modal) return;
-    
-    const container = modal.querySelector('.group-profile-container');
-    if (container) {
-        if (isNightMode) {
-            container.style.background = '#1e1e1e';
-            container.style.color = '#e0e0e0';
-        } else {
-            container.style.background = 'white';
-            container.style.color = '';
-        }
-    }
-}
-
-// Наблюдатель за изменением темы
-const themeObserver = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-        if (mutation.attributeName === 'class') {
-            applyThemeToGroupProfile();
-        }
-    });
-});
-
-themeObserver.observe(document.body, { attributes: true });
-
-// Переопределяем closeGroupProfileModal, чтобы убрать обработчик
-const originalCloseGroupProfile = window.closeGroupProfileModal;
-window.closeGroupProfileModal = function() {
-    const modal = document.getElementById('group-profile-modal');
-    if (modal) modal.remove();
-    window.currentGroupId = null;
-    window.currentGroupData = null;
-    window.currentGroupMemberId = null;
-};
-
-console.log('✅ Тёмная тема для профиля группы применена');
-// ========== РЕДАКТИРОВАНИЕ ПРОФИЛЯ ГРУППЫ ==========
-
-// Редактирование баннера
-function bindEditBanner(chatId, chatData, isAdmin, isCreator) {
-    const editBannerBtn = document.getElementById('edit-banner-btn');
-    if (!editBannerBtn) return;
-    
-    editBannerBtn.onclick = async () => {
-        if (!isAdmin && !isCreator) {
-            showNotification('Нет прав для редактирования', 'error');
-            return;
-        }
-        
-        // Цвета для баннера
-        const colors = ['#228B22', '#556B2F', '#1a5c1a', '#32CD32', '#6b8e6b', '#000000', '#1E90FF', '#FFD700', '#FFA500', '#FF69B4', '#87CEEB', '#9370DB'];
-        
-        let colorPickerHtml = '<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; padding: 10px;">';
-        colors.forEach(color => {
-            colorPickerHtml += `<div style="width: 45px; height: 45px; border-radius: 50%; background: ${color}; cursor: pointer; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" onclick="setGroupBanner('${chatId}', '${color}')"></div>`;
-        });
-        colorPickerHtml += '</div>';
-        colorPickerHtml += '<div style="text-align: center; padding: 10px;"><button onclick="uploadGroupBannerImage(\'' + chatId + '\')" class="btn-primary" style="margin: 5px;">📷 Загрузить картинку</button></div>';
-        colorPickerHtml += '<div style="text-align: center; padding: 10px;"><button onclick="setGroupBanner(\'' + chatId + '\', null)" class="btn-secondary">Сбросить</button></div>';
-        
-        showCustomModal('Выберите баннер', colorPickerHtml);
-    };
-}
-
-// Редактирование аватара
-function bindEditAvatar(chatId, chatData, isAdmin, isCreator) {
-    const editAvatarBtn = document.getElementById('edit-avatar-btn');
-    if (!editAvatarBtn) return;
-    
-    editAvatarBtn.onclick = async () => {
-        if (!isAdmin && !isCreator) {
-            showNotification('Нет прав для редактирования', 'error');
-            return;
-        }
-        
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            showNotification('Загрузка аватара...', 'info');
-            try {
-                const url = await uploadToImgBB(file);
-                await database.ref('chats/' + chatId + '/avatar').set(url);
-                showNotification('Аватар обновлён', 'success');
-                
-                // Обновляем отображение
-                const avatarDiv = document.querySelector('.group-avatar');
-                if (avatarDiv) {
-                    avatarDiv.style.backgroundImage = `url(${url})`;
-                    avatarDiv.style.backgroundSize = 'cover';
-                    avatarDiv.textContent = '';
-                }
-                
-                // Обновляем в списке чатов
-                const chatItem = document.querySelector(`.chat-item[data-chat-id="${chatId}"] .avatar`);
-                if (chatItem) {
-                    chatItem.style.backgroundImage = `url(${url})`;
-                    chatItem.style.backgroundSize = 'cover';
-                    chatItem.textContent = '';
-                }
-            } catch (err) {
-                showNotification('Ошибка загрузки', 'error');
-            }
-        };
-        input.click();
-    };
-}
-
-// Редактирование названия группы
-function bindEditName(chatId, chatData, isAdmin, isCreator) {
-    const editNameIcon = document.getElementById('edit-name-icon');
-    const nameDisplay = document.getElementById('group-name-display');
-    
-    if (editNameIcon && nameDisplay) {
-        editNameIcon.onclick = async () => {
-            if (!isAdmin && !isCreator) {
-                showNotification('Нет прав для редактирования', 'error');
-                return;
-            }
-            
-            const newName = prompt('Введите новое название группы:', chatData.name || '');
-            if (newName && newName.trim()) {
-                await database.ref('chats/' + chatId + '/name').set(newName.trim());
-                showNotification('Название обновлено', 'success');
-                nameDisplay.textContent = newName.trim();
-                
-                // Обновляем в списке чатов
-                const chatNameSpan = document.querySelector(`.chat-item[data-chat-id="${chatId}"] .chat-item-name`);
-                if (chatNameSpan) chatNameSpan.textContent = newName.trim();
-                
-                // Обновляем в шапке чата если открыт
-                const chatHeaderName = document.getElementById('chat-username');
-                if (chatHeaderName && window.currentChatId === chatId) {
-                    chatHeaderName.textContent = newName.trim();
-                }
-            }
-        };
-        
-        // Двойной клик для быстрого редактирования
-        nameDisplay.ondblclick = () => {
-            if (isAdmin || isCreator) editNameIcon.onclick();
-        };
-    }
-}
-
-// Редактирование описания
-function bindEditDescription(chatId, chatData, isAdmin, isCreator) {
-    const editDescBtn = document.getElementById('edit-desc-btn');
-    const descDisplay = document.getElementById('group-desc-display');
-    
-    if (editDescBtn && descDisplay) {
-        editDescBtn.onclick = async () => {
-            if (!isAdmin && !isCreator) {
-                showNotification('Нет прав для редактирования', 'error');
-                return;
-            }
-            
-            const newDesc = prompt('Введите новое описание группы:', chatData.description || '');
-            if (newDesc !== null) {
-                await database.ref('chats/' + chatId + '/description').set(newDesc.trim());
-                showNotification('Описание обновлено', 'success');
-                descDisplay.textContent = newDesc.trim() || 'Нет описания';
-            }
-        };
-    }
-}
-
-// Редактирование инфо группы (K-name и настройки)
-function bindEditGroupSettings(chatId, chatData, isAdmin, isCreator) {
-    const editSettingsBtn = document.getElementById('edit-group-settings-btn');
-    if (!editSettingsBtn) return;
-    
-    editSettingsBtn.onclick = async () => {
-        if (!isAdmin && !isCreator) {
-            showNotification('Нет прав для редактирования', 'error');
-            return;
-        }
-        
-        const currentKname = chatData.kname || '';
-        const currentPrivacy = chatData.privacy || 'public';
-        
-        const modalHtml = `
-            <div id="group-settings-modal" class="modal" style="z-index: 10004;">
-                <div class="modal-content" style="max-width: 400px; border-radius: 24px;">
-                    <div class="modal-header">
-                        <h3>⚙️ Настройки группы</h3>
-                        <button onclick="closeGroupSettingsModal()" class="btn-close">×</button>
-                    </div>
-                    <div style="padding: 20px;">
-                        <label style="font-weight: 600;">K-name (уникальная ссылка)</label>
-                        <input type="text" id="group-kname-input" placeholder="mygroup" value="${currentKname}" style="width: 100%; padding: 12px; margin: 8px 0 15px; border: 2px solid var(--border); border-radius: 12px;">
-                        <small style="display: block; margin-top: -10px; margin-bottom: 15px; color: #999;">Только латиница, цифры и _</small>
-                        
-                        <label style="font-weight: 600;">Тип группы</label>
-                        <div style="margin: 8px 0 15px;">
-                            <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 2px solid var(--border); border-radius: 12px; margin-bottom: 8px; cursor: pointer;">
-                                <input type="radio" name="group-privacy" value="public" ${currentPrivacy === 'public' ? 'checked' : ''}> 🌍 Публичная
-                                <small style="margin-left: 10px; color: #999;">Может найти любой</small>
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 2px solid var(--border); border-radius: 12px; cursor: pointer;">
-                                <input type="radio" name="group-privacy" value="private" ${currentPrivacy === 'private' ? 'checked' : ''}> 🔒 Приватная
-                                <small style="margin-left: 10px; color: #999;">Только по ссылке-приглашению</small>
-                            </label>
-                        </div>
-                        
-                        <button id="save-group-settings-btn" class="btn-primary" style="width: 100%;">💾 Сохранить</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        const oldModal = document.getElementById('group-settings-modal');
-        if (oldModal) oldModal.remove();
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        
-        const saveBtn = document.getElementById('save-group-settings-btn');
-        if (saveBtn) {
-            saveBtn.onclick = async () => {
-                const newKname = document.getElementById('group-kname-input').value.trim().toLowerCase();
-                const newPrivacy = document.querySelector('input[name="group-privacy"]:checked').value;
-                
-                // Проверка K-name
-                if (newKname) {
-                    const knamePattern = /^[a-z0-9_]+$/;
-                    if (!knamePattern.test(newKname)) {
-                        showNotification('K-name может содержать только латиницу, цифры и _', 'error');
-                        return;
-                    }
-                    
-                    if (newKname !== currentKname) {
-                        const existing = await database.ref('channelKnames/' + newKname).once('value');
-                        if (existing.exists()) {
-                            showNotification('K-name уже занят', 'error');
-                            return;
-                        }
-                        if (currentKname) {
-                            await database.ref('channelKnames/' + currentKname).remove();
-                        }
-                        await database.ref('channelKnames/' + newKname).set(chatId);
-                    }
-                } else if (currentKname) {
-                    await database.ref('channelKnames/' + currentKname).remove();
-                }
-                
-                await database.ref('chats/' + chatId).update({
-                    kname: newKname || null,
-                    privacy: newPrivacy
-                });
-                
-                showNotification('Настройки сохранены', 'success');
-                closeGroupSettingsModal();
-                
-                // Обновляем отображение K-name
-                const knameDisplay = document.querySelector('.group-profile-container p');
-                if (knameDisplay && newKname) {
-                    knameDisplay.innerHTML = `🔗 @${escapeHtml(newKname)}`;
-                } else if (knameDisplay && !newKname) {
-                    knameDisplay.remove();
-                }
-            };
-        }
-    };
-}
-
-// Пользовательское модальное окно
-function showCustomModal(title, contentHtml) {
-    const oldModal = document.getElementById('custom-modal');
-    if (oldModal) oldModal.remove();
-    
-    const modal = document.createElement('div');
-    modal.id = 'custom-modal';
-    modal.className = 'modal';
-    modal.style.zIndex = '10005';
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width: 350px; border-radius: 24px;">
-            <div class="modal-header">
-                <h3>${title}</h3>
-                <button onclick="closeCustomModal()" class="btn-close">×</button>
-            </div>
-            <div style="padding: 10px 20px 20px;">
-                ${contentHtml}
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    modal.classList.remove('hidden');
-}
-
-window.closeCustomModal = function() {
-    const modal = document.getElementById('custom-modal');
-    if (modal) modal.remove();
-};
-
-window.closeGroupSettingsModal = function() {
-    const modal = document.getElementById('group-settings-modal');
-    if (modal) modal.remove();
-};
-
-// Установка баннера группы
-window.setGroupBanner = async function(chatId, colorOrUrl) {
-    try {
-        await database.ref('chats/' + chatId + '/banner').set(colorOrUrl || null);
-        showNotification('Баннер обновлён', 'success');
-        closeCustomModal();
-        
-        // Обновляем отображение
-        const bannerDiv = document.querySelector('.group-banner');
-        if (bannerDiv) {
-            if (colorOrUrl) {
-                if (colorOrUrl.startsWith('#')) {
-                    bannerDiv.style.background = colorOrUrl;
-                    bannerDiv.style.backgroundImage = 'none';
-                } else {
-                    bannerDiv.style.backgroundImage = `url(${colorOrUrl})`;
-                    bannerDiv.style.backgroundSize = 'cover';
-                    bannerDiv.style.backgroundPosition = 'center';
-                }
-            } else {
-                bannerDiv.style.background = 'linear-gradient(135deg, #228B22, #556B2F)';
-                bannerDiv.style.backgroundImage = 'none';
-            }
-        }
-    } catch (err) {
-        showNotification('Ошибка', 'error');
-    }
-};
-
-// Загрузка картинки для баннера
-window.uploadGroupBannerImage = async function(chatId) {
-    closeCustomModal();
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*,image/gif';
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        showNotification('Загрузка баннера...', 'info');
-        try {
-            const url = await uploadToImgBB(file);
-            await setGroupBanner(chatId, url);
-        } catch (err) {
-            showNotification('Ошибка загрузки', 'error');
-        }
-    };
-    input.click();
-};
-
-// Добавляем привязку всех кнопок редактирования в основную функцию
-// Найди в функции openGroupProfile место, где вызывается bindGroupProfileEvents,
-// и добавь туда эти вызовы. Или добавь этот код после bindGroupProfileEvents:
-
-// В функцию bindGroupProfileEvents добавь эти вызовы:
-function bindAllEditButtons(chatId, chatData, isAdmin, isCreator) {
-    bindEditBanner(chatId, chatData, isAdmin, isCreator);
-    bindEditAvatar(chatId, chatData, isAdmin, isCreator);
-    bindEditName(chatId, chatData, isAdmin, isCreator);
-    bindEditDescription(chatId, chatData, isAdmin, isCreator);
-    bindEditGroupSettings(chatId, chatData, isAdmin, isCreator);
-}
-
-// Переопределяем bindGroupProfileEvents, добавив в него вызов bindAllEditButtons
-const originalBindGroupProfileEvents = bindGroupProfileEvents;
-window.bindGroupProfileEvents = function(chatId, chatData, isMember, isAdmin, isCreator, canManageMembers) {
-    originalBindGroupProfileEvents(chatId, chatData, isMember, isAdmin, isCreator, canManageMembers);
-    bindAllEditButtons(chatId, chatData, isAdmin, isCreator);
-};
-
-console.log('✅ Кнопки редактирования группы привязаны!');
-// ========== ИСПРАВЛЕНИЕ ЗАГРУЗКИ АВАТАРОК В ПРОФИЛЕ ГРУППЫ ==========
-
-// Функция для установки аватарки с правильными классами
-function setAvatarWithDefault(element, avatarUrl, type) {
-    if (!element) return;
-    
-    // Очищаем предыдущие классы
-    element.classList.remove('default-avatar-user', 'default-avatar-group', 'default-avatar-channel');
-    
-    if (avatarUrl && avatarUrl.trim() !== '') {
-        element.style.backgroundImage = `url(${avatarUrl})`;
-        element.style.backgroundSize = 'cover';
-        element.style.backgroundPosition = 'center';
-        element.textContent = '';
-        // Убираем классы дефолтных аватарок
-        element.classList.remove('default-avatar-user', 'default-avatar-group', 'default-avatar-channel');
-    } else {
-        element.style.backgroundImage = '';
-        element.classList.add(`default-avatar-${type}`);
-        element.textContent = '';
-    }
-}
-
-// Переопределяем отображение аватарок в списке участников
-function fixMemberAvatars() {
-    const memberItems = document.querySelectorAll('.member-item');
-    memberItems.forEach(async (item) => {
-        const avatarDiv = item.querySelector('.avatar');
-        if (avatarDiv && !avatarDiv.hasAttribute('data-fixed')) {
-            avatarDiv.setAttribute('data-fixed', 'true');
-            
-            // Пробуем получить ID участника
-            const memberId = item.getAttribute('data-member-id');
-            if (memberId) {
-                try {
-                    const userSnap = await database.ref('users/' + memberId).once('value');
-                    const userData = userSnap.val();
-                    if (userData) {
-                        setAvatarWithDefault(avatarDiv, userData.avatar, 'user');
-                    }
-                } catch(e) {}
-            }
-        }
-    });
-}
-
-// Запускаем исправление аватарок после загрузки списка участников
-const originalLoadGroupMembersList = window.loadGroupMembersList;
-if (originalLoadGroupMembersList) {
-    window.loadGroupMembersList = async function(chatId, chatData) {
-        await originalLoadGroupMembersList(chatId, chatData);
-        setTimeout(fixMemberAvatars, 500);
-    };
-}
-
-// Исправление аватарок в профиле группы
-function fixGroupProfileAvatars(chatData) {
-    // Аватар группы
-    const groupAvatar = document.querySelector('.group-avatar');
-    if (groupAvatar) {
-        setAvatarWithDefault(groupAvatar, chatData?.avatar, 'group');
-    }
-    
-    // Баннер группы
-    const bannerDiv = document.querySelector('.group-banner');
-    if (bannerDiv && chatData?.banner) {
-        bannerDiv.style.backgroundImage = `url(${chatData.banner})`;
-        bannerDiv.style.backgroundSize = 'cover';
-        bannerDiv.style.backgroundPosition = 'center';
-    }
-}
-
-// Вызываем исправление после открытия профиля
-const originalOpenGroupProfile = window.openGroupProfile;
-if (originalOpenGroupProfile) {
-    window.openGroupProfile = async function(chatId) {
-        await originalOpenGroupProfile(chatId);
-        const chatSnap = await database.ref('chats/' + chatId).once('value');
-        const chatData = chatSnap.val();
-        setTimeout(() => fixGroupProfileAvatars(chatData), 500);
-    };
-}
-
-console.log('✅ Исправление аватарок в профилях применено');
-// ========== ИСПРАВЛЕНИЕ ОТОБРАЖЕНИЯ АВАТАРОК В МОДАЛЬНЫХ ОКНАХ ==========
-
-// Универсальная функция установки аватарки
-function setAvatarCorrectly(element, avatarUrl, defaultType) {
-    if (!element) return false;
-    
-    // Очищаем всё
-    element.style.backgroundImage = '';
-    element.style.backgroundSize = '';
-    element.style.backgroundPosition = '';
-    element.textContent = '';
-    
-    // Удаляем все классы дефолтных аватарок
-    element.classList.remove('default-avatar-user', 'default-avatar-group', 'default-avatar-channel');
-    
-    if (avatarUrl && avatarUrl.trim() !== '' && avatarUrl !== 'null' && avatarUrl !== 'undefined') {
-        // Есть URL аватарки - устанавливаем фон
-        element.style.backgroundImage = `url('${avatarUrl}')`;
-        element.style.backgroundSize = 'cover';
-        element.style.backgroundPosition = 'center';
-        element.style.backgroundColor = 'transparent';
-        element.textContent = '';
-        return true;
-    } else {
-        // Нет аватарки - ставим дефолтную иконку
-        element.classList.add(`default-avatar-${defaultType}`);
-        element.style.backgroundColor = 'var(--sage, #9DC183)';
-        return false;
-    }
-}
-
-// Исправление аватара пользователя в профиле
-window.fixUserProfileAvatar = async function(userId) {
-    const avatarDiv = document.querySelector('#user-profile-modal .profile-avatar');
-    if (!avatarDiv) return;
-    
-    try {
-        const userSnap = await database.ref('users/' + userId).once('value');
-        const userData = userSnap.val();
-        if (userData) {
-            setAvatarCorrectly(avatarDiv, userData.avatar, 'user');
-        }
-    } catch(e) {
-        console.error('Ошибка загрузки аватара:', e);
-        setAvatarCorrectly(avatarDiv, null, 'user');
-    }
-};
-
-// Исправление аватара группы в профиле
-window.fixGroupProfileAvatar = async function(groupId) {
-    const avatarDiv = document.querySelector('#group-profile-modal .group-avatar');
-    if (!avatarDiv) return;
-    
-    try {
-        const groupSnap = await database.ref('chats/' + groupId).once('value');
-        const groupData = groupSnap.val();
-        if (groupData) {
-            setAvatarCorrectly(avatarDiv, groupData.avatar, 'group');
-        }
-    } catch(e) {
-        console.error('Ошибка загрузки аватара группы:', e);
-        setAvatarCorrectly(avatarDiv, null, 'group');
-    }
-};
-
-// Исправление аватара канала в профиле
-window.fixChannelProfileAvatar = async function(channelId) {
-    const avatarDiv = document.querySelector('#channel-profile-modal .avatar');
-    if (!avatarDiv) return;
-    
-    try {
-        const channelSnap = await database.ref('chats/' + channelId).once('value');
-        const channelData = channelSnap.val();
-        if (channelData) {
-            setAvatarCorrectly(avatarDiv, channelData.avatar, 'channel');
-        }
-    } catch(e) {
-        console.error('Ошибка загрузки аватара канала:', e);
-        setAvatarCorrectly(avatarDiv, null, 'channel');
-    }
-};
-
-// Исправление аватарок участников в списке
-window.fixMemberListAvatars = async function() {
-    const memberItems = document.querySelectorAll('#group-profile-modal .member-item');
-    
-    for (const item of memberItems) {
-        const memberId = item.getAttribute('data-member-id');
-        const avatarDiv = item.querySelector('.avatar');
-        
-        if (memberId && avatarDiv && !avatarDiv.hasAttribute('data-avatar-fixed')) {
-            avatarDiv.setAttribute('data-avatar-fixed', 'true');
-            
-            try {
-                const userSnap = await database.ref('users/' + memberId).once('value');
-                const userData = userSnap.val();
-                if (userData) {
-                    setAvatarCorrectly(avatarDiv, userData.avatar, 'user');
-                } else {
-                    setAvatarCorrectly(avatarDiv, null, 'user');
-                }
-            } catch(e) {
-                setAvatarCorrectly(avatarDiv, null, 'user');
-            }
-        }
-    }
-};
-
-// Перехватываем открытие профиля пользователя
-const originalOpenUserProfile = window.openUserProfile;
-if (originalOpenUserProfile) {
-    window.openUserProfile = async function(userId) {
-        await originalOpenUserProfile(userId);
-        setTimeout(() => window.fixUserProfileAvatar(userId), 300);
-    };
-}
-
-// Перехватываем открытие профиля группы
-const originalOpenGroupProfile = window.openGroupProfile;
-if (originalOpenGroupProfile) {
-    window.openGroupProfile = async function(groupId) {
-        await originalOpenGroupProfile(groupId);
-        setTimeout(() => {
-            window.fixGroupProfileAvatar(groupId);
-            window.fixMemberListAvatars();
-        }, 500);
-    };
-}
-
-// Перехватываем открытие профиля канала
-const originalOpenChannelProfile = window.openChannelProfile;
-if (originalOpenChannelProfile) {
-    window.openChannelProfile = async function(channelId) {
-        await originalOpenChannelProfile(channelId);
-        setTimeout(() => window.fixChannelProfileAvatar(channelId), 300);
-    };
-}
-
-// Наблюдатель за появлением модальных окон
-const modalObserver = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-        if (mutation.addedNodes.length) {
-            mutation.addedNodes.forEach(function(node) {
-                if (node.nodeType === 1) {
-                    // Профиль пользователя
-                    if (node.id === 'user-profile-modal') {
-                        const userId = window.viewingProfileUserId;
-                        if (userId) setTimeout(() => window.fixUserProfileAvatar(userId), 300);
-                    }
-                    // Профиль группы
-                    if (node.id === 'group-profile-modal') {
-                        const groupId = window.currentGroupId;
-                        if (groupId) {
-                            setTimeout(() => {
-                                window.fixGroupProfileAvatar(groupId);
-                                window.fixMemberListAvatars();
-                            }, 500);
-                        }
-                    }
-                    // Профиль канала
-                    if (node.id === 'channel-profile-modal') {
-                        const channelId = window.currentChannelId;
-                        if (channelId) setTimeout(() => window.fixChannelProfileAvatar(channelId), 300);
-                    }
-                }
-            });
-        }
-    });
-});
-
-modalObserver.observe(document.body, { childList: true, subtree: true });
-
-console.log('✅ Исправление аватарок в модальных окнах активировано');
-// ========== ВОССТАНОВЛЕНИЕ РАБОТЫ ЧАТОВ ==========
-
-// Простая и надёжная загрузка чатов
-window.loadChats = function() {
-    console.log('loadChats() вызвана (восстановленная)');
-    
-    if (!window.currentUser || !window.currentUser.uid) {
-        console.log('Нет пользователя');
-        return;
-    }
-    
-    var container = document.getElementById('chats-list');
-    if (!container) return;
-    
-    container.innerHTML = '<div class="empty-chats">🔄 Загрузка...</div>';
-    
-    database.ref('userChats/' + window.currentUser.uid).once('value', function(snapshot) {
-        var userChats = snapshot.val();
-        
-        if (!userChats) {
-            container.innerHTML = '<div class="empty-chats">💬 Нет чатов</div>';
-            return;
-        }
-        
-        var chatIds = Object.keys(userChats);
-        var chatsHtml = '';
-        var processed = 0;
-        
-        chatIds.forEach(function(chatId) {
-            database.ref('chats/' + chatId).once('value', function(chatSnap) {
-                var chat = chatSnap.val();
-                if (chat) {
-                    // Получаем имя для личного чата
-                    if (chat.type === 'private') {
-                        var otherId = chat.participants.find(id => id !== window.currentUser.uid);
-                        if (otherId) {
-                            database.ref('users/' + otherId + '/username').once('value', function(nameSnap) {
-                                var name = nameSnap.val() || 'Пользователь';
-                                var preview = chat.lastMessage || 'Нет сообщений';
-                                if (preview.length > 40) preview = preview.substring(0, 37) + '...';
-                                
-                                chatsHtml += `
-                                    <div class="chat-item" data-chat-id="${chatId}">
-                                        <div class="chat-item-avatar">
-                                            <div class="avatar default-avatar-user"></div>
-                                        </div>
-                                        <div class="chat-item-info">
-                                            <div class="chat-item-header">
-                                                <span class="chat-item-name">${escapeHtml(name)}</span>
-                                                <span class="chat-item-time">${formatTime(chat.lastMessageTime)}</span>
-                                            </div>
-                                            <div class="chat-item-preview">${escapeHtml(preview)}</div>
-                                        </div>
-                                    </div>
-                                `;
-                                processed++;
-                                if (processed === chatIds.length) {
-                                    container.innerHTML = chatsHtml;
-                                    attachSimpleChatClicks();
-                                }
-                            });
-                            return;
-                        }
-                    } else {
-                        var name = chat.name || (chat.type === 'group' ? 'Группа' : 'Канал');
-                        var preview = chat.lastMessage || 'Нет сообщений';
-                        if (preview.length > 40) preview = preview.substring(0, 37) + '...';
-                        var avatarClass = chat.type === 'group' ? 'default-avatar-group' : 'default-avatar-channel';
-                        
-                        chatsHtml += `
-                            <div class="chat-item" data-chat-id="${chatId}">
-                                <div class="chat-item-avatar">
-                                    <div class="avatar ${avatarClass}"></div>
-                                </div>
-                                <div class="chat-item-info">
-                                    <div class="chat-item-header">
-                                        <span class="chat-item-name">${escapeHtml(name)}</span>
-                                        <span class="chat-item-time">${formatTime(chat.lastMessageTime)}</span>
-                                    </div>
-                                    <div class="chat-item-preview">${escapeHtml(preview)}</div>
-                                </div>
-                            </div>
-                        `;
-                        processed++;
-                        if (processed === chatIds.length) {
-                            container.innerHTML = chatsHtml;
-                            attachSimpleChatClicks();
-                        }
-                    }
-                } else {
-                    processed++;
-                    if (processed === chatIds.length && chatsHtml === '') {
-                        container.innerHTML = chatsHtml || '<div class="empty-chats">💬 Нет чатов</div>';
-                        if (chatsHtml) attachSimpleChatClicks();
-                    }
-                }
-            });
-        });
-    });
-};
-
-// Простая функция открытия чата
-window.openChatById = function(chatId) {
-    console.log('openChatById:', chatId);
-    
-    if (!chatId) return;
-    
-    database.ref('chats/' + chatId).once('value', function(snap) {
-        var chatData = snap.val();
-        if (!chatData) {
-            alert('Чат не найден');
-            return;
-        }
-        
-        window.currentChatId = chatId;
-        window.currentChatData = chatData;
-        
-        // Показываем область чата
-        var noChat = document.getElementById('no-chat-selected');
-        var activeChat = document.getElementById('active-chat');
-        if (noChat) noChat.classList.add('hidden');
-        if (activeChat) activeChat.classList.remove('hidden');
-        
-        // Обновляем шапку
-        var nameEl = document.getElementById('chat-username');
-        if (nameEl) {
-            if (chatData.type === 'private') {
-                var otherId = chatData.participants.find(id => id !== window.currentUser.uid);
-                if (otherId) {
-                    database.ref('users/' + otherId + '/username').once('value', function(nameSnap) {
-                        nameEl.textContent = nameSnap.val() || 'Пользователь';
-                    });
-                }
-            } else {
-                nameEl.textContent = chatData.name || (chatData.type === 'group' ? 'Группа' : 'Канал');
-            }
-        }
-        
-        // Очищаем и загружаем сообщения
-        var msgContainer = document.getElementById('messages-container');
-        if (msgContainer) msgContainer.innerHTML = '<div style="text-align:center;padding:20px;">Загрузка сообщений...</div>';
-        
-        database.ref('messages/' + chatId).orderByChild('timestamp').limitToLast(50).once('value', function(messagesSnap) {
-            var messages = messagesSnap.val();
-            if (msgContainer) msgContainer.innerHTML = '';
-            if (messages) {
-                var msgArray = [];
-                for (var id in messages) {
-                    msgArray.push({id: id, data: messages[id]});
-                }
-                msgArray.sort((a,b) => (a.data.timestamp||0) - (b.data.timestamp||0));
-                msgArray.forEach(function(msg) {
-                    var isSent = msg.data.senderId === window.currentUser.uid;
-                    var msgDiv = document.createElement('div');
-                    msgDiv.className = 'message ' + (isSent ? 'sent' : 'received');
-                    msgDiv.innerHTML = '<div class="message-text">' + escapeHtml(msg.data.text || 'Медиа') + '</div><div class="message-time">' + formatTime(msg.data.timestamp) + '</div>';
-                    if (msgContainer) msgContainer.appendChild(msgDiv);
-                });
-            }
-            if (msgContainer) msgContainer.scrollTop = msgContainer.scrollHeight;
-        });
-    });
-};
-
-// Привязка кликов
-function attachSimpleChatClicks() {
-    document.querySelectorAll('.chat-item').forEach(function(item) {
-        item.onclick = function(e) {
-            e.preventDefault();
-            var chatId = this.getAttribute('data-chat-id');
-            if (chatId) window.openChatById(chatId);
-        };
-    });
-}
-
-// Загружаем чаты при старте
-setTimeout(function() {
-    if (window.currentUser && window.currentUser.uid) {
-        window.loadChats();
-    }
-}, 500);
-
-console.log('✅ Чаты восстановлены!');
+console.log('chat.js полностью загружен и готов к работе');
