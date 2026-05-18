@@ -2513,3 +2513,66 @@ window.openChannelProfile = async function(chatId) {
 
 console.log('✅ Телефонные профили групп/каналов установлены!');
 console.log('✅ Глобальный обработчик кликов по чатам установлен!');
+// ========== ФИНАЛЬНЫЙ ФИКС ДЛЯ ТЕЛЕФОНА - КЛИК ПО ШАПКЕ ==========
+// Ждём загрузки страницы
+setTimeout(function() {
+    console.log('Фикс шапки: запущен');
+    
+    // Функция для установки обработчика на шапку
+    function fixChatHeaderClick() {
+        var chatUserInfo = document.querySelector('.chat-user-info');
+        if (!chatUserInfo) {
+            // Пробуем другие селекторы
+            chatUserInfo = document.querySelector('#active-chat .chat-user-info');
+        }
+        if (!chatUserInfo) {
+            chatUserInfo = document.querySelector('.chat-header .chat-user-info');
+        }
+        
+        if (chatUserInfo && !chatUserInfo.hasAttribute('data-fixed')) {
+            console.log('Фикс шапки: устанавливаю обработчик');
+            chatUserInfo.setAttribute('data-fixed', 'true');
+            chatUserInfo.style.cursor = 'pointer';
+            
+            chatUserInfo.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('КЛИК ПО ШАПКЕ!');
+                
+                var chatData = window.currentChatData;
+                if (!chatData) {
+                    alert('Сначала откройте чат');
+                    return;
+                }
+                
+                if (chatData.type === 'group') {
+                    var name = chatData.name || 'Группа';
+                    var members = chatData.members ? Object.keys(chatData.members).length : 0;
+                    alert('👥 ГРУППА: ' + name + '\n👥 Участников: ' + members + '\n📝 ' + (chatData.description || 'Нет описания'));
+                } 
+                else if (chatData.type === 'channel') {
+                    var name = chatData.name || 'Канал';
+                    var subs = chatData.subscribers ? Object.keys(chatData.subscribers).length : 0;
+                    alert('📢 КАНАЛ: ' + name + '\n👥 Подписчиков: ' + subs + '\n📝 ' + (chatData.description || 'Нет описания'));
+                } 
+                else if (chatData.type === 'private') {
+                    alert('👤 Пользователь');
+                }
+            };
+        }
+    }
+    
+    // Запускаем сразу
+    fixChatHeaderClick();
+    
+    // Запускаем каждые 2 секунды (на случай, если чат откроется позже)
+    setInterval(fixChatHeaderClick, 2000);
+    
+    // Также следим за открытием чата через MutationObserver
+    var observer = new MutationObserver(function() {
+        fixChatHeaderClick();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    console.log('✅ Фикс шапки: обработчик готов');
+}, 1000);
