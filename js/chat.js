@@ -2991,3 +2991,517 @@ setTimeout(setupHeaderClickListener, 1000);
 setInterval(setupHeaderClickListener, 3000);
 
 console.log('✅ Полностью рабочие профили групп и каналов установлены!');
+// ========== РАСШИРЕННЫЙ ПРОФИЛЬ ГРУППЫ (ПОЛНАЯ ВЕРСИЯ) ==========
+
+// Глобальная переменная для текущего редактируемого участника
+window.currentGroupMemberId = null;
+
+window.openGroupProfile = async function(chatId) {
+    console.log('openGroupProfile вызван для:', chatId);
+    
+    if (!chatId) {
+        showNotification('ID группы не указан', 'error');
+        return;
+    }
+    
+    try {
+        const chatSnap = await database.ref('chats/' + chatId).once('value');
+        const chatData = chatSnap.val();
+        
+        if (!chatData || chatData.type !== 'group') {
+            showNotification('Группа не найдена', 'error');
+            return;
+        }
+        
+        // Закрываем старое окно
+        const oldModal = document.getElementById('group-profile-modal');
+        if (oldModal) oldModal.remove();
+        
+        // Получаем данные о создателе
+        let creatorName = 'Неизвестно';
+        let creatorAvatar = '';
+        if (chatData.createdBy) {
+            try {
+                const creatorSnap = await database.ref('users/' + chatData.createdBy).once('value');
+                const creatorData = creatorSnap.val();
+                if (creatorData) {
+                    creatorName = creatorData.username;
+                    creatorAvatar = creatorData.avatar || '';
+                }
+            } catch(e) {}
+        }
+        
+        const membersCount = chatData.members ? Object.keys(chatData.members).length : 0;
+        const isMember = chatData.members && chatData.members[currentUser?.uid];
+        const isAdmin = chatData.admins && chatData.admins[currentUser?.uid];
+        const isCreator = chatData.createdBy === currentUser?.uid;
+        const canManageMembers = isCreator || (isAdmin && chatData.adminPermissions && chatData.adminPermissions[currentUser?.uid]?.manageMembers);
+        
+        // Сохраняем для действий
+        window.currentGroupId = chatId;
+        window.currentGroupData = chatData;
+        
+        // Баннер (если есть)
+        const bannerStyle = chatData.banner ? 
+            `background-image: url(${chatData.banner}); background-size: cover; background-position: center;` : 
+            'background: linear-gradient(135deg, #228B22, #556B2F);';
+        
+        // Формируем HTML модального окна
+        const modal = document.createElement('div');
+        modal.id = 'group-profile-modal';
+        modal.className = 'modal';
+        modal.style.zIndex = '10003';
+        modal.innerHTML = `
+            <div class="group-profile-container" style="max-width: 500px; width: 95%; background: white; border-radius: 28px; overflow: hidden; max-height: 85vh; display: flex; flex-direction: column; position: relative;">
+                <!-- Шапка с возвратом -->
+                <div id="group-profile-header" style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee; background: white; flex-shrink: 0;">
+                    <button id="group-profile-back" style="background: none; border: none; font-size: 24px; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">←</button>
+                    <h3 id="group-profile-title" style="margin: 0; flex: 1; text-align: center;">Информация</h3>
+                    <button onclick="closeGroupProfileModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; width: 40px; height: 40px;">×</button>
+                </div>
+                
+                <!-- Основной контент -->
+                <div id="group-profile-main" style="flex: 1; overflow-y: auto;">
+                    <!-- Баннер -->
+                    <div class="group-banner" style="height: 140px; position: relative; ${bannerStyle}">
+                        ${(isAdmin || isCreator) ? '<button id="edit-banner-btn" style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;">✏️</button>' : ''}
+                    </div>
+                    
+                    <!-- Аватар -->
+                    <div style="display: flex; justify-content: center; margin-top: -50px; position: relative;">
+                        <div class="group-avatar" style="width: 90px; height: 90px; border-radius: 50%; background: var(--sage); border: 4px solid white; display: flex; align-items: center; justify-content: center; font-size: 45px; ${chatData.avatar ? 'background-image: url(' + chatData.avatar + '); background-size: cover;' : ''}">
+                            ${chatData.avatar ? '' : '👥'}
+                            ${(isAdmin || isCreator) ? '<button id="edit-avatar-btn" style="position: absolute; bottom: 0; right: 0; background: var(--forest); border: none; color: white; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px;">✏️</button>' : ''}
+                        </div>
+                    </div>
+                    
+                    <!-- Информация -->
+                    <div style="text-align: center; padding: 15px;">
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                            <h2 id="group-name-display" style="margin: 0; cursor: ${(isAdmin || isCreator) ? 'pointer' : 'default'};">${escapeHtml(chatData.name || 'Группа')}</h2>
+                            ${(isAdmin || isCreator) ? '<span id="edit-name-icon" style="cursor: pointer; font-size: 16px;">✏️</span>' : ''}
+                        </div>
+                        ${chatData.kname ? `<p style="color: var(--forest); margin: 5px 0;">🔗 @${escapeHtml(chatData.kname)}</p>` : ''}
+                        
+                        <!-- Кнопка действия -->
+                        <button id="group-action-btn" style="margin: 10px auto; padding: 8px 24px; border-radius: 30px; border: none; font-weight: 600; cursor: pointer; background: ${isMember ? '#dc3545' : 'var(--forest)'}; color: white;">
+                            ${isMember ? '🚪 Выйти из группы' : '➕ Вступить в группу'}
+                        </button>
+                        
+                        <!-- Описание -->
+                        <div style="margin-top: 15px; text-align: left; background: var(--background); border-radius: 16px; padding: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-weight: 600;">📝 Описание</span>
+                                ${(isAdmin || isCreator) ? '<button id="edit-desc-btn" style="background: none; border: none; cursor: pointer;">✏️</button>' : ''}
+                            </div>
+                            <p id="group-desc-display" style="margin: 8px 0 0 0; color: #666;">${escapeHtml(chatData.description || 'Нет описания')}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Вкладки -->
+                    <div style="display: flex; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+                        <button id="tab-members-btn" class="group-tab-btn active" style="flex: 1; padding: 12px; background: none; border: none; cursor: pointer; font-weight: 600; color: var(--forest); border-bottom: 2px solid var(--forest);">👥 Участники</button>
+                        <button id="tab-info-btn" class="group-tab-btn" style="flex: 1; padding: 12px; background: none; border: none; cursor: pointer;">ℹ️ Инфо</button>
+                    </div>
+                    
+                    <!-- Контент вкладок -->
+                    <div id="members-tab" style="padding: 10px;">
+                        <div id="members-list" style="max-height: 350px; overflow-y: auto;">
+                            <div class="profile-loading">Загрузка участников...</div>
+                        </div>
+                    </div>
+                    
+                    <div id="info-tab" style="padding: 15px; display: none;">
+                        <div style="background: var(--background); border-radius: 16px; padding: 15px; margin-bottom: 10px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>📅 Дата создания</span>
+                                <span>${new Date(chatData.createdAt).toLocaleDateString()}</span>
+                            </div>
+                        </div>
+                        <div style="background: var(--background); border-radius: 16px; padding: 15px; margin-bottom: 10px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>👥 Всего участников</span>
+                                <span>${membersCount}</span>
+                            </div>
+                        </div>
+                        <div style="background: var(--background); border-radius: 16px; padding: 15px; margin-bottom: 10px;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>👑 Создатель</span>
+                                <span style="color: gold;">${escapeHtml(creatorName)}</span>
+                            </div>
+                        </div>
+                        <button id="share-group-btn" style="width: 100%; padding: 12px; background: var(--forest); color: white; border: none; border-radius: 16px; margin-top: 10px; cursor: pointer;">🔗 Поделиться группой</button>
+                        ${(isAdmin || isCreator) ? '<button id="edit-group-settings-btn" style="width: 100%; padding: 12px; background: var(--background); border: 1px solid var(--border); border-radius: 16px; margin-top: 10px; cursor: pointer;">⚙️ Изменить инфо группы</button>' : ''}
+                    </div>
+                </div>
+                
+                <!-- Модалка разрешений участника (изначально скрыта) -->
+                <div id="member-permissions-modal" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 20; overflow-y: auto;">
+                    <div style="display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #eee;">
+                        <button id="perms-back-btn" style="background: none; border: none; font-size: 24px; cursor: pointer;">←</button>
+                        <h3 style="margin: 0; flex: 1; text-align: center;" id="perms-member-name">Разрешения</h3>
+                        <button id="perms-close-btn" style="background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
+                    </div>
+                    <div style="padding: 20px;">
+                        <div style="margin-bottom: 20px;">
+                            <label style="font-weight: 600;">Должность</label>
+                            <select id="member-role-select" style="width: 100%; padding: 12px; margin-top: 8px; border: 2px solid var(--border); border-radius: 12px;">
+                                <option value="member">Участник</option>
+                                ${(isCreator || (isAdmin && canManageMembers)) ? '<option value="admin">Администратор</option>' : ''}
+                                ${isCreator ? '<option value="owner">Владелец</option>' : ''}
+                            </select>
+                        </div>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <div style="font-weight: 600; margin-bottom: 10px;">Разрешения</div>
+                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                                <span>✏️ Писать в группу</span>
+                                <label class="switch"><input type="checkbox" id="perm-send-messages" checked><span class="slider"></span></label>
+                            </div>
+                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                                <span>🔗 Отправлять ссылки</span>
+                                <label class="switch"><input type="checkbox" id="perm-send-links" checked><span class="slider"></span></label>
+                            </div>
+                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                                <span>📷 Отправлять фото</span>
+                                <label class="switch"><input type="checkbox" id="perm-send-photos" checked><span class="slider"></span></label>
+                            </div>
+                            ${(isCreator || (isAdmin && canManageMembers)) ? `
+                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                                <span>👑 Менять инфо группы</span>
+                                <label class="switch"><input type="checkbox" id="perm-edit-info"><span class="slider"></span></label>
+                            </div>
+                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                                <span>👥 Менять должность участников</span>
+                                <label class="switch"><input type="checkbox" id="perm-manage-roles"><span class="slider"></span></label>
+                            </div>
+                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                                <span>🚪 Выгонять участников</span>
+                                <label class="switch"><input type="checkbox" id="perm-kick-members"><span class="slider"></span></label>
+                            </div>
+                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                                <span>➕ Добавлять участников</span>
+                                <label class="switch"><input type="checkbox" id="perm-add-members"><span class="slider"></span></label>
+                            </div>
+                            <div class="permission-item" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                                <span>🗑️ Удалять чужие сообщения</span>
+                                <label class="switch"><input type="checkbox" id="perm-delete-messages"><span class="slider"></span></label>
+                            </div>
+                            ` : ''}
+                        </div>
+                        
+                        <button id="save-permissions-btn" style="width: 100%; padding: 14px; background: var(--forest); color: white; border: none; border-radius: 16px; cursor: pointer;">💾 Сохранить</button>
+                        ${(isCreator || (isAdmin && canManageMembers)) ? '<button id="kick-member-btn" style="width: 100%; padding: 14px; background: #dc3545; color: white; border: none; border-radius: 16px; margin-top: 10px; cursor: pointer;">🚫 Выгнать из группы</button>' : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        modal.classList.remove('hidden');
+        
+        // Загружаем список участников
+        await loadGroupMembersList(chatId, chatData);
+        
+        // Привязываем обработчики
+        bindGroupProfileEvents(chatId, chatData, isMember, isAdmin, isCreator, canManageMembers);
+        
+    } catch (err) {
+        console.error('Ошибка открытия профиля группы:', err);
+        showNotification('Ошибка загрузки группы', 'error');
+    }
+};
+
+// Загрузка списка участников
+async function loadGroupMembersList(chatId, chatData) {
+    const container = document.getElementById('members-list');
+    if (!container) return;
+    
+    if (!chatData.members) {
+        container.innerHTML = '<div class="profile-empty">Нет участников</div>';
+        return;
+    }
+    
+    const memberIds = Object.keys(chatData.members);
+    const isAdmin = chatData.admins && chatData.admins[currentUser?.uid];
+    const isCreator = chatData.createdBy === currentUser?.uid;
+    const canManage = isCreator || (isAdmin && chatData.adminPermissions?.[currentUser?.uid]?.manageMembers);
+    
+    let ownerHtml = '';
+    let adminsHtml = '';
+    let membersHtml = '';
+    let bannedHtml = '';
+    
+    for (const memberId of memberIds) {
+        try {
+            const userSnap = await database.ref('users/' + memberId).once('value');
+            const userData = userSnap.val();
+            const isUserCreator = chatData.createdBy === memberId;
+            const isUserAdmin = chatData.admins && chatData.admins[memberId] && !isUserCreator;
+            const isBanned = chatData.banned && chatData.banned[memberId];
+            
+            const avatarStyle = userData?.avatar ? `background-image: url(${userData.avatar}); background-size: cover;` : '';
+            const avatarContent = userData?.avatar ? '' : '👤';
+            
+            const memberHtml = `
+                <div class="member-item" data-member-id="${memberId}" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid var(--border); ${canManage ? 'cursor: pointer;' : ''}">
+                    <div class="avatar" style="width: 45px; height: 45px; ${avatarStyle}">${avatarContent}</div>
+                    <div style="flex:1;">
+                        <div style="font-weight: 500;">${escapeHtml(userData?.username || 'Пользователь')}</div>
+                        <div style="font-size: 11px;">
+                            ${isUserCreator ? '<span style="color: gold;">👑 владелец</span>' : (isUserAdmin ? '<span style="color: var(--forest);">⭐ администратор</span>' : 'участник')}
+                            ${isBanned ? '<span style="color: #ff4444; margin-left: 8px;">🚫 в ЧС</span>' : ''}
+                        </div>
+                    </div>
+                    ${canManage && !isUserCreator ? '<span style="color: var(--text-muted);">›</span>' : ''}
+                </div>
+            `;
+            
+            if (isUserCreator) {
+                ownerHtml = memberHtml;
+            } else if (isUserAdmin) {
+                adminsHtml += memberHtml;
+            } else if (isBanned) {
+                bannedHtml += memberHtml;
+            } else {
+                membersHtml += memberHtml;
+            }
+        } catch(e) {}
+    }
+    
+    let finalHtml = '';
+    if (ownerHtml) finalHtml += '<div style="margin-bottom: 10px;"><div style="font-weight: 600; margin-bottom: 8px;">👑 Владелец</div>' + ownerHtml + '</div>';
+    if (adminsHtml) finalHtml += '<div style="margin-bottom: 10px;"><div style="font-weight: 600; margin-bottom: 8px;">⭐ Администраторы</div>' + adminsHtml + '</div>';
+    if (membersHtml) finalHtml += '<div style="margin-bottom: 10px;"><div style="font-weight: 600; margin-bottom: 8px;">👥 Участники</div>' + membersHtml + '</div>';
+    if (bannedHtml) finalHtml += '<div style="margin-bottom: 10px;"><div style="font-weight: 600; margin-bottom: 8px;">🚫 Черный список</div>' + bannedHtml + '</div>';
+    
+    container.innerHTML = finalHtml || '<div class="profile-empty">Нет участников</div>';
+    
+    // Добавляем обработчики кликов на участников
+    if (canManage) {
+        document.querySelectorAll('.member-item[data-member-id]').forEach(item => {
+            item.onclick = () => openMemberPermissions(item.getAttribute('data-member-id'), chatId, chatData);
+        });
+    }
+}
+
+// Открытие окна разрешений участника
+async function openMemberPermissions(memberId, chatId, chatData) {
+    window.currentGroupMemberId = memberId;
+    
+    const permsModal = document.getElementById('member-permissions-modal');
+    const mainContent = document.getElementById('group-profile-main');
+    
+    if (!permsModal || !mainContent) return;
+    
+    // Получаем данные участника
+    const userSnap = await database.ref('users/' + memberId).once('value');
+    const userData = userSnap.val();
+    
+    const isCreator = chatData.createdBy === currentUser?.uid;
+    const isAdmin = chatData.admins && chatData.admins[currentUser?.uid];
+    const isTargetCreator = chatData.createdBy === memberId;
+    const isTargetAdmin = chatData.admins && chatData.admins[memberId];
+    
+    const memberName = userData?.username || 'Пользователь';
+    document.getElementById('perms-member-name').textContent = memberName;
+    
+    // Устанавливаем текущую роль
+    const roleSelect = document.getElementById('member-role-select');
+    if (roleSelect) {
+        if (isTargetCreator) roleSelect.value = 'owner';
+        else if (isTargetAdmin) roleSelect.value = 'admin';
+        else roleSelect.value = 'member';
+        roleSelect.disabled = isTargetCreator || (isTargetAdmin && !isCreator);
+    }
+    
+    // Загружаем разрешения
+    const permissions = chatData.userPermissions?.[memberId] || {};
+    document.getElementById('perm-send-messages').checked = permissions.sendMessages !== false;
+    document.getElementById('perm-send-links').checked = permissions.sendLinks !== false;
+    document.getElementById('perm-send-photos').checked = permissions.sendPhotos !== false;
+    
+    if (document.getElementById('perm-edit-info')) {
+        document.getElementById('perm-edit-info').checked = permissions.editInfo === true;
+        document.getElementById('perm-manage-roles').checked = permissions.manageRoles === true;
+        document.getElementById('perm-kick-members').checked = permissions.kickMembers === true;
+        document.getElementById('perm-add-members').checked = permissions.addMembers === true;
+        document.getElementById('perm-delete-messages').checked = permissions.deleteMessages === true;
+    }
+    
+    // Показываем модалку
+    mainContent.style.display = 'none';
+    permsModal.style.display = 'block';
+}
+
+// Привязка событий профиля группы
+function bindGroupProfileEvents(chatId, chatData, isMember, isAdmin, isCreator, canManageMembers) {
+    // Кнопка действия (вступить/выйти)
+    const actionBtn = document.getElementById('group-action-btn');
+    if (actionBtn) {
+        actionBtn.onclick = async () => {
+            if (isMember) {
+                if (!confirm('Вы уверены, что хотите покинуть группу?')) return;
+                await database.ref('chats/' + chatId + '/members/' + currentUser.uid).remove();
+                await database.ref('userChats/' + currentUser.uid + '/' + chatId).remove();
+                showNotification('Вы покинули группу', 'success');
+                closeGroupProfileModal();
+                if (typeof closeChat === 'function') closeChat();
+                if (typeof loadChats === 'function') loadChats();
+            } else {
+                await database.ref('chats/' + chatId + '/members/' + currentUser.uid).set(true);
+                await database.ref('userChats/' + currentUser.uid + '/' + chatId).set(true);
+                showNotification('Вы присоединились к группе', 'success');
+                closeGroupProfileModal();
+                if (typeof loadChats === 'function') loadChats();
+                const newChatData = await database.ref('chats/' + chatId).once('value');
+                if (typeof openChatWithData === 'function') {
+                    openChatWithData(chatId, newChatData.val());
+                }
+            }
+        };
+    }
+    
+    // Переключение вкладок
+    const membersTab = document.getElementById('members-tab');
+    const infoTab = document.getElementById('info-tab');
+    const tabMembersBtn = document.getElementById('tab-members-btn');
+    const tabInfoBtn = document.getElementById('tab-info-btn');
+    
+    if (tabMembersBtn) {
+        tabMembersBtn.onclick = () => {
+            if (membersTab) membersTab.style.display = 'block';
+            if (infoTab) infoTab.style.display = 'none';
+            tabMembersBtn.classList.add('active');
+            tabMembersBtn.style.color = 'var(--forest)';
+            tabMembersBtn.style.borderBottom = '2px solid var(--forest)';
+            if (tabInfoBtn) {
+                tabInfoBtn.classList.remove('active');
+                tabInfoBtn.style.color = '';
+                tabInfoBtn.style.borderBottom = 'none';
+            }
+        };
+    }
+    
+    if (tabInfoBtn) {
+        tabInfoBtn.onclick = () => {
+            if (membersTab) membersTab.style.display = 'none';
+            if (infoTab) infoTab.style.display = 'block';
+            tabInfoBtn.classList.add('active');
+            tabInfoBtn.style.color = 'var(--forest)';
+            tabInfoBtn.style.borderBottom = '2px solid var(--forest)';
+            if (tabMembersBtn) {
+                tabMembersBtn.classList.remove('active');
+                tabMembersBtn.style.color = '';
+                tabMembersBtn.style.borderBottom = 'none';
+            }
+        };
+    }
+    
+    // Кнопка назад в модалке разрешений
+    const backBtn = document.getElementById('perms-back-btn');
+    const permsModal = document.getElementById('member-permissions-modal');
+    const mainContent = document.getElementById('group-profile-main');
+    
+    if (backBtn) {
+        backBtn.onclick = () => {
+            if (permsModal) permsModal.style.display = 'none';
+            if (mainContent) mainContent.style.display = 'block';
+        };
+    }
+    
+    const permsCloseBtn = document.getElementById('perms-close-btn');
+    if (permsCloseBtn) {
+        permsCloseBtn.onclick = () => {
+            if (permsModal) permsModal.style.display = 'none';
+            if (mainContent) mainContent.style.display = 'block';
+        };
+    }
+    
+    // Кнопка сохранения разрешений
+    const savePermsBtn = document.getElementById('save-permissions-btn');
+    if (savePermsBtn && window.currentGroupMemberId) {
+        savePermsBtn.onclick = async () => {
+            const memberId = window.currentGroupMemberId;
+            const roleSelect = document.getElementById('member-role-select');
+            const newRole = roleSelect?.value;
+            
+            const permissions = {
+                sendMessages: document.getElementById('perm-send-messages')?.checked || false,
+                sendLinks: document.getElementById('perm-send-links')?.checked || false,
+                sendPhotos: document.getElementById('perm-send-photos')?.checked || false,
+                editInfo: document.getElementById('perm-edit-info')?.checked || false,
+                manageRoles: document.getElementById('perm-manage-roles')?.checked || false,
+                kickMembers: document.getElementById('perm-kick-members')?.checked || false,
+                addMembers: document.getElementById('perm-add-members')?.checked || false,
+                deleteMessages: document.getElementById('perm-delete-messages')?.checked || false
+            };
+            
+            // Обновляем роль
+            if (newRole === 'admin') {
+                await database.ref('chats/' + chatId + '/admins/' + memberId).set(true);
+                await database.ref('chats/' + chatId + '/userPermissions/' + memberId).set(permissions);
+            } else if (newRole === 'member') {
+                await database.ref('chats/' + chatId + '/admins/' + memberId).remove();
+                await database.ref('chats/' + chatId + '/userPermissions/' + memberId).set(permissions);
+            }
+            
+            showNotification('Разрешения сохранены', 'success');
+            
+            // Закрываем модалку и обновляем список
+            if (permsModal) permsModal.style.display = 'none';
+            if (mainContent) mainContent.style.display = 'block';
+            await loadGroupMembersList(chatId, chatData);
+        };
+    }
+    
+    // Кнопка выгона участника
+    const kickBtn = document.getElementById('kick-member-btn');
+    if (kickBtn && window.currentGroupMemberId) {
+        kickBtn.onclick = async () => {
+            const memberId = window.currentGroupMemberId;
+            if (!confirm('Выгнать этого участника из группы?')) return;
+            
+            await database.ref('chats/' + chatId + '/members/' + memberId).remove();
+            await database.ref('chats/' + chatId + '/banned/' + memberId).set(true);
+            await database.ref('userChats/' + memberId + '/' + chatId).remove();
+            
+            showNotification('Участник выгнан', 'success');
+            
+            if (permsModal) permsModal.style.display = 'none';
+            if (mainContent) mainContent.style.display = 'block';
+            await loadGroupMembersList(chatId, chatData);
+        };
+    }
+    
+    // Поделиться группой
+    const shareBtn = document.getElementById('share-group-btn');
+    if (shareBtn) {
+        shareBtn.onclick = () => {
+            const groupLink = `${window.location.origin}/Kukumber-messenger/?group=${chatId}`;
+            if (navigator.share) {
+                navigator.share({ title: chatData.name, text: 'Присоединяйся к группе!', url: groupLink });
+            } else {
+                navigator.clipboard.writeText(groupLink);
+                showNotification('Ссылка скопирована!', 'success');
+            }
+        };
+    }
+    
+    // Кнопка возврата в профиле группы
+    const backButton = document.getElementById('group-profile-back');
+    if (backButton) {
+        backButton.onclick = () => closeGroupProfileModal();
+    }
+}
+
+// Функция закрытия профиля группы
+window.closeGroupProfileModal = function() {
+    const modal = document.getElementById('group-profile-modal');
+    if (modal) modal.remove();
+    window.currentGroupId = null;
+    window.currentGroupData = null;
+    window.currentGroupMemberId = null;
+};
+
+console.log('✅ Расширенный профиль группы загружен!');
