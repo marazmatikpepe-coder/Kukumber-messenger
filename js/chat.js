@@ -3505,3 +3505,43 @@ window.closeGroupProfileModal = function() {
 };
 
 console.log('✅ Расширенный профиль группы загружен!');
+// ========== ПРИМЕНЕНИЕ ТЁМНОЙ ТЕМЫ К ПРОФИЛЮ ГРУППЫ ==========
+function applyThemeToGroupProfile() {
+    const isNightMode = document.body.classList.contains('night-mode');
+    const modal = document.getElementById('group-profile-modal');
+    if (!modal) return;
+    
+    const container = modal.querySelector('.group-profile-container');
+    if (container) {
+        if (isNightMode) {
+            container.style.background = '#1e1e1e';
+            container.style.color = '#e0e0e0';
+        } else {
+            container.style.background = 'white';
+            container.style.color = '';
+        }
+    }
+}
+
+// Наблюдатель за изменением темы
+const themeObserver = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+        if (mutation.attributeName === 'class') {
+            applyThemeToGroupProfile();
+        }
+    });
+});
+
+themeObserver.observe(document.body, { attributes: true });
+
+// Переопределяем closeGroupProfileModal, чтобы убрать обработчик
+const originalCloseGroupProfile = window.closeGroupProfileModal;
+window.closeGroupProfileModal = function() {
+    const modal = document.getElementById('group-profile-modal');
+    if (modal) modal.remove();
+    window.currentGroupId = null;
+    window.currentGroupData = null;
+    window.currentGroupMemberId = null;
+};
+
+console.log('✅ Тёмная тема для профиля группы применена');
