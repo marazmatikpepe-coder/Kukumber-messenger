@@ -3545,3 +3545,338 @@ window.closeGroupProfileModal = function() {
 };
 
 console.log('✅ Тёмная тема для профиля группы применена');
+// ========== РЕДАКТИРОВАНИЕ ПРОФИЛЯ ГРУППЫ ==========
+
+// Редактирование баннера
+function bindEditBanner(chatId, chatData, isAdmin, isCreator) {
+    const editBannerBtn = document.getElementById('edit-banner-btn');
+    if (!editBannerBtn) return;
+    
+    editBannerBtn.onclick = async () => {
+        if (!isAdmin && !isCreator) {
+            showNotification('Нет прав для редактирования', 'error');
+            return;
+        }
+        
+        // Цвета для баннера
+        const colors = ['#228B22', '#556B2F', '#1a5c1a', '#32CD32', '#6b8e6b', '#000000', '#1E90FF', '#FFD700', '#FFA500', '#FF69B4', '#87CEEB', '#9370DB'];
+        
+        let colorPickerHtml = '<div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; padding: 10px;">';
+        colors.forEach(color => {
+            colorPickerHtml += `<div style="width: 45px; height: 45px; border-radius: 50%; background: ${color}; cursor: pointer; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.2);" onclick="setGroupBanner('${chatId}', '${color}')"></div>`;
+        });
+        colorPickerHtml += '</div>';
+        colorPickerHtml += '<div style="text-align: center; padding: 10px;"><button onclick="uploadGroupBannerImage(\'' + chatId + '\')" class="btn-primary" style="margin: 5px;">📷 Загрузить картинку</button></div>';
+        colorPickerHtml += '<div style="text-align: center; padding: 10px;"><button onclick="setGroupBanner(\'' + chatId + '\', null)" class="btn-secondary">Сбросить</button></div>';
+        
+        showCustomModal('Выберите баннер', colorPickerHtml);
+    };
+}
+
+// Редактирование аватара
+function bindEditAvatar(chatId, chatData, isAdmin, isCreator) {
+    const editAvatarBtn = document.getElementById('edit-avatar-btn');
+    if (!editAvatarBtn) return;
+    
+    editAvatarBtn.onclick = async () => {
+        if (!isAdmin && !isCreator) {
+            showNotification('Нет прав для редактирования', 'error');
+            return;
+        }
+        
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            showNotification('Загрузка аватара...', 'info');
+            try {
+                const url = await uploadToImgBB(file);
+                await database.ref('chats/' + chatId + '/avatar').set(url);
+                showNotification('Аватар обновлён', 'success');
+                
+                // Обновляем отображение
+                const avatarDiv = document.querySelector('.group-avatar');
+                if (avatarDiv) {
+                    avatarDiv.style.backgroundImage = `url(${url})`;
+                    avatarDiv.style.backgroundSize = 'cover';
+                    avatarDiv.textContent = '';
+                }
+                
+                // Обновляем в списке чатов
+                const chatItem = document.querySelector(`.chat-item[data-chat-id="${chatId}"] .avatar`);
+                if (chatItem) {
+                    chatItem.style.backgroundImage = `url(${url})`;
+                    chatItem.style.backgroundSize = 'cover';
+                    chatItem.textContent = '';
+                }
+            } catch (err) {
+                showNotification('Ошибка загрузки', 'error');
+            }
+        };
+        input.click();
+    };
+}
+
+// Редактирование названия группы
+function bindEditName(chatId, chatData, isAdmin, isCreator) {
+    const editNameIcon = document.getElementById('edit-name-icon');
+    const nameDisplay = document.getElementById('group-name-display');
+    
+    if (editNameIcon && nameDisplay) {
+        editNameIcon.onclick = async () => {
+            if (!isAdmin && !isCreator) {
+                showNotification('Нет прав для редактирования', 'error');
+                return;
+            }
+            
+            const newName = prompt('Введите новое название группы:', chatData.name || '');
+            if (newName && newName.trim()) {
+                await database.ref('chats/' + chatId + '/name').set(newName.trim());
+                showNotification('Название обновлено', 'success');
+                nameDisplay.textContent = newName.trim();
+                
+                // Обновляем в списке чатов
+                const chatNameSpan = document.querySelector(`.chat-item[data-chat-id="${chatId}"] .chat-item-name`);
+                if (chatNameSpan) chatNameSpan.textContent = newName.trim();
+                
+                // Обновляем в шапке чата если открыт
+                const chatHeaderName = document.getElementById('chat-username');
+                if (chatHeaderName && window.currentChatId === chatId) {
+                    chatHeaderName.textContent = newName.trim();
+                }
+            }
+        };
+        
+        // Двойной клик для быстрого редактирования
+        nameDisplay.ondblclick = () => {
+            if (isAdmin || isCreator) editNameIcon.onclick();
+        };
+    }
+}
+
+// Редактирование описания
+function bindEditDescription(chatId, chatData, isAdmin, isCreator) {
+    const editDescBtn = document.getElementById('edit-desc-btn');
+    const descDisplay = document.getElementById('group-desc-display');
+    
+    if (editDescBtn && descDisplay) {
+        editDescBtn.onclick = async () => {
+            if (!isAdmin && !isCreator) {
+                showNotification('Нет прав для редактирования', 'error');
+                return;
+            }
+            
+            const newDesc = prompt('Введите новое описание группы:', chatData.description || '');
+            if (newDesc !== null) {
+                await database.ref('chats/' + chatId + '/description').set(newDesc.trim());
+                showNotification('Описание обновлено', 'success');
+                descDisplay.textContent = newDesc.trim() || 'Нет описания';
+            }
+        };
+    }
+}
+
+// Редактирование инфо группы (K-name и настройки)
+function bindEditGroupSettings(chatId, chatData, isAdmin, isCreator) {
+    const editSettingsBtn = document.getElementById('edit-group-settings-btn');
+    if (!editSettingsBtn) return;
+    
+    editSettingsBtn.onclick = async () => {
+        if (!isAdmin && !isCreator) {
+            showNotification('Нет прав для редактирования', 'error');
+            return;
+        }
+        
+        const currentKname = chatData.kname || '';
+        const currentPrivacy = chatData.privacy || 'public';
+        
+        const modalHtml = `
+            <div id="group-settings-modal" class="modal" style="z-index: 10004;">
+                <div class="modal-content" style="max-width: 400px; border-radius: 24px;">
+                    <div class="modal-header">
+                        <h3>⚙️ Настройки группы</h3>
+                        <button onclick="closeGroupSettingsModal()" class="btn-close">×</button>
+                    </div>
+                    <div style="padding: 20px;">
+                        <label style="font-weight: 600;">K-name (уникальная ссылка)</label>
+                        <input type="text" id="group-kname-input" placeholder="mygroup" value="${currentKname}" style="width: 100%; padding: 12px; margin: 8px 0 15px; border: 2px solid var(--border); border-radius: 12px;">
+                        <small style="display: block; margin-top: -10px; margin-bottom: 15px; color: #999;">Только латиница, цифры и _</small>
+                        
+                        <label style="font-weight: 600;">Тип группы</label>
+                        <div style="margin: 8px 0 15px;">
+                            <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 2px solid var(--border); border-radius: 12px; margin-bottom: 8px; cursor: pointer;">
+                                <input type="radio" name="group-privacy" value="public" ${currentPrivacy === 'public' ? 'checked' : ''}> 🌍 Публичная
+                                <small style="margin-left: 10px; color: #999;">Может найти любой</small>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 10px; padding: 10px; border: 2px solid var(--border); border-radius: 12px; cursor: pointer;">
+                                <input type="radio" name="group-privacy" value="private" ${currentPrivacy === 'private' ? 'checked' : ''}> 🔒 Приватная
+                                <small style="margin-left: 10px; color: #999;">Только по ссылке-приглашению</small>
+                            </label>
+                        </div>
+                        
+                        <button id="save-group-settings-btn" class="btn-primary" style="width: 100%;">💾 Сохранить</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const oldModal = document.getElementById('group-settings-modal');
+        if (oldModal) oldModal.remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        const saveBtn = document.getElementById('save-group-settings-btn');
+        if (saveBtn) {
+            saveBtn.onclick = async () => {
+                const newKname = document.getElementById('group-kname-input').value.trim().toLowerCase();
+                const newPrivacy = document.querySelector('input[name="group-privacy"]:checked').value;
+                
+                // Проверка K-name
+                if (newKname) {
+                    const knamePattern = /^[a-z0-9_]+$/;
+                    if (!knamePattern.test(newKname)) {
+                        showNotification('K-name может содержать только латиницу, цифры и _', 'error');
+                        return;
+                    }
+                    
+                    if (newKname !== currentKname) {
+                        const existing = await database.ref('channelKnames/' + newKname).once('value');
+                        if (existing.exists()) {
+                            showNotification('K-name уже занят', 'error');
+                            return;
+                        }
+                        if (currentKname) {
+                            await database.ref('channelKnames/' + currentKname).remove();
+                        }
+                        await database.ref('channelKnames/' + newKname).set(chatId);
+                    }
+                } else if (currentKname) {
+                    await database.ref('channelKnames/' + currentKname).remove();
+                }
+                
+                await database.ref('chats/' + chatId).update({
+                    kname: newKname || null,
+                    privacy: newPrivacy
+                });
+                
+                showNotification('Настройки сохранены', 'success');
+                closeGroupSettingsModal();
+                
+                // Обновляем отображение K-name
+                const knameDisplay = document.querySelector('.group-profile-container p');
+                if (knameDisplay && newKname) {
+                    knameDisplay.innerHTML = `🔗 @${escapeHtml(newKname)}`;
+                } else if (knameDisplay && !newKname) {
+                    knameDisplay.remove();
+                }
+            };
+        }
+    };
+}
+
+// Пользовательское модальное окно
+function showCustomModal(title, contentHtml) {
+    const oldModal = document.getElementById('custom-modal');
+    if (oldModal) oldModal.remove();
+    
+    const modal = document.createElement('div');
+    modal.id = 'custom-modal';
+    modal.className = 'modal';
+    modal.style.zIndex = '10005';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 350px; border-radius: 24px;">
+            <div class="modal-header">
+                <h3>${title}</h3>
+                <button onclick="closeCustomModal()" class="btn-close">×</button>
+            </div>
+            <div style="padding: 10px 20px 20px;">
+                ${contentHtml}
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.classList.remove('hidden');
+}
+
+window.closeCustomModal = function() {
+    const modal = document.getElementById('custom-modal');
+    if (modal) modal.remove();
+};
+
+window.closeGroupSettingsModal = function() {
+    const modal = document.getElementById('group-settings-modal');
+    if (modal) modal.remove();
+};
+
+// Установка баннера группы
+window.setGroupBanner = async function(chatId, colorOrUrl) {
+    try {
+        await database.ref('chats/' + chatId + '/banner').set(colorOrUrl || null);
+        showNotification('Баннер обновлён', 'success');
+        closeCustomModal();
+        
+        // Обновляем отображение
+        const bannerDiv = document.querySelector('.group-banner');
+        if (bannerDiv) {
+            if (colorOrUrl) {
+                if (colorOrUrl.startsWith('#')) {
+                    bannerDiv.style.background = colorOrUrl;
+                    bannerDiv.style.backgroundImage = 'none';
+                } else {
+                    bannerDiv.style.backgroundImage = `url(${colorOrUrl})`;
+                    bannerDiv.style.backgroundSize = 'cover';
+                    bannerDiv.style.backgroundPosition = 'center';
+                }
+            } else {
+                bannerDiv.style.background = 'linear-gradient(135deg, #228B22, #556B2F)';
+                bannerDiv.style.backgroundImage = 'none';
+            }
+        }
+    } catch (err) {
+        showNotification('Ошибка', 'error');
+    }
+};
+
+// Загрузка картинки для баннера
+window.uploadGroupBannerImage = async function(chatId) {
+    closeCustomModal();
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*,image/gif';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        showNotification('Загрузка баннера...', 'info');
+        try {
+            const url = await uploadToImgBB(file);
+            await setGroupBanner(chatId, url);
+        } catch (err) {
+            showNotification('Ошибка загрузки', 'error');
+        }
+    };
+    input.click();
+};
+
+// Добавляем привязку всех кнопок редактирования в основную функцию
+// Найди в функции openGroupProfile место, где вызывается bindGroupProfileEvents,
+// и добавь туда эти вызовы. Или добавь этот код после bindGroupProfileEvents:
+
+// В функцию bindGroupProfileEvents добавь эти вызовы:
+function bindAllEditButtons(chatId, chatData, isAdmin, isCreator) {
+    bindEditBanner(chatId, chatData, isAdmin, isCreator);
+    bindEditAvatar(chatId, chatData, isAdmin, isCreator);
+    bindEditName(chatId, chatData, isAdmin, isCreator);
+    bindEditDescription(chatId, chatData, isAdmin, isCreator);
+    bindEditGroupSettings(chatId, chatData, isAdmin, isCreator);
+}
+
+// Переопределяем bindGroupProfileEvents, добавив в него вызов bindAllEditButtons
+const originalBindGroupProfileEvents = bindGroupProfileEvents;
+window.bindGroupProfileEvents = function(chatId, chatData, isMember, isAdmin, isCreator, canManageMembers) {
+    originalBindGroupProfileEvents(chatId, chatData, isMember, isAdmin, isCreator, canManageMembers);
+    bindAllEditButtons(chatId, chatData, isAdmin, isCreator);
+};
+
+console.log('✅ Кнопки редактирования группы привязаны!');
