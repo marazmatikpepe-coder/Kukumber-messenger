@@ -2648,3 +2648,27 @@ body.night-mode .group-profile-container .btn-secondary {
     background-image: url('https://i.ibb.co/3ydBsv59/image.png') !important;
     background-size: cover !important;
 }
+/* Модальные окна на телефоне - прокрутка */
+@media (max-width: 768px) {
+    .modal .modal-content {
+        max-height: 85vh !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    .modal .modal-header {
+        position: sticky !important;
+        top: 0 !important;
+        background: inherit !important;
+        z-index: 10 !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .modal .modal-body,
+    .modal > div > div:not(.modal-header) {
+        overflow-y: auto !important;
+        flex: 1 !important;
+    }
+}
