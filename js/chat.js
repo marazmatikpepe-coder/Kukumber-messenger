@@ -1344,54 +1344,54 @@ setTimeout(function() {
         console.error('❌ openGroupProfile НЕ загружена! Проверьте порядок подключения скриптов');
     }
 }, 2000);
-// ========== СОЗДАНИЕ ГРУППЫ (КОМПАКТНАЯ ВЕРСИЯ) ==========
+// ========== СОЗДАНИЕ ГРУППЫ ==========
 window.openCreateGroupWizard = function() {
     closeCreateMenu();
-    
-    var modalHtml = `
-        <div id="create-group-modal" class="modal" style="z-index: 10002;">
-            <div class="modal-content" style="max-width: 400px; width: 85%; border-radius: 24px; background: white; margin: auto; overflow: hidden;">
-                <div class="modal-header" style="padding: 12px 16px;">
-                    <h3 style="margin: 0; font-size: 18px;">👥 Создание группы</h3>
-                    <button onclick="closeGroupModal()" class="btn-close" style="font-size: 24px;">×</button>
-                </div>
-                <div style="padding: 16px;">
-                    <!-- Аватар -->
-                    <div style="text-align:center; margin-bottom: 12px;">
-                        <div id="group-avatar-preview" style="width: 70px; height: 70px; margin: 0 auto; border-radius: 50%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 32px; cursor: pointer; background-size: cover; background-position: center;">👥</div>
-                        <input type="file" id="group-avatar-input" accept="image/*" style="display:none;">
-                        <button onclick="document.getElementById('group-avatar-input').click()" style="margin-top: 6px; background: none; border: none; color: var(--forest); font-size: 12px; cursor: pointer;">📷 Загрузить</button>
-                    </div>
-                    
-                    <!-- Название -->
-                    <input type="text" id="group-name-input" placeholder="Название группы *" style="width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 14px; box-sizing: border-box;">
-                    
-                    <!-- Описание -->
-                    <textarea id="group-desc-input" placeholder="Описание" rows="2" style="width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 14px; resize: vertical; box-sizing: border-box;"></textarea>
-                    
-                    <!-- Тип группы -->
-                    <div style="margin-bottom: 16px;">
-                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; cursor: pointer; background: #f9f9f9;">
-                            <input type="radio" name="group-type" value="public" checked style="margin: 0;"> 🌍 Публичная
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; background: #f9f9f9;">
-                            <input type="radio" name="group-type" value="private" style="margin: 0;"> 🔒 Приватная
-                        </label>
-                    </div>
-                    
-                    <!-- Кнопка -->
-                    <button onclick="createGroup()" class="btn-primary" style="width: 100%; padding: 12px; font-size: 15px;">Создать группу</button>
-                </div>
-            </div>
-        </div>
-    `;
     
     var oldModal = document.getElementById('create-group-modal');
     if (oldModal) oldModal.remove();
     
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    var modal = document.createElement('div');
+    modal.id = 'create-group-modal';
+    modal.className = 'modal';
+    modal.style.zIndex = '10002';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
     
-    // Обработчик загрузки аватара
+    modal.innerHTML = `
+        <div style="background: white; width: 90%; max-width: 380px; border-radius: 28px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+            <div style="padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 18px;">👥 Создать группу</h3>
+                <button onclick="closeGroupModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
+            </div>
+            <div style="padding: 20px;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div id="group-avatar-preview" style="width: 80px; height: 80px; margin: 0 auto; border-radius: 50%; background: #e8f5e8; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; background-size: cover; background-position: center;">👥</div>
+                    <input type="file" id="group-avatar-input" accept="image/*" style="display: none;">
+                    <button onclick="document.getElementById('group-avatar-input').click()" style="margin-top: 8px; background: none; border: none; color: #228B22; font-size: 13px; cursor: pointer;">Загрузить фото</button>
+                </div>
+                
+                <input type="text" id="group-name-input" placeholder="Название группы" style="width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 14px; font-size: 15px; box-sizing: border-box;">
+                
+                <textarea id="group-desc-input" placeholder="Описание" rows="2" style="width: 100%; padding: 12px; margin-bottom: 16px; border: 1px solid #ddd; border-radius: 14px; font-size: 14px; resize: none; box-sizing: border-box;"></textarea>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <label style="flex: 1; text-align: center; padding: 10px; border: 1px solid #ddd; border-radius: 14px; cursor: pointer; background: #f9f9f9;">
+                        <input type="radio" name="group-type" value="public" checked> 🌍 Публичная
+                    </label>
+                    <label style="flex: 1; text-align: center; padding: 10px; border: 1px solid #ddd; border-radius: 14px; cursor: pointer; background: #f9f9f9;">
+                        <input type="radio" name="group-type" value="private"> 🔒 Приватная
+                    </label>
+                </div>
+                
+                <button onclick="createGroup()" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #228B22, #32CD32); color: white; border: none; border-radius: 30px; font-size: 16px; font-weight: 600; cursor: pointer;">Создать группу</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
     var avatarInput = document.getElementById('group-avatar-input');
     if (avatarInput) {
         avatarInput.onchange = function(e) {
@@ -1400,12 +1400,9 @@ window.openCreateGroupWizard = function() {
                 var reader = new FileReader();
                 reader.onload = function(ev) {
                     var preview = document.getElementById('group-avatar-preview');
-                    if (preview) {
-                        preview.style.backgroundImage = 'url(' + ev.target.result + ')';
-                        preview.style.backgroundSize = 'cover';
-                        preview.style.backgroundPosition = 'center';
-                        preview.textContent = '';
-                    }
+                    preview.style.backgroundImage = 'url(' + ev.target.result + ')';
+                    preview.style.backgroundSize = 'cover';
+                    preview.innerHTML = '';
                     window.groupAvatarFile = file;
                 };
                 reader.readAsDataURL(file);
@@ -1413,9 +1410,11 @@ window.openCreateGroupWizard = function() {
         };
     }
 };
+
 window.closeGroupModal = function() {
     var modal = document.getElementById('create-group-modal');
     if (modal) modal.remove();
+    window.groupAvatarFile = null;
 };
 
 window.createGroup = async function() {
@@ -1431,20 +1430,14 @@ window.createGroup = async function() {
     showNotification('Создание группы...', 'info');
     
     try {
-        // Загружаем аватар если есть
         var avatarUrl = '';
-        if (window.groupAvatarFile) {
-            if (typeof uploadToImgBB === 'function') {
-                avatarUrl = await uploadToImgBB(window.groupAvatarFile);
-            } else {
-                showNotification('Функция загрузки не найдена', 'error');
-                return;
-            }
+        if (window.groupAvatarFile && typeof uploadToImgBB === 'function') {
+            avatarUrl = await uploadToImgBB(window.groupAvatarFile);
         }
         
         var groupId = 'group_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         
-        var groupData = {
+        await database.ref('chats/' + groupId).set({
             type: 'group',
             name: groupName,
             description: groupDesc,
@@ -1454,29 +1447,18 @@ window.createGroup = async function() {
             createdBy: currentUser.uid,
             lastMessage: 'Группа создана',
             lastMessageTime: firebase.database.ServerValue.TIMESTAMP,
-            members: {},
-            admins: {}
-        };
+            members: { [currentUser.uid]: true },
+            admins: { [currentUser.uid]: true }
+        });
         
-        // Добавляем создателя как участника и админа
-        groupData.members[currentUser.uid] = true;
-        groupData.admins[currentUser.uid] = true;
-        
-        await database.ref('chats/' + groupId).set(groupData);
         await database.ref('userChats/' + currentUser.uid + '/' + groupId).set(true);
         
         showNotification('Группа создана!', 'success');
         closeGroupModal();
-        
-        // Очищаем
         window.groupAvatarFile = null;
         
-        // Перезагружаем чаты
-        if (typeof loadChats === 'function') {
-            loadChats();
-        }
+        if (typeof loadChats === 'function') loadChats();
         
-        // Открываем созданную группу
         setTimeout(async function() {
             var chatData = await database.ref('chats/' + groupId).once('value');
             if (typeof openChatWithData === 'function') {
@@ -1490,56 +1472,59 @@ window.createGroup = async function() {
     }
 };
 
-// ========== СОЗДАНИЕ КАНАЛА (КОМПАКТНАЯ ВЕРСИЯ) ==========
+// ========== СОЗДАНИЕ КАНАЛА ==========
 window.openCreateChannelWizard = function() {
     closeCreateMenu();
-    
-    var modalHtml = `
-        <div id="create-channel-modal" class="modal" style="z-index: 10002;">
-            <div class="modal-content" style="max-width: 400px; width: 85%; border-radius: 24px; background: white; margin: auto; overflow: hidden;">
-                <div class="modal-header" style="padding: 12px 16px;">
-                    <h3 style="margin: 0; font-size: 18px;">📢 Создание канала</h3>
-                    <button onclick="closeChannelModal()" class="btn-close" style="font-size: 24px;">×</button>
-                </div>
-                <div style="padding: 16px;">
-                    <!-- Аватар -->
-                    <div style="text-align:center; margin-bottom: 12px;">
-                        <div id="channel-avatar-preview" style="width: 70px; height: 70px; margin: 0 auto; border-radius: 50%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 32px; cursor: pointer; background-size: cover; background-position: center;">📢</div>
-                        <input type="file" id="channel-avatar-input" accept="image/*" style="display:none;">
-                        <button onclick="document.getElementById('channel-avatar-input').click()" style="margin-top: 6px; background: none; border: none; color: var(--forest); font-size: 12px; cursor: pointer;">📷 Загрузить</button>
-                    </div>
-                    
-                    <!-- Название -->
-                    <input type="text" id="channel-name-input" placeholder="Название канала *" style="width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 14px; box-sizing: border-box;">
-                    
-                    <!-- K-name -->
-                    <input type="text" id="channel-kname-input" placeholder="K-name (ссылка)" style="width: 100%; padding: 10px 12px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: 12px; font-size: 14px; box-sizing: border-box;">
-                    <small style="display: block; margin-bottom: 12px; color: #999; font-size: 10px;">Только латиница, цифры и _</small>
-                    
-                    <!-- Описание -->
-                    <textarea id="channel-desc-input" placeholder="Описание" rows="2" style="width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 14px; resize: vertical; box-sizing: border-box;"></textarea>
-                    
-                    <!-- Тип канала -->
-                    <div style="margin-bottom: 16px;">
-                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; cursor: pointer; background: #f9f9f9;">
-                            <input type="radio" name="channel-type" value="public" checked style="margin: 0;"> 🌍 Публичный
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; background: #f9f9f9;">
-                            <input type="radio" name="channel-type" value="private" style="margin: 0;"> 🔒 Приватный
-                        </label>
-                    </div>
-                    
-                    <!-- Кнопка -->
-                    <button onclick="createChannel()" class="btn-primary" style="width: 100%; padding: 12px; font-size: 15px;">Создать канал</button>
-                </div>
-            </div>
-        </div>
-    `;
     
     var oldModal = document.getElementById('create-channel-modal');
     if (oldModal) oldModal.remove();
     
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    var modal = document.createElement('div');
+    modal.id = 'create-channel-modal';
+    modal.className = 'modal';
+    modal.style.zIndex = '10002';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    
+    modal.innerHTML = `
+        <div style="background: white; width: 90%; max-width: 380px; border-radius: 28px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+            <div style="padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 18px;">📢 Создать канал</h3>
+                <button onclick="closeChannelModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
+            </div>
+            <div style="padding: 20px;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div id="channel-avatar-preview" style="width: 80px; height: 80px; margin: 0 auto; border-radius: 50%; background: #e8f5e8; display: flex; align-items: center; justify-content: center; font-size: 40px; cursor: pointer; background-size: cover; background-position: center;">📢</div>
+                    <input type="file" id="channel-avatar-input" accept="image/*" style="display: none;">
+                    <button onclick="document.getElementById('channel-avatar-input').click()" style="margin-top: 8px; background: none; border: none; color: #228B22; font-size: 13px; cursor: pointer;">Загрузить фото</button>
+                </div>
+                
+                <input type="text" id="channel-name-input" placeholder="Название канала" style="width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 14px; font-size: 15px; box-sizing: border-box;">
+                
+                <div style="display: flex; align-items: center; border: 1px solid #ddd; border-radius: 14px; margin-bottom: 12px;">
+                    <span style="padding: 0 12px; color: #228B22;">@</span>
+                    <input type="text" id="channel-kname-input" placeholder="k-name" style="flex: 1; padding: 12px 12px 12px 0; border: none; font-size: 15px; outline: none;">
+                </div>
+                <small style="display: block; margin-top: -8px; margin-bottom: 12px; color: #999; font-size: 11px;">Латиница, цифры, _ (необязательно)</small>
+                
+                <textarea id="channel-desc-input" placeholder="Описание" rows="2" style="width: 100%; padding: 12px; margin-bottom: 16px; border: 1px solid #ddd; border-radius: 14px; font-size: 14px; resize: none; box-sizing: border-box;"></textarea>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <label style="flex: 1; text-align: center; padding: 10px; border: 1px solid #ddd; border-radius: 14px; cursor: pointer; background: #f9f9f9;">
+                        <input type="radio" name="channel-type" value="public" checked> 🌍 Публичный
+                    </label>
+                    <label style="flex: 1; text-align: center; padding: 10px; border: 1px solid #ddd; border-radius: 14px; cursor: pointer; background: #f9f9f9;">
+                        <input type="radio" name="channel-type" value="private"> 🔒 Приватный
+                    </label>
+                </div>
+                
+                <button onclick="createChannel()" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #228B22, #32CD32); color: white; border: none; border-radius: 30px; font-size: 16px; font-weight: 600; cursor: pointer;">Создать канал</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
     
     var avatarInput = document.getElementById('channel-avatar-input');
     if (avatarInput) {
@@ -1549,12 +1534,9 @@ window.openCreateChannelWizard = function() {
                 var reader = new FileReader();
                 reader.onload = function(ev) {
                     var preview = document.getElementById('channel-avatar-preview');
-                    if (preview) {
-                        preview.style.backgroundImage = 'url(' + ev.target.result + ')';
-                        preview.style.backgroundSize = 'cover';
-                        preview.style.backgroundPosition = 'center';
-                        preview.textContent = '';
-                    }
+                    preview.style.backgroundImage = 'url(' + ev.target.result + ')';
+                    preview.style.backgroundSize = 'cover';
+                    preview.innerHTML = '';
                     window.channelAvatarFile = file;
                 };
                 reader.readAsDataURL(file);
@@ -1562,9 +1544,11 @@ window.openCreateChannelWizard = function() {
         };
     }
 };
+
 window.closeChannelModal = function() {
     var modal = document.getElementById('create-channel-modal');
     if (modal) modal.remove();
+    window.channelAvatarFile = null;
 };
 
 window.createChannel = async function() {
@@ -1578,15 +1562,13 @@ window.createChannel = async function() {
     var channelDesc = document.getElementById('channel-desc-input').value.trim();
     var channelType = document.querySelector('input[name="channel-type"]:checked').value;
     
-    // Проверка K-name
     if (channelKname) {
         var knamePattern = /^[a-z0-9_]+$/;
         if (!knamePattern.test(channelKname)) {
-            showNotification('K-name может содержать только латиницу, цифры и _', 'error');
+            showNotification('K-name: только латиница, цифры и _', 'error');
             return;
         }
         
-        // Проверка уникальности
         var existing = await database.ref('channelKnames/' + channelKname).once('value');
         if (existing.exists()) {
             showNotification('K-name уже занят', 'error');
@@ -1598,18 +1580,13 @@ window.createChannel = async function() {
     
     try {
         var avatarUrl = '';
-        if (window.channelAvatarFile) {
-            if (typeof uploadToImgBB === 'function') {
-                avatarUrl = await uploadToImgBB(window.channelAvatarFile);
-            } else {
-                showNotification('Функция загрузки не найдена', 'error');
-                return;
-            }
+        if (window.channelAvatarFile && typeof uploadToImgBB === 'function') {
+            avatarUrl = await uploadToImgBB(window.channelAvatarFile);
         }
         
         var channelId = 'channel_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         
-        var channelData = {
+        await database.ref('chats/' + channelId).set({
             type: 'channel',
             name: channelName,
             kname: channelKname || null,
@@ -1620,15 +1597,10 @@ window.createChannel = async function() {
             createdBy: currentUser.uid,
             lastMessage: 'Канал создан',
             lastMessageTime: firebase.database.ServerValue.TIMESTAMP,
-            subscribers: {},
-            admins: {}
-        };
+            subscribers: { [currentUser.uid]: true },
+            admins: { [currentUser.uid]: true }
+        });
         
-        // Добавляем создателя как админа и подписчика
-        channelData.admins[currentUser.uid] = true;
-        channelData.subscribers[currentUser.uid] = true;
-        
-        await database.ref('chats/' + channelId).set(channelData);
         await database.ref('userChats/' + currentUser.uid + '/' + channelId).set(true);
         
         if (channelKname) {
@@ -1637,16 +1609,10 @@ window.createChannel = async function() {
         
         showNotification('Канал создан!', 'success');
         closeChannelModal();
-        
-        // Очищаем
         window.channelAvatarFile = null;
         
-        // Перезагружаем чаты
-        if (typeof loadChats === 'function') {
-            loadChats();
-        }
+        if (typeof loadChats === 'function') loadChats();
         
-        // Открываем созданный канал
         setTimeout(async function() {
             var chatData = await database.ref('chats/' + channelId).once('value');
             if (typeof openChatWithData === 'function') {
