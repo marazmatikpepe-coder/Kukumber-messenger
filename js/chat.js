@@ -1344,19 +1344,18 @@ setTimeout(function() {
         console.error('❌ openGroupProfile НЕ загружена! Проверьте порядок подключения скриптов');
     }
 }, 2000);
-// ========== СОЗДАНИЕ ГРУППЫ (РАБОЧАЯ ВЕРСИЯ) ==========
+// ========== СОЗДАНИЕ ГРУППЫ (С ПРОКРУТКОЙ ДЛЯ ТЕЛЕФОНА) ==========
 window.openCreateGroupWizard = function() {
     closeCreateMenu();
     
-    // Создаём модальное окно для создания группы
     var modalHtml = `
         <div id="create-group-modal" class="modal" style="z-index: 10002;">
-            <div class="modal-content" style="max-width: 500px; border-radius: 20px;">
-                <div class="modal-header">
+            <div class="modal-content" style="max-width: 500px; width: 90%; border-radius: 20px; max-height: 85vh; display: flex; flex-direction: column; margin: auto; overflow: hidden;">
+                <div class="modal-header" style="flex-shrink: 0;">
                     <h3>👥 Создание группы</h3>
                     <button onclick="closeGroupModal()" class="btn-close">×</button>
                 </div>
-                <div style="padding: 20px;">
+                <div style="padding: 20px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch;">
                     <div class="avatar-upload" style="text-align:center; margin-bottom:15px;">
                         <div id="group-avatar-preview" class="avatar-preview" style="width:80px; height:80px; margin:0 auto; border-radius:50%; background:#f0f0f0; display:flex; align-items:center; justify-content:center; font-size:40px; cursor:pointer;">👥</div>
                         <input type="file" id="group-avatar-input" accept="image/*" style="display:none;">
@@ -1410,7 +1409,6 @@ window.openCreateGroupWizard = function() {
         };
     }
 };
-
 window.closeGroupModal = function() {
     var modal = document.getElementById('create-group-modal');
     if (modal) modal.remove();
@@ -1488,18 +1486,18 @@ window.createGroup = async function() {
     }
 };
 
-// ========== СОЗДАНИЕ КАНАЛА (РАБОЧАЯ ВЕРСИЯ) ==========
+// ========== СОЗДАНИЕ КАНАЛА (С ПРОКРУТКОЙ ДЛЯ ТЕЛЕФОНА) ==========
 window.openCreateChannelWizard = function() {
     closeCreateMenu();
     
     var modalHtml = `
         <div id="create-channel-modal" class="modal" style="z-index: 10002;">
-            <div class="modal-content" style="max-width: 500px; border-radius: 20px;">
-                <div class="modal-header">
+            <div class="modal-content" style="max-width: 500px; width: 90%; border-radius: 20px; max-height: 85vh; display: flex; flex-direction: column; margin: auto; overflow: hidden;">
+                <div class="modal-header" style="flex-shrink: 0;">
                     <h3>📢 Создание канала</h3>
                     <button onclick="closeChannelModal()" class="btn-close">×</button>
                 </div>
-                <div style="padding: 20px;">
+                <div style="padding: 20px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch;">
                     <div class="avatar-upload" style="text-align:center; margin-bottom:15px;">
                         <div id="channel-avatar-preview" class="avatar-preview" style="width:80px; height:80px; margin:0 auto; border-radius:50%; background:#f0f0f0; display:flex; align-items:center; justify-content:center; font-size:40px; cursor:pointer;">📢</div>
                         <input type="file" id="channel-avatar-input" accept="image/*" style="display:none;">
