@@ -1344,40 +1344,43 @@ setTimeout(function() {
         console.error('❌ openGroupProfile НЕ загружена! Проверьте порядок подключения скриптов');
     }
 }, 2000);
-// ========== СОЗДАНИЕ ГРУППЫ (С ПРОКРУТКОЙ ДЛЯ ТЕЛЕФОНА) ==========
+// ========== СОЗДАНИЕ ГРУППЫ (КОМПАКТНАЯ ВЕРСИЯ) ==========
 window.openCreateGroupWizard = function() {
     closeCreateMenu();
     
     var modalHtml = `
         <div id="create-group-modal" class="modal" style="z-index: 10002;">
-            <div class="modal-content" style="max-width: 500px; width: 90%; border-radius: 20px; max-height: 85vh; display: flex; flex-direction: column; margin: auto; overflow: hidden;">
-                <div class="modal-header" style="flex-shrink: 0;">
-                    <h3>👥 Создание группы</h3>
-                    <button onclick="closeGroupModal()" class="btn-close">×</button>
+            <div class="modal-content" style="max-width: 400px; width: 85%; border-radius: 24px; background: white; margin: auto; overflow: hidden;">
+                <div class="modal-header" style="padding: 12px 16px;">
+                    <h3 style="margin: 0; font-size: 18px;">👥 Создание группы</h3>
+                    <button onclick="closeGroupModal()" class="btn-close" style="font-size: 24px;">×</button>
                 </div>
-                <div style="padding: 20px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch;">
-                    <div class="avatar-upload" style="text-align:center; margin-bottom:15px;">
-                        <div id="group-avatar-preview" class="avatar-preview" style="width:80px; height:80px; margin:0 auto; border-radius:50%; background:#f0f0f0; display:flex; align-items:center; justify-content:center; font-size:40px; cursor:pointer;">👥</div>
+                <div style="padding: 16px;">
+                    <!-- Аватар -->
+                    <div style="text-align:center; margin-bottom: 12px;">
+                        <div id="group-avatar-preview" style="width: 70px; height: 70px; margin: 0 auto; border-radius: 50%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 32px; cursor: pointer; background-size: cover; background-position: center;">👥</div>
                         <input type="file" id="group-avatar-input" accept="image/*" style="display:none;">
-                        <button onclick="document.getElementById('group-avatar-input').click()" class="btn-small" style="margin-top:8px;">📷 Загрузить фото</button>
+                        <button onclick="document.getElementById('group-avatar-input').click()" style="margin-top: 6px; background: none; border: none; color: var(--forest); font-size: 12px; cursor: pointer;">📷 Загрузить</button>
                     </div>
                     
-                    <input type="text" id="group-name-input" placeholder="Название группы *" style="width:100%; padding:12px; margin-bottom:15px; border:2px solid var(--border); border-radius:12px;">
+                    <!-- Название -->
+                    <input type="text" id="group-name-input" placeholder="Название группы *" style="width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 14px; box-sizing: border-box;">
                     
-                    <textarea id="group-desc-input" placeholder="Описание группы (необязательно)" rows="3" style="width:100%; padding:12px; margin-bottom:15px; border:2px solid var(--border); border-radius:12px;"></textarea>
+                    <!-- Описание -->
+                    <textarea id="group-desc-input" placeholder="Описание" rows="2" style="width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 14px; resize: vertical; box-sizing: border-box;"></textarea>
                     
-                    <div class="channel-type-options">
-                        <label style="display:flex; align-items:center; gap:10px; padding:10px; border:2px solid var(--border); border-radius:12px; margin-bottom:10px; cursor:pointer;">
-                            <input type="radio" name="group-type" value="public" checked> 🌍 Публичная
-                            <small style="margin-left:10px; color:#999;">Может найти любой</small>
+                    <!-- Тип группы -->
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; cursor: pointer; background: #f9f9f9;">
+                            <input type="radio" name="group-type" value="public" checked style="margin: 0;"> 🌍 Публичная
                         </label>
-                        <label style="display:flex; align-items:center; gap:10px; padding:10px; border:2px solid var(--border); border-radius:12px; cursor:pointer;">
-                            <input type="radio" name="group-type" value="private"> 🔒 Приватная
-                            <small style="margin-left:10px; color:#999;">Только по ссылке-приглашению</small>
+                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; background: #f9f9f9;">
+                            <input type="radio" name="group-type" value="private" style="margin: 0;"> 🔒 Приватная
                         </label>
                     </div>
                     
-                    <button onclick="createGroup()" class="btn-primary" style="margin-top:20px; width:100%;">Создать группу</button>
+                    <!-- Кнопка -->
+                    <button onclick="createGroup()" class="btn-primary" style="width: 100%; padding: 12px; font-size: 15px;">Создать группу</button>
                 </div>
             </div>
         </div>
@@ -1400,6 +1403,7 @@ window.openCreateGroupWizard = function() {
                     if (preview) {
                         preview.style.backgroundImage = 'url(' + ev.target.result + ')';
                         preview.style.backgroundSize = 'cover';
+                        preview.style.backgroundPosition = 'center';
                         preview.textContent = '';
                     }
                     window.groupAvatarFile = file;
@@ -1486,41 +1490,47 @@ window.createGroup = async function() {
     }
 };
 
-// ========== СОЗДАНИЕ КАНАЛА (С ПРОКРУТКОЙ ДЛЯ ТЕЛЕФОНА) ==========
+// ========== СОЗДАНИЕ КАНАЛА (КОМПАКТНАЯ ВЕРСИЯ) ==========
 window.openCreateChannelWizard = function() {
     closeCreateMenu();
     
     var modalHtml = `
         <div id="create-channel-modal" class="modal" style="z-index: 10002;">
-            <div class="modal-content" style="max-width: 500px; width: 90%; border-radius: 20px; max-height: 85vh; display: flex; flex-direction: column; margin: auto; overflow: hidden;">
-                <div class="modal-header" style="flex-shrink: 0;">
-                    <h3>📢 Создание канала</h3>
-                    <button onclick="closeChannelModal()" class="btn-close">×</button>
+            <div class="modal-content" style="max-width: 400px; width: 85%; border-radius: 24px; background: white; margin: auto; overflow: hidden;">
+                <div class="modal-header" style="padding: 12px 16px;">
+                    <h3 style="margin: 0; font-size: 18px;">📢 Создание канала</h3>
+                    <button onclick="closeChannelModal()" class="btn-close" style="font-size: 24px;">×</button>
                 </div>
-                <div style="padding: 20px; overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch;">
-                    <div class="avatar-upload" style="text-align:center; margin-bottom:15px;">
-                        <div id="channel-avatar-preview" class="avatar-preview" style="width:80px; height:80px; margin:0 auto; border-radius:50%; background:#f0f0f0; display:flex; align-items:center; justify-content:center; font-size:40px; cursor:pointer;">📢</div>
+                <div style="padding: 16px;">
+                    <!-- Аватар -->
+                    <div style="text-align:center; margin-bottom: 12px;">
+                        <div id="channel-avatar-preview" style="width: 70px; height: 70px; margin: 0 auto; border-radius: 50%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 32px; cursor: pointer; background-size: cover; background-position: center;">📢</div>
                         <input type="file" id="channel-avatar-input" accept="image/*" style="display:none;">
-                        <button onclick="document.getElementById('channel-avatar-input').click()" class="btn-small" style="margin-top:8px;">📷 Загрузить фото</button>
+                        <button onclick="document.getElementById('channel-avatar-input').click()" style="margin-top: 6px; background: none; border: none; color: var(--forest); font-size: 12px; cursor: pointer;">📷 Загрузить</button>
                     </div>
                     
-                    <input type="text" id="channel-name-input" placeholder="Название канала *" style="width:100%; padding:12px; margin-bottom:15px; border:2px solid var(--border); border-radius:12px;">
+                    <!-- Название -->
+                    <input type="text" id="channel-name-input" placeholder="Название канала *" style="width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 14px; box-sizing: border-box;">
                     
-                    <input type="text" id="channel-kname-input" placeholder="K-name (уникальная ссылка)" style="width:100%; padding:12px; margin-bottom:15px; border:2px solid var(--border); border-radius:12px;">
-                    <small style="display:block; margin-top:-10px; margin-bottom:15px; color:#999;">Только латиница, цифры и _</small>
+                    <!-- K-name -->
+                    <input type="text" id="channel-kname-input" placeholder="K-name (ссылка)" style="width: 100%; padding: 10px 12px; margin-bottom: 6px; border: 1px solid var(--border); border-radius: 12px; font-size: 14px; box-sizing: border-box;">
+                    <small style="display: block; margin-bottom: 12px; color: #999; font-size: 10px;">Только латиница, цифры и _</small>
                     
-                    <textarea id="channel-desc-input" placeholder="Описание канала" rows="3" style="width:100%; padding:12px; margin-bottom:15px; border:2px solid var(--border); border-radius:12px;"></textarea>
+                    <!-- Описание -->
+                    <textarea id="channel-desc-input" placeholder="Описание" rows="2" style="width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 12px; font-size: 14px; resize: vertical; box-sizing: border-box;"></textarea>
                     
-                    <div class="channel-type-options">
-                        <label style="display:flex; align-items:center; gap:10px; padding:10px; border:2px solid var(--border); border-radius:12px; margin-bottom:10px; cursor:pointer;">
-                            <input type="radio" name="channel-type" value="public" checked> 🌍 Публичный
+                    <!-- Тип канала -->
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; cursor: pointer; background: #f9f9f9;">
+                            <input type="radio" name="channel-type" value="public" checked style="margin: 0;"> 🌍 Публичный
                         </label>
-                        <label style="display:flex; align-items:center; gap:10px; padding:10px; border:2px solid var(--border); border-radius:12px; cursor:pointer;">
-                            <input type="radio" name="channel-type" value="private"> 🔒 Приватный
+                        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px; cursor: pointer; background: #f9f9f9;">
+                            <input type="radio" name="channel-type" value="private" style="margin: 0;"> 🔒 Приватный
                         </label>
                     </div>
                     
-                    <button onclick="createChannel()" class="btn-primary" style="margin-top:20px; width:100%;">Создать канал</button>
+                    <!-- Кнопка -->
+                    <button onclick="createChannel()" class="btn-primary" style="width: 100%; padding: 12px; font-size: 15px;">Создать канал</button>
                 </div>
             </div>
         </div>
@@ -1542,6 +1552,7 @@ window.openCreateChannelWizard = function() {
                     if (preview) {
                         preview.style.backgroundImage = 'url(' + ev.target.result + ')';
                         preview.style.backgroundSize = 'cover';
+                        preview.style.backgroundPosition = 'center';
                         preview.textContent = '';
                     }
                     window.channelAvatarFile = file;
@@ -1551,7 +1562,6 @@ window.openCreateChannelWizard = function() {
         };
     }
 };
-
 window.closeChannelModal = function() {
     var modal = document.getElementById('create-channel-modal');
     if (modal) modal.remove();
