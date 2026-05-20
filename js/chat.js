@@ -2428,3 +2428,108 @@ if (typeof showMessageContextMenu === 'function') {
 }
 
 console.log('✅ Система ответов на сообщения успешно добавлена!');
+// ========== ЭФФЕКТ ВИБРАЦИИ И ПОДСВЕТКА ПРИ ПЕРЕХОДЕ К СООБЩЕНИЮ ==========
+
+// Переопределяем функцию scrollToRepliedMessage с эффектами
+window.scrollToRepliedMessage = function(messageId) {
+    var msgElement = document.querySelector('.message[data-message-id="' + messageId + '"]');
+    if (msgElement) {
+        // Плавная прокрутка
+        msgElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Получаем цвет темы
+        var themeColor = getComputedStyle(document.documentElement).getPropertyValue('--forest').trim() || '#228B22';
+        
+        // Создаём эффект "вибрации" (пульсации)
+        msgElement.style.transition = 'all 0.2s ease';
+        msgElement.style.transform = 'scale(1.02)';
+        msgElement.style.boxShadow = '0 0 0 3px ' + themeColor;
+        msgElement.style.zIndex = '100';
+        
+        // Подсветка фона
+        var originalBg = msgElement.style.backgroundColor;
+        msgElement.style.backgroundColor = themeColor + '40'; // 40 = 25% прозрачности
+        
+        setTimeout(function() {
+            msgElement.style.transform = 'scale(1)';
+            msgElement.style.boxShadow = '';
+            
+            setTimeout(function() {
+                msgElement.style.backgroundColor = '';
+                msgElement.style.transition = '';
+                msgElement.style.zIndex = '';
+            }, 500);
+        }, 300);
+        
+        // Дополнительная вибрация на мобильных устройствах
+        if (window.navigator && window.navigator.vibrate) {
+            window.navigator.vibrate(50);
+        }
+        
+        // Добавляем анимацию пульсации через CSS класс
+        msgElement.classList.add('message-highlight');
+        setTimeout(function() {
+            msgElement.classList.remove('message-highlight');
+        }, 1000);
+    } else {
+        showNotification('Сообщение не найдено', 'error');
+    }
+};
+
+// Добавляем CSS для эффекта подсветки
+var highlightStyle = document.createElement('style');
+highlightStyle.textContent = `
+    @keyframes messageGlow {
+        0% {
+            box-shadow: 0 0 0 0 var(--forest);
+            transform: scale(1);
+        }
+        50% {
+            box-shadow: 0 0 0 8px var(--forest);
+            transform: scale(1.02);
+        }
+        100% {
+            box-shadow: 0 0 0 0 var(--forest);
+            transform: scale(1);
+        }
+    }
+    
+    .message-highlight {
+        animation: messageGlow 0.8s ease-out !important;
+    }
+    
+    .message-reply {
+        transition: background 0.2s;
+    }
+    
+    .message-reply:hover {
+        background: rgba(34, 139, 34, 0.15) !important;
+    }
+    
+    body.night-mode .message-reply {
+        background: rgba(50, 205, 50, 0.15) !important;
+    }
+    
+    body.night-mode .message-reply:hover {
+        background: rgba(50, 205, 50, 0.25) !important;
+    }
+`;
+document.head.appendChild(highlightStyle);
+
+// Также обновляем стиль панели ответа под тему
+var replyBarStyle = document.createElement('style');
+replyBarStyle.textContent = `
+    #replyBar {
+        background: var(--background) !important;
+        border-left-color: var(--forest) !important;
+    }
+    #replyBar div[style*="font-weight: 600"] {
+        color: var(--forest) !important;
+    }
+    body.night-mode #replyBar {
+        background: #2a2a2a !important;
+    }
+`;
+document.head.appendChild(replyBarStyle);
+
+console.log('✅ Эффект вибрации и подсветка добавлены!');
