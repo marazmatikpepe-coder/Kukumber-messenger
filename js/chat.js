@@ -929,6 +929,7 @@ function formatMessageText(text) {
 }
 
 // ========== ОТПРАВКА СООБЩЕНИЙ ==========
+// ========== ОТПРАВКА СООБЩЕНИЙ ==========
 function sendMessage() {
     var input = document.getElementById('message-input');
     if (!input) return;
@@ -970,7 +971,7 @@ function sendMessage() {
             lastMessageTime: firebase.database.ServerValue.TIMESTAMP
         });
         
-        // ОТМЕНЯЕМ ОТВЕТ ПОСЛЕ ОТПРАВКИ
+        // Очищаем ответ
         cancelReply();
         
         if (typeof KukumberSounds !== 'undefined') {
@@ -1774,6 +1775,9 @@ function copyMessageText(messageId) {
 }
 
 // ========== ОТВЕТ НА СООБЩЕНИЕ (РАБОЧАЯ ВЕРСИЯ) ==========
+
+var replyToMessageData = null; // ГЛОБАЛЬНАЯ ПЕРЕМЕННАЯ
+
 function replyToMessage(messageId) {
     // Получаем полные данные сообщения
     database.ref('messages/' + currentChatId + '/' + messageId).once('value').then(function(snapshot) {
@@ -1851,8 +1855,7 @@ function cancelReply() {
     replyToMessageData = null;
     var replyIndicator = document.getElementById('reply-indicator');
     if (replyIndicator) {
-        replyIndicator.style.display = 'none';
-        replyIndicator.remove(); // Полностью удаляем элемент
+        replyIndicator.remove();
     }
 }
 
