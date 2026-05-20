@@ -818,6 +818,7 @@ function appendMessage(message) {
     
     var content = '';
     // Показываем информацию об ответе (добавить ПОСЛЕ let content = '')
+// Показываем информацию об ответе (ДОЛЖНО БЫТЬ ВНУТРИ messageDiv)
 if (message.replyTo) {
     var replyText = '';
     if (message.replyTo.type === 'image') replyText = '📷 Фото';
@@ -933,25 +934,45 @@ function sendMessage() {
     if (!input) return;
     
     var text = input.value.trim();
-    if (!text || !window.currentChatId) return;
+    if (!text && !replyToMessageData) return;
+    if (!text && replyToMessageData) {
+        showNotification('Введите текст ответа', 'error');
+        return;
+    }
+    if (!currentChatId) return;
     
     var message = {
         type: 'text',
         text: text,
-        senderId: window.currentUser.uid,
+        senderId: currentUser.uid,
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
     
+    // Добавляем информацию об ответе
+    if (replyToMessageData) {
+        message.replyTo = {
+            messageId: replyToMessageData.id,
+            text: replyToMessageData.text,
+            senderName: replyToMessageData.senderName,
+            type: replyToMessageData.type
+        };
+    }
+    
     input.value = '';
     
-    database.ref('messages/' + window.currentChatId).push(message).then(function() {
+    database.ref('messages/' + currentChatId).push(message).then(function() {
         var lastMsg = text.length > 100 ? text.substring(0, 97) + '...' : text;
-        database.ref('chats/' + window.currentChatId).update({
+        if (replyToMessageData) {
+            lastMsg = '↩️ Ответ: ' + lastMsg;
+        }
+        database.ref('chats/' + currentChatId).update({
             lastMessage: lastMsg,
             lastMessageTime: firebase.database.ServerValue.TIMESTAMP
         });
         
-        // Звук отправки
+        // ОТМЕНЯЕМ ОТВЕТ ПОСЛЕ ОТПРАВКИ
+        cancelReply();
+        
         if (typeof KukumberSounds !== 'undefined') {
             KukumberSounds.playSend();
         }
@@ -961,7 +982,6 @@ function sendMessage() {
         input.value = text;
     });
 }
-
 function handleMessageKeyPress(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -1784,17 +1804,13 @@ function showReplyIndicator(messageId, messageData, senderName) {
         type: messageData.type || 'text'
     };
     
-    var replyIndicator = document.getElementById('reply-indicator');
-    if (!replyIndicator) {
-        replyIndicator = document.createElement('div');
-        replyIndicator.id = 'reply-indicator';
-        replyIndicator.style.cssText = 'background: var(--background); border-left: 4px solid var(--forest); padding: 8px 12px; border-radius: 12px; margin: 0 12px 8px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; cursor: pointer;';
-        
-        var inputArea = document.querySelector('.message-input-area');
-        if (inputArea) {
-            inputArea.parentNode.insertBefore(replyIndicator, inputArea);
-        }
-    }
+    // Удаляем старый индикатор, если есть
+    var oldIndicator = document.getElementById('reply-indicator');
+    if (oldIndicator) oldIndicator.remove();
+    
+    var replyIndicator = document.createElement('div');
+    replyIndicator.id = 'reply-indicator';
+    replyIndicator.style.cssText = 'background: var(--background); border-left: 4px solid var(--forest); padding: 8px 12px; border-radius: 12px; margin: 0 12px 8px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; cursor: pointer;';
     
     var replyText = replyToMessageData.text;
     if (replyToMessageData.type === 'image') replyText = '📷 Фото';
@@ -1816,13 +1832,16 @@ function showReplyIndicator(messageId, messageData, senderName) {
         <button onclick="cancelReply()" style="background: none; border: none; font-size: 18px; cursor: pointer;">×</button>
     `;
     
-    replyIndicator.style.display = 'flex';
-    
     replyIndicator.onclick = function(e) {
         if (e.target.tagName !== 'BUTTON') {
             scrollToMessage(replyToMessageData.id);
         }
     };
+    
+    var inputArea = document.querySelector('.message-input-area');
+    if (inputArea) {
+        inputArea.parentNode.insertBefore(replyIndicator, inputArea);
+    }
     
     var messageInput = document.getElementById('message-input');
     if (messageInput) messageInput.focus();
@@ -1833,6 +1852,7 @@ function cancelReply() {
     var replyIndicator = document.getElementById('reply-indicator');
     if (replyIndicator) {
         replyIndicator.style.display = 'none';
+        replyIndicator.remove(); // Полностью удаляем элемент
     }
 }
 
