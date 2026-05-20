@@ -2715,21 +2715,21 @@ function renderForwardChats(chatsArray) {
     chatsArray.forEach(function(chat) {
         var isSelected = selectedForwardUsers.some(function(u) { return u.id === chat.id; });
         
-        var avatarStyle = chat.avatar ? 'background-image: url(' + chat.avatar + '); background-size: cover; background-position: center;' : '';
-        var avatarContent = '';
-        var avatarClass = '';
+        // Если есть своя аватарка - используем её
+        var hasAvatar = chat.avatar && chat.avatar !== '';
+        var avatarStyle = hasAvatar ? 'background-image: url(' + chat.avatar + '); background-size: cover; background-position: center;' : '';
         
-        if (!chat.avatar) {
+        // Дефолтные картинки, если нет своей аватарки
+        var defaultAvatarUrl = '';
+        if (!hasAvatar) {
             if (chat.type === 'group') {
-                avatarContent = '👥';
-                avatarClass = 'default-avatar-group';
+                defaultAvatarUrl = 'https://i.ibb.co/0RWPwqwQ/image.png';
             } else if (chat.type === 'channel') {
-                avatarContent = '📢';
-                avatarClass = 'default-avatar-channel';
+                defaultAvatarUrl = 'https://i.ibb.co/3ydBsv59/image.png';
             } else {
-                avatarContent = '👤';
-                avatarClass = 'default-avatar-user';
+                defaultAvatarUrl = 'https://i.ibb.co/W4xM0wf7/image.png';
             }
+            avatarStyle = 'background-image: url(' + defaultAvatarUrl + '); background-size: cover; background-position: center;';
         }
         
         var div = document.createElement('div');
@@ -2740,7 +2740,7 @@ function renderForwardChats(chatsArray) {
         div.style.cssText = 'display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;';
         
         div.innerHTML = `
-            <div class="avatar ${avatarClass}" style="width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; ${avatarStyle}">${avatarContent}</div>
+            <div class="avatar" style="width: 48px; height: 48px; border-radius: 50%; ${avatarStyle}"></div>
             <div style="flex: 1;">
                 <div style="font-weight: 500;">${escapeHtml(chat.name)}</div>
                 <div style="font-size: 11px; color: #999;">${chat.type === 'group' ? 'Группа' : (chat.type === 'channel' ? 'Канал' : 'Личный чат')}</div>
@@ -2773,28 +2773,26 @@ function filterForwardChats(query) {
     filtered.forEach(function(chat) {
         var isSelected = selectedForwardUsers.some(function(u) { return u.id === chat.id; });
         
-        var avatarStyle = chat.avatar ? 'background-image: url(' + chat.avatar + '); background-size: cover; background-position: center;' : '';
-        var avatarContent = '';
-        var avatarClass = '';
+        var hasAvatar = chat.avatar && chat.avatar !== '';
+        var avatarStyle = hasAvatar ? 'background-image: url(' + chat.avatar + '); background-size: cover; background-position: center;' : '';
         
-        if (!chat.avatar) {
+        if (!hasAvatar) {
+            var defaultAvatarUrl = '';
             if (chat.type === 'group') {
-                avatarContent = '👥';
-                avatarClass = 'default-avatar-group';
+                defaultAvatarUrl = 'https://i.ibb.co/0RWPwqwQ/image.png';
             } else if (chat.type === 'channel') {
-                avatarContent = '📢';
-                avatarClass = 'default-avatar-channel';
+                defaultAvatarUrl = 'https://i.ibb.co/3ydBsv59/image.png';
             } else {
-                avatarContent = '👤';
-                avatarClass = 'default-avatar-user';
+                defaultAvatarUrl = 'https://i.ibb.co/W4xM0wf7/image.png';
             }
+            avatarStyle = 'background-image: url(' + defaultAvatarUrl + '); background-size: cover; background-position: center;';
         }
         
         var div = document.createElement('div');
         div.style.cssText = 'display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid #eee; cursor: pointer;';
         
         div.innerHTML = `
-            <div class="avatar ${avatarClass}" style="width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; ${avatarStyle}">${avatarContent}</div>
+            <div class="avatar" style="width: 48px; height: 48px; border-radius: 50%; ${avatarStyle}"></div>
             <div style="flex: 1;">
                 <div style="font-weight: 500;">${escapeHtml(chat.name)}</div>
                 <div style="font-size: 11px; color: #999;">${chat.type === 'group' ? 'Группа' : (chat.type === 'channel' ? 'Канал' : 'Личный чат')}</div>
@@ -2811,7 +2809,6 @@ function filterForwardChats(query) {
         container.appendChild(div);
     });
 }
-
 function toggleForwardUser(chatId) {
     var index = -1;
     for (var i = 0; i < selectedForwardUsers.length; i++) {
