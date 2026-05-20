@@ -817,6 +817,25 @@ function appendMessage(message) {
     messageDiv.setAttribute('data-sender-id', message.senderId || '');
     
     var content = '';
+    // Показываем информацию об ответе (добавить ПОСЛЕ let content = '')
+if (message.replyTo) {
+    var replyText = '';
+    if (message.replyTo.type === 'image') replyText = '📷 Фото';
+    else if (message.replyTo.type === 'gif') replyText = '🎬 GIF';
+    else if (message.replyTo.type === 'audio') replyText = '🎤 Голосовое';
+    else if (message.replyTo.type === 'video') replyText = '🎬 Видео';
+    else if (message.replyTo.type === 'file') replyText = '📎 Файл';
+    else replyText = message.replyTo.text;
+    
+    var displayReplyText = replyText.length > 50 ? replyText.substring(0, 47) + '...' : replyText;
+    
+    content += `
+        <div class="message-reply" onclick="scrollToMessage('${message.replyTo.messageId}')" style="background: rgba(0,0,0,0.05); border-left: 3px solid var(--forest); padding: 6px 10px; border-radius: 10px; margin-bottom: 6px; cursor: pointer; font-size: 12px;">
+            <div style="font-weight: 600; color: var(--forest);">↩️ ${escapeHtml(message.replyTo.senderName)}</div>
+            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(displayReplyText)}</div>
+        </div>
+    `;
+}
     
     // Типы сообщений
     if (message.type === 'image') {
@@ -1627,12 +1646,13 @@ window.createChannel = async function() {
 };
 // ========== КОНТЕКСТНОЕ МЕНЮ ДЛЯ СООБЩЕНИЙ ==========
 
+var replyToMessageData = null; // Данные сообщения, на которое отвечаем
+
 // Показ контекстного меню для сообщения
 function showMessageContextMenu(event, messageId, messageData) {
     event.preventDefault();
     event.stopPropagation();
     
-    // Удаляем старое меню
     var oldMenu = document.getElementById('message-context-menu');
     if (oldMenu) oldMenu.remove();
     
@@ -1640,44 +1660,36 @@ function showMessageContextMenu(event, messageId, messageData) {
     var isAdmin = window.isSuperAdmin === true;
     var isGroupAdmin = false;
     
-    // Проверяем, является ли пользователь админом группы
     if (currentChatData && currentChatData.type === 'group') {
         isGroupAdmin = currentChatData.admins && currentChatData.admins[currentUser.uid];
     }
     
     var menuHtml = '<div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.15); min-width: 200px;">';
     
-    // Копировать текст (если есть текст)
     if (messageData.text) {
         menuHtml += '<div class="context-menu-item" onclick="copyMessageText(\'' + messageId + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee;">';
         menuHtml += '<span style="font-size: 18px;">📋</span><span>Копировать текст</span></div>';
     }
     
-    // Ответить
-    menuHtml += '<div class="context-menu-item" onclick="replyToMessage(\'' + messageId + '\', \'' + escapeHtml(messageData.text || 'Медиа') + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee;">';
+    menuHtml += '<div class="context-menu-item" onclick="replyToMessage(\'' + messageId + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee;">';
     menuHtml += '<span style="font-size: 18px;">↩️</span><span>Ответить</span></div>';
     
-    // Переслать
     menuHtml += '<div class="context-menu-item" onclick="forwardMessage(\'' + messageId + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee;">';
     menuHtml += '<span style="font-size: 18px;">📤</span><span>Переслать</span></div>';
     
-    // Поставить реакцию
     menuHtml += '<div class="context-menu-item" onclick="showReactionPicker(\'' + messageId + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee;">';
     menuHtml += '<span style="font-size: 18px;">😊</span><span>Поставить реакцию</span></div>';
     
-    // Редактировать (только свои текстовые сообщения)
     if (isOwnMessage && messageData.type === 'text') {
         menuHtml += '<div class="context-menu-item" onclick="editMessage(\'' + messageId + '\', \'' + escapeHtml(messageData.text || '') + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee;">';
         menuHtml += '<span style="font-size: 18px;">✏️</span><span>Редактировать</span></div>';
     }
     
-    // Удалить у себя (всегда для своих сообщений)
     if (isOwnMessage) {
         menuHtml += '<div class="context-menu-item" onclick="deleteForMe(\'' + messageId + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee;">';
         menuHtml += '<span style="font-size: 18px;">🗑️</span><span>Удалить у себя</span></div>';
     }
     
-    // Удалить у всех (для своих сообщений, админов или супер-админов)
     if (isOwnMessage || isAdmin || isGroupAdmin) {
         menuHtml += '<div class="context-menu-item" onclick="deleteForEveryone(\'' + messageId + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #dc3545;">';
         menuHtml += '<span style="font-size: 18px;">⚠️</span><span>Удалить у всех</span></div>';
@@ -1691,7 +1703,6 @@ function showMessageContextMenu(event, messageId, messageData) {
     menu.innerHTML = menuHtml;
     document.body.appendChild(menu);
     
-    // Позиционирование
     var x = event.clientX;
     var y = event.clientY;
     
@@ -1712,7 +1723,6 @@ function showMessageContextMenu(event, messageId, messageData) {
     menu.style.left = x + 'px';
     menu.style.top = y + 'px';
     
-    // Закрытие при клике вне меню
     setTimeout(function() {
         document.addEventListener('click', function closeMenu(e) {
             if (!menu.contains(e.target)) {
@@ -1743,20 +1753,42 @@ function copyMessageText(messageId) {
     closeMessageContextMenu();
 }
 
-// Ответить на сообщение
-var replyToMessageId = null;
-var replyToMessageText = '';
-
-function replyToMessage(messageId, messageText) {
-    replyToMessageId = messageId;
-    replyToMessageText = messageText;
+// ========== ОТВЕТ НА СООБЩЕНИЕ (РАБОЧАЯ ВЕРСИЯ) ==========
+function replyToMessage(messageId) {
+    // Получаем полные данные сообщения
+    database.ref('messages/' + currentChatId + '/' + messageId).once('value').then(function(snapshot) {
+        var messageData = snapshot.val();
+        if (!messageData) return;
+        
+        // Получаем имя отправителя
+        var senderName = 'Пользователь';
+        if (messageData.senderId !== currentUser.uid) {
+            database.ref('users/' + messageData.senderId + '/username').once('value').then(function(nameSnap) {
+                senderName = nameSnap.val() || 'Пользователь';
+                showReplyIndicator(messageId, messageData, senderName);
+            });
+        } else {
+            senderName = 'Вы';
+            showReplyIndicator(messageId, messageData, senderName);
+        }
+    });
     
-    // Показываем индикатор ответа
+    closeMessageContextMenu();
+}
+
+function showReplyIndicator(messageId, messageData, senderName) {
+    replyToMessageData = {
+        id: messageId,
+        text: messageData.text || 'Медиа',
+        senderName: senderName,
+        type: messageData.type || 'text'
+    };
+    
     var replyIndicator = document.getElementById('reply-indicator');
     if (!replyIndicator) {
         replyIndicator = document.createElement('div');
         replyIndicator.id = 'reply-indicator';
-        replyIndicator.style.cssText = 'background: #e8f5e8; padding: 8px 12px; border-radius: 12px; margin: 0 12px 5px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #228B22;';
+        replyIndicator.style.cssText = 'background: var(--background); border-left: 4px solid var(--forest); padding: 8px 12px; border-radius: 12px; margin: 0 12px 8px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; cursor: pointer;';
         
         var inputArea = document.querySelector('.message-input-area');
         if (inputArea) {
@@ -1764,21 +1796,60 @@ function replyToMessage(messageId, messageText) {
         }
     }
     
-    replyIndicator.innerHTML = '<span>↩️ Ответ: ' + escapeHtml(messageText.substring(0, 50)) + (messageText.length > 50 ? '...' : '') + '</span><button onclick="cancelReply()" style="background: none; border: none; font-size: 18px; cursor: pointer;">×</button>';
+    var replyText = replyToMessageData.text;
+    if (replyToMessageData.type === 'image') replyText = '📷 Фото';
+    else if (replyToMessageData.type === 'gif') replyText = '🎬 GIF';
+    else if (replyToMessageData.type === 'audio') replyText = '🎤 Голосовое';
+    else if (replyToMessageData.type === 'video') replyText = '🎬 Видео';
+    else if (replyToMessageData.type === 'file') replyText = '📎 Файл';
+    
+    var displayText = replyText.length > 50 ? replyText.substring(0, 47) + '...' : replyText;
+    
+    replyIndicator.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
+            <span>↩️</span>
+            <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 12px; color: var(--forest);">${escapeHtml(replyToMessageData.senderName)}</div>
+                <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(displayText)}</div>
+            </div>
+        </div>
+        <button onclick="cancelReply()" style="background: none; border: none; font-size: 18px; cursor: pointer;">×</button>
+    `;
+    
     replyIndicator.style.display = 'flex';
     
-    // Фокус на поле ввода
+    replyIndicator.onclick = function(e) {
+        if (e.target.tagName !== 'BUTTON') {
+            scrollToMessage(replyToMessageData.id);
+        }
+    };
+    
     var messageInput = document.getElementById('message-input');
     if (messageInput) messageInput.focus();
-    
-    closeMessageContextMenu();
 }
 
 function cancelReply() {
-    replyToMessageId = null;
-    replyToMessageText = '';
+    replyToMessageData = null;
     var replyIndicator = document.getElementById('reply-indicator');
-    if (replyIndicator) replyIndicator.style.display = 'none';
+    if (replyIndicator) {
+        replyIndicator.style.display = 'none';
+    }
+}
+
+function scrollToMessage(messageId) {
+    var messageElement = document.querySelector('.message[data-message-id="' + messageId + '"]');
+    if (messageElement) {
+        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        messageElement.style.transition = 'background-color 0.3s';
+        messageElement.style.backgroundColor = 'rgba(34, 139, 34, 0.3)';
+        
+        setTimeout(function() {
+            messageElement.style.backgroundColor = '';
+        }, 1000);
+    } else {
+        showNotification('Сообщение не найдено', 'error');
+    }
 }
 
 // Переслать сообщение
@@ -1788,14 +1859,11 @@ function forwardMessage(messageId) {
     database.ref('messages/' + currentChatId + '/' + messageId).once('value').then(function(snapshot) {
         var message = snapshot.val();
         if (!message) return;
-        
-        // Показываем диалог выбора чата для пересылки
         showForwardDialog(message);
     });
 }
 
 function showForwardDialog(message) {
-    // Создаём модальное окно со списком чатов
     var modalHtml = `
         <div id="forward-modal" class="modal" style="z-index: 10002;">
             <div class="modal-content" style="max-width: 400px; border-radius: 20px;">
@@ -1816,7 +1884,6 @@ function showForwardDialog(message) {
     if (oldModal) oldModal.remove();
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     
-    // Загружаем список чатов
     database.ref('userChats/' + currentUser.uid).once('value').then(function(snapshot) {
         var userChats = snapshot.val();
         if (!userChats) {
@@ -1833,20 +1900,23 @@ function showForwardDialog(message) {
                 var chat = chatSnap.val();
                 if (chat && chatId !== currentChatId) {
                     var chatName = '';
+                    var chatIcon = '👤';
+                    
                     if (chat.type === 'group') {
                         chatName = chat.name || 'Группа';
+                        chatIcon = '👥';
                     } else if (chat.type === 'channel') {
                         chatName = chat.name || 'Канал';
+                        chatIcon = '📢';
                     } else {
                         var otherId = chat.participants.find(id => id !== currentUser.uid);
                         if (otherId) {
                             database.ref('users/' + otherId + '/username').once('value').then(function(nameSnap) {
                                 var name = nameSnap.val() || 'Пользователь';
                                 chatsHtml += '<div class="forward-chat-item" data-chat-id="' + chatId + '" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid #eee; cursor: pointer;">';
-                                chatsHtml += '<div class="avatar" style="width: 45px; height: 45px; background: #e8f5e8; display: flex; align-items: center; justify-content: center; border-radius: 50%;">' + (chat.type === 'group' ? '👥' : (chat.type === 'channel' ? '📢' : '👤')) + '</div>';
-                                chatsHtml += '<div><strong>' + escapeHtml(name) + '</strong><br><small style="color: #999;">' + (chat.type === 'group' ? 'Группа' : (chat.type === 'channel' ? 'Канал' : 'Личный чат')) + '</small></div>';
+                                chatsHtml += '<div style="width: 45px; height: 45px; background: #e8f5e8; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 22px;">' + chatIcon + '</div>';
+                                chatsHtml += '<div><strong>' + escapeHtml(name) + '</strong><br><small style="color: #999;">Личный чат</small></div>';
                                 chatsHtml += '</div>';
-                                
                                 document.getElementById('forward-chats-list').innerHTML = chatsHtml;
                                 attachForwardClicks(message);
                             });
@@ -1855,7 +1925,7 @@ function showForwardDialog(message) {
                     }
                     
                     chatsHtml += '<div class="forward-chat-item" data-chat-id="' + chatId + '" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid #eee; cursor: pointer;">';
-                    chatsHtml += '<div class="avatar" style="width: 45px; height: 45px; background: #e8f5e8; display: flex; align-items: center; justify-content: center; border-radius: 50%;">' + (chat.type === 'group' ? '👥' : (chat.type === 'channel' ? '📢' : '👤')) + '</div>';
+                    chatsHtml += '<div style="width: 45px; height: 45px; background: #e8f5e8; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 22px;">' + chatIcon + '</div>';
                     chatsHtml += '<div><strong>' + escapeHtml(chatName) + '</strong><br><small style="color: #999;">' + (chat.type === 'group' ? 'Группа' : (chat.type === 'channel' ? 'Канал' : 'Личный чат')) + '</small></div>';
                     chatsHtml += '</div>';
                 }
@@ -1889,11 +1959,9 @@ function forwardMessageToChat(message, targetChatId) {
         text: message.text || '',
         senderId: currentUser.uid,
         timestamp: firebase.database.ServerValue.TIMESTAMP,
-        forwarded: true,
-        originalSender: message.senderId
+        forwarded: true
     };
     
-    // Копируем медиа данные
     if (message.imageUrl) forwardData.imageUrl = message.imageUrl;
     if (message.gifUrl) forwardData.gifUrl = message.gifUrl;
     if (message.videoUrl) forwardData.videoUrl = message.videoUrl;
@@ -1944,11 +2012,7 @@ function deleteForMe(messageId) {
     closeMessageContextMenu();
     
     if (confirm('Удалить это сообщение только у себя?')) {
-        database.ref('messages/' + currentChatId + '/' + messageId).update({
-            deletedFor: firebase.database.ServerValue.increment(1),
-            text: '[Удалено]',
-            type: 'text'
-        }).then(function() {
+        database.ref('messages/' + currentChatId + '/' + messageId).remove().then(function() {
             showNotification('Сообщение удалено', 'success');
         }).catch(function() {
             showNotification('Ошибка удаления', 'error');
@@ -1975,24 +2039,25 @@ function showReactionPicker(messageId) {
     
     var reactions = ['👍', '❤️', '😂', '😮', '😢', '😡', '🎉', '🔥'];
     
-    var pickerHtml = `
-        <div id="reaction-picker" style="position: fixed; z-index: 10002; background: white; border-radius: 40px; padding: 8px 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); display: flex; gap: 8px;">
-            ${reactions.map(r => `<span style="font-size: 28px; cursor: pointer; padding: 5px; transition: transform 0.1s;" onclick="addReaction('${messageId}', '${r}')">${r}</span>`).join('')}
-            <span style="font-size: 24px; cursor: pointer; padding: 5px; color: #999;" onclick="closeReactionPicker()">✕</span>
-        </div>
-    `;
-    
     var picker = document.createElement('div');
-    picker.innerHTML = pickerHtml;
+    picker.id = 'reaction-picker';
+    picker.style.cssText = 'position: fixed; z-index: 10002; background: white; border-radius: 40px; padding: 8px 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); display: flex; gap: 8px; left: 50%; transform: translateX(-50%); bottom: 100px;';
+    
+    reactions.forEach(function(r) {
+        var span = document.createElement('span');
+        span.textContent = r;
+        span.style.cssText = 'font-size: 28px; cursor: pointer; padding: 5px; transition: transform 0.1s;';
+        span.onclick = function() { addReaction(messageId, r); };
+        picker.appendChild(span);
+    });
+    
+    var closeSpan = document.createElement('span');
+    closeSpan.textContent = '✕';
+    closeSpan.style.cssText = 'font-size: 24px; cursor: pointer; padding: 5px; color: #999;';
+    closeSpan.onclick = closeReactionPicker;
+    picker.appendChild(closeSpan);
+    
     document.body.appendChild(picker);
-    
-    var rect = picker.firstElementChild.getBoundingClientRect();
-    var x = (window.innerWidth - rect.width) / 2;
-    var y = window.innerHeight - 100;
-    
-    picker.firstElementChild.style.position = 'fixed';
-    picker.firstElementChild.style.left = x + 'px';
-    picker.firstElementChild.style.top = y + 'px';
 }
 
 function closeReactionPicker() {
@@ -2020,7 +2085,6 @@ function addContextMenuToMessages() {
         
         msg.setAttribute('data-context-attached', 'true');
         
-        // ПК - правый клик
         msg.addEventListener('contextmenu', function(e) {
             e.preventDefault();
             var messageId = this.getAttribute('data-message-id');
@@ -2040,7 +2104,6 @@ function addContextMenuToMessages() {
             }
         });
         
-        // Телефон - долгое нажатие
         var touchTimer = null;
         msg.addEventListener('touchstart', function(e) {
             touchTimer = setTimeout(function() {
@@ -2069,7 +2132,6 @@ var messagesObserver = new MutationObserver(function() {
     addContextMenuToMessages();
 });
 
-// Запускаем наблюдатель после загрузки
 setTimeout(function() {
     var messagesContainer = document.getElementById('messages-container');
     if (messagesContainer) {
