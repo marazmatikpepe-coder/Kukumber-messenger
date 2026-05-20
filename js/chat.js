@@ -1625,3 +1625,455 @@ window.createChannel = async function() {
         showNotification('Ошибка создания канала', 'error');
     }
 };
+// ========== КОНТЕКСТНОЕ МЕНЮ ДЛЯ СООБЩЕНИЙ ==========
+
+// Показ контекстного меню для сообщения
+function showMessageContextMenu(event, messageId, messageData) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Удаляем старое меню
+    var oldMenu = document.getElementById('message-context-menu');
+    if (oldMenu) oldMenu.remove();
+    
+    var isOwnMessage = messageData.senderId === currentUser.uid;
+    var isAdmin = window.isSuperAdmin === true;
+    var isGroupAdmin = false;
+    
+    // Проверяем, является ли пользователь админом группы
+    if (currentChatData && currentChatData.type === 'group') {
+        isGroupAdmin = currentChatData.admins && currentChatData.admins[currentUser.uid];
+    }
+    
+    var menuHtml = '<div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.15); min-width: 200px;">';
+    
+    // Копировать текст (если есть текст)
+    if (messageData.text) {
+        menuHtml += '<div class="context-menu-item" onclick="copyMessageText(\'' + messageId + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee;">';
+        menuHtml += '<span style="font-size: 18px;">📋</span><span>Копировать текст</span></div>';
+    }
+    
+    // Ответить
+    menuHtml += '<div class="context-menu-item" onclick="replyToMessage(\'' + messageId + '\', \'' + escapeHtml(messageData.text || 'Медиа') + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee;">';
+    menuHtml += '<span style="font-size: 18px;">↩️</span><span>Ответить</span></div>';
+    
+    // Переслать
+    menuHtml += '<div class="context-menu-item" onclick="forwardMessage(\'' + messageId + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee;">';
+    menuHtml += '<span style="font-size: 18px;">📤</span><span>Переслать</span></div>';
+    
+    // Поставить реакцию
+    menuHtml += '<div class="context-menu-item" onclick="showReactionPicker(\'' + messageId + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee;">';
+    menuHtml += '<span style="font-size: 18px;">😊</span><span>Поставить реакцию</span></div>';
+    
+    // Редактировать (только свои текстовые сообщения)
+    if (isOwnMessage && messageData.type === 'text') {
+        menuHtml += '<div class="context-menu-item" onclick="editMessage(\'' + messageId + '\', \'' + escapeHtml(messageData.text || '') + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee;">';
+        menuHtml += '<span style="font-size: 18px;">✏️</span><span>Редактировать</span></div>';
+    }
+    
+    // Удалить у себя (всегда для своих сообщений)
+    if (isOwnMessage) {
+        menuHtml += '<div class="context-menu-item" onclick="deleteForMe(\'' + messageId + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #eee;">';
+        menuHtml += '<span style="font-size: 18px;">🗑️</span><span>Удалить у себя</span></div>';
+    }
+    
+    // Удалить у всех (для своих сообщений, админов или супер-админов)
+    if (isOwnMessage || isAdmin || isGroupAdmin) {
+        menuHtml += '<div class="context-menu-item" onclick="deleteForEveryone(\'' + messageId + '\')" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #dc3545;">';
+        menuHtml += '<span style="font-size: 18px;">⚠️</span><span>Удалить у всех</span></div>';
+    }
+    
+    menuHtml += '</div>';
+    
+    var menu = document.createElement('div');
+    menu.id = 'message-context-menu';
+    menu.style.cssText = 'position: fixed; z-index: 10001; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); min-width: 200px; overflow: hidden;';
+    menu.innerHTML = menuHtml;
+    document.body.appendChild(menu);
+    
+    // Позиционирование
+    var x = event.clientX;
+    var y = event.clientY;
+    
+    if (event.touches) {
+        x = event.touches[0].clientX;
+        y = event.touches[0].clientY;
+    }
+    
+    var menuRect = menu.getBoundingClientRect();
+    var windowWidth = window.innerWidth;
+    var windowHeight = window.innerHeight;
+    
+    if (x + menuRect.width > windowWidth) x = windowWidth - menuRect.width - 10;
+    if (y + menuRect.height > windowHeight) y = windowHeight - menuRect.height - 10;
+    if (x < 10) x = 10;
+    if (y < 10) y = 10;
+    
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    
+    // Закрытие при клике вне меню
+    setTimeout(function() {
+        document.addEventListener('click', function closeMenu(e) {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        });
+        document.addEventListener('touchstart', function closeMenuTouch(e) {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('touchstart', closeMenuTouch);
+            }
+        });
+    }, 10);
+}
+
+// Копировать текст сообщения
+function copyMessageText(messageId) {
+    var messageElement = document.querySelector('.message[data-message-id="' + messageId + '"]');
+    if (messageElement) {
+        var textElement = messageElement.querySelector('.message-text');
+        if (textElement) {
+            var text = textElement.innerText;
+            navigator.clipboard.writeText(text);
+            showNotification('Текст скопирован', 'success');
+        }
+    }
+    closeMessageContextMenu();
+}
+
+// Ответить на сообщение
+var replyToMessageId = null;
+var replyToMessageText = '';
+
+function replyToMessage(messageId, messageText) {
+    replyToMessageId = messageId;
+    replyToMessageText = messageText;
+    
+    // Показываем индикатор ответа
+    var replyIndicator = document.getElementById('reply-indicator');
+    if (!replyIndicator) {
+        replyIndicator = document.createElement('div');
+        replyIndicator.id = 'reply-indicator';
+        replyIndicator.style.cssText = 'background: #e8f5e8; padding: 8px 12px; border-radius: 12px; margin: 0 12px 5px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #228B22;';
+        
+        var inputArea = document.querySelector('.message-input-area');
+        if (inputArea) {
+            inputArea.parentNode.insertBefore(replyIndicator, inputArea);
+        }
+    }
+    
+    replyIndicator.innerHTML = '<span>↩️ Ответ: ' + escapeHtml(messageText.substring(0, 50)) + (messageText.length > 50 ? '...' : '') + '</span><button onclick="cancelReply()" style="background: none; border: none; font-size: 18px; cursor: pointer;">×</button>';
+    replyIndicator.style.display = 'flex';
+    
+    // Фокус на поле ввода
+    var messageInput = document.getElementById('message-input');
+    if (messageInput) messageInput.focus();
+    
+    closeMessageContextMenu();
+}
+
+function cancelReply() {
+    replyToMessageId = null;
+    replyToMessageText = '';
+    var replyIndicator = document.getElementById('reply-indicator');
+    if (replyIndicator) replyIndicator.style.display = 'none';
+}
+
+// Переслать сообщение
+function forwardMessage(messageId) {
+    closeMessageContextMenu();
+    
+    database.ref('messages/' + currentChatId + '/' + messageId).once('value').then(function(snapshot) {
+        var message = snapshot.val();
+        if (!message) return;
+        
+        // Показываем диалог выбора чата для пересылки
+        showForwardDialog(message);
+    });
+}
+
+function showForwardDialog(message) {
+    // Создаём модальное окно со списком чатов
+    var modalHtml = `
+        <div id="forward-modal" class="modal" style="z-index: 10002;">
+            <div class="modal-content" style="max-width: 400px; border-radius: 20px;">
+                <div class="modal-header">
+                    <h3>📤 Переслать</h3>
+                    <button onclick="closeForwardModal()" class="btn-close">×</button>
+                </div>
+                <div style="padding: 15px; max-height: 400px; overflow-y: auto;">
+                    <div id="forward-chats-list" style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="text-align: center; padding: 20px;">Загрузка чатов...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    var oldModal = document.getElementById('forward-modal');
+    if (oldModal) oldModal.remove();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Загружаем список чатов
+    database.ref('userChats/' + currentUser.uid).once('value').then(function(snapshot) {
+        var userChats = snapshot.val();
+        if (!userChats) {
+            document.getElementById('forward-chats-list').innerHTML = '<div style="text-align: center; padding: 20px;">Нет чатов для пересылки</div>';
+            return;
+        }
+        
+        var chatIds = Object.keys(userChats);
+        var chatsHtml = '';
+        var processed = 0;
+        
+        chatIds.forEach(function(chatId) {
+            database.ref('chats/' + chatId).once('value').then(function(chatSnap) {
+                var chat = chatSnap.val();
+                if (chat && chatId !== currentChatId) {
+                    var chatName = '';
+                    if (chat.type === 'group') {
+                        chatName = chat.name || 'Группа';
+                    } else if (chat.type === 'channel') {
+                        chatName = chat.name || 'Канал';
+                    } else {
+                        var otherId = chat.participants.find(id => id !== currentUser.uid);
+                        if (otherId) {
+                            database.ref('users/' + otherId + '/username').once('value').then(function(nameSnap) {
+                                var name = nameSnap.val() || 'Пользователь';
+                                chatsHtml += '<div class="forward-chat-item" data-chat-id="' + chatId + '" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid #eee; cursor: pointer;">';
+                                chatsHtml += '<div class="avatar" style="width: 45px; height: 45px; background: #e8f5e8; display: flex; align-items: center; justify-content: center; border-radius: 50%;">' + (chat.type === 'group' ? '👥' : (chat.type === 'channel' ? '📢' : '👤')) + '</div>';
+                                chatsHtml += '<div><strong>' + escapeHtml(name) + '</strong><br><small style="color: #999;">' + (chat.type === 'group' ? 'Группа' : (chat.type === 'channel' ? 'Канал' : 'Личный чат')) + '</small></div>';
+                                chatsHtml += '</div>';
+                                
+                                document.getElementById('forward-chats-list').innerHTML = chatsHtml;
+                                attachForwardClicks(message);
+                            });
+                            return;
+                        }
+                    }
+                    
+                    chatsHtml += '<div class="forward-chat-item" data-chat-id="' + chatId + '" style="display: flex; align-items: center; gap: 12px; padding: 12px; border-bottom: 1px solid #eee; cursor: pointer;">';
+                    chatsHtml += '<div class="avatar" style="width: 45px; height: 45px; background: #e8f5e8; display: flex; align-items: center; justify-content: center; border-radius: 50%;">' + (chat.type === 'group' ? '👥' : (chat.type === 'channel' ? '📢' : '👤')) + '</div>';
+                    chatsHtml += '<div><strong>' + escapeHtml(chatName) + '</strong><br><small style="color: #999;">' + (chat.type === 'group' ? 'Группа' : (chat.type === 'channel' ? 'Канал' : 'Личный чат')) + '</small></div>';
+                    chatsHtml += '</div>';
+                }
+                processed++;
+                
+                if (processed === chatIds.length) {
+                    if (chatsHtml === '') {
+                        document.getElementById('forward-chats-list').innerHTML = '<div style="text-align: center; padding: 20px;">Нет других чатов</div>';
+                    } else {
+                        document.getElementById('forward-chats-list').innerHTML = chatsHtml;
+                        attachForwardClicks(message);
+                    }
+                }
+            });
+        });
+    });
+}
+
+function attachForwardClicks(message) {
+    document.querySelectorAll('.forward-chat-item').forEach(function(item) {
+        item.onclick = function() {
+            var targetChatId = this.getAttribute('data-chat-id');
+            forwardMessageToChat(message, targetChatId);
+        };
+    });
+}
+
+function forwardMessageToChat(message, targetChatId) {
+    var forwardData = {
+        type: message.type,
+        text: message.text || '',
+        senderId: currentUser.uid,
+        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        forwarded: true,
+        originalSender: message.senderId
+    };
+    
+    // Копируем медиа данные
+    if (message.imageUrl) forwardData.imageUrl = message.imageUrl;
+    if (message.gifUrl) forwardData.gifUrl = message.gifUrl;
+    if (message.videoUrl) forwardData.videoUrl = message.videoUrl;
+    if (message.audioUrl) forwardData.audioUrl = message.audioUrl;
+    if (message.fileUrl) {
+        forwardData.fileUrl = message.fileUrl;
+        forwardData.fileName = message.fileName;
+    }
+    
+    database.ref('messages/' + targetChatId).push(forwardData).then(function() {
+        var shortText = message.text ? (message.text.length > 50 ? message.text.substring(0, 47) + '...' : message.text) : 'Медиа';
+        database.ref('chats/' + targetChatId).update({
+            lastMessage: '📨 Переслано: ' + shortText,
+            lastMessageTime: firebase.database.ServerValue.TIMESTAMP
+        });
+        showNotification('Сообщение переслано', 'success');
+        closeForwardModal();
+    }).catch(function() {
+        showNotification('Ошибка пересылки', 'error');
+    });
+}
+
+function closeForwardModal() {
+    var modal = document.getElementById('forward-modal');
+    if (modal) modal.remove();
+}
+
+// Редактировать сообщение
+function editMessage(messageId, currentText) {
+    closeMessageContextMenu();
+    
+    var newText = prompt('Редактировать сообщение:', currentText);
+    if (newText && newText.trim() && newText !== currentText) {
+        database.ref('messages/' + currentChatId + '/' + messageId).update({
+            text: newText.trim(),
+            edited: true,
+            editedAt: firebase.database.ServerValue.TIMESTAMP
+        }).then(function() {
+            showNotification('Сообщение отредактировано', 'success');
+        }).catch(function() {
+            showNotification('Ошибка редактирования', 'error');
+        });
+    }
+}
+
+// Удалить у себя
+function deleteForMe(messageId) {
+    closeMessageContextMenu();
+    
+    if (confirm('Удалить это сообщение только у себя?')) {
+        database.ref('messages/' + currentChatId + '/' + messageId).update({
+            deletedFor: firebase.database.ServerValue.increment(1),
+            text: '[Удалено]',
+            type: 'text'
+        }).then(function() {
+            showNotification('Сообщение удалено', 'success');
+        }).catch(function() {
+            showNotification('Ошибка удаления', 'error');
+        });
+    }
+}
+
+// Удалить у всех
+function deleteForEveryone(messageId) {
+    closeMessageContextMenu();
+    
+    if (confirm('Удалить это сообщение у всех участников? Это действие необратимо!')) {
+        database.ref('messages/' + currentChatId + '/' + messageId).remove().then(function() {
+            showNotification('Сообщение удалено у всех', 'success');
+        }).catch(function() {
+            showNotification('Ошибка удаления', 'error');
+        });
+    }
+}
+
+// Реакции
+function showReactionPicker(messageId) {
+    closeMessageContextMenu();
+    
+    var reactions = ['👍', '❤️', '😂', '😮', '😢', '😡', '🎉', '🔥'];
+    
+    var pickerHtml = `
+        <div id="reaction-picker" style="position: fixed; z-index: 10002; background: white; border-radius: 40px; padding: 8px 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); display: flex; gap: 8px;">
+            ${reactions.map(r => `<span style="font-size: 28px; cursor: pointer; padding: 5px; transition: transform 0.1s;" onclick="addReaction('${messageId}', '${r}')">${r}</span>`).join('')}
+            <span style="font-size: 24px; cursor: pointer; padding: 5px; color: #999;" onclick="closeReactionPicker()">✕</span>
+        </div>
+    `;
+    
+    var picker = document.createElement('div');
+    picker.innerHTML = pickerHtml;
+    document.body.appendChild(picker);
+    
+    var rect = picker.firstElementChild.getBoundingClientRect();
+    var x = (window.innerWidth - rect.width) / 2;
+    var y = window.innerHeight - 100;
+    
+    picker.firstElementChild.style.position = 'fixed';
+    picker.firstElementChild.style.left = x + 'px';
+    picker.firstElementChild.style.top = y + 'px';
+}
+
+function closeReactionPicker() {
+    var picker = document.getElementById('reaction-picker');
+    if (picker) picker.remove();
+}
+
+function addReaction(messageId, reaction) {
+    var reactionRef = database.ref('messageReactions/' + messageId + '/' + currentUser.uid);
+    reactionRef.set(reaction);
+    showNotification('Реакция добавлена', 'success');
+    closeReactionPicker();
+}
+
+function closeMessageContextMenu() {
+    var menu = document.getElementById('message-context-menu');
+    if (menu) menu.remove();
+}
+
+// Добавляем обработчики для сообщений
+function addContextMenuToMessages() {
+    var messages = document.querySelectorAll('.message');
+    messages.forEach(function(msg) {
+        if (msg.hasAttribute('data-context-attached')) return;
+        
+        msg.setAttribute('data-context-attached', 'true');
+        
+        // ПК - правый клик
+        msg.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            var messageId = this.getAttribute('data-message-id');
+            var messageData = window.tempMessageData ? window.tempMessageData[messageId] : null;
+            
+            if (!messageData) {
+                database.ref('messages/' + currentChatId + '/' + messageId).once('value').then(function(snap) {
+                    var data = snap.val();
+                    if (data) {
+                        if (!window.tempMessageData) window.tempMessageData = {};
+                        window.tempMessageData[messageId] = data;
+                        showMessageContextMenu(e, messageId, data);
+                    }
+                });
+            } else {
+                showMessageContextMenu(e, messageId, messageData);
+            }
+        });
+        
+        // Телефон - долгое нажатие
+        var touchTimer = null;
+        msg.addEventListener('touchstart', function(e) {
+            touchTimer = setTimeout(function() {
+                var messageId = msg.getAttribute('data-message-id');
+                database.ref('messages/' + currentChatId + '/' + messageId).once('value').then(function(snap) {
+                    var data = snap.val();
+                    if (data) {
+                        showMessageContextMenu(e, messageId, data);
+                    }
+                });
+            }, 500);
+        });
+        
+        msg.addEventListener('touchend', function() {
+            if (touchTimer) clearTimeout(touchTimer);
+        });
+        
+        msg.addEventListener('touchmove', function() {
+            if (touchTimer) clearTimeout(touchTimer);
+        });
+    });
+}
+
+// Наблюдатель за новыми сообщениями
+var messagesObserver = new MutationObserver(function() {
+    addContextMenuToMessages();
+});
+
+// Запускаем наблюдатель после загрузки
+setTimeout(function() {
+    var messagesContainer = document.getElementById('messages-container');
+    if (messagesContainer) {
+        messagesObserver.observe(messagesContainer, { childList: true, subtree: true });
+        addContextMenuToMessages();
+    }
+}, 1000);
