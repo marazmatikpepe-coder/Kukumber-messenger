@@ -2533,3 +2533,563 @@ replyBarStyle.textContent = `
 document.head.appendChild(replyBarStyle);
 
 console.log('✅ Эффект вибрации и подсветка добавлены!');
+// ========== ПЕРЕСЫЛКА СООБЩЕНИЙ (РАСШИРЕННАЯ ВЕРСИЯ) - ДОБАВЛЕНО В КОНЕЦ ==========
+
+var selectedForwardUsers = [];
+var forwardMessageData = null;
+
+// Функция пересылки (вызывается из контекстного меню)
+window.forwardMessage = function(messageId) {
+    if (typeof closeMessageContextMenu === 'function') closeMessageContextMenu();
+    
+    database.ref('messages/' + currentChatId + '/' + messageId).once('value').then(function(snapshot) {
+        var message = snapshot.val();
+        if (!message) return;
+        
+        forwardMessageData = message;
+        showForwardDialog();
+    });
+};
+
+function showForwardDialog() {
+    selectedForwardUsers = [];
+    
+    var modalHtml = `
+        <div id="forward-modal" class="modal" style="z-index: 10002;">
+            <div class="modal-content" style="max-width: 450px; width: 90%; border-radius: 24px; background: white; overflow: hidden; display: flex; flex-direction: column; max-height: 85vh;">
+                <div class="modal-header" style="padding: 15px 20px; border-bottom: 1px solid #eee; flex-shrink: 0;">
+                    <h3 style="margin: 0; font-size: 18px;">📤 Переслать</h3>
+                    <button onclick="closeForwardModal()" class="btn-close">×</button>
+                </div>
+                
+                <!-- Поиск -->
+                <div style="padding: 12px 20px; border-bottom: 1px solid #eee;">
+                    <div style="display: flex; align-items: center; background: #f5f5f5; border-radius: 30px; padding: 0 15px;">
+                        <span style="font-size: 16px;">🔍</span>
+                        <input type="text" id="forward-search-input" placeholder="Поиск по чатам..." style="flex: 1; padding: 12px 10px; border: none; background: transparent; outline: none; font-size: 14px;">
+                    </div>
+                </div>
+                
+                <!-- Список чатов -->
+                <div id="forward-chats-list" style="flex: 1; overflow-y: auto; padding: 10px 0; max-height: 350px;">
+                    <div style="text-align: center; padding: 30px;">Загрузка чатов...</div>
+                </div>
+                
+                <!-- Выбранные пользователи -->
+                <div id="selected-users-container" style="padding: 10px 20px; border-top: 1px solid #eee; background: #f9f9f9; display: none;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px;" id="selected-users-list"></div>
+                </div>
+                
+                <!-- Подпись и отправка -->
+                <div style="padding: 15px 20px; border-top: 1px solid #eee; background: white;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="text" id="forward-caption" placeholder="Добавить подпись..." style="flex: 1; padding: 12px 15px; border: 1px solid #ddd; border-radius: 30px; font-size: 14px; outline: none;">
+                        <button id="forward-settings-btn" style="background: none; border: none; font-size: 24px; cursor: pointer; padding: 8px;">💡</button>
+                        <button id="send-forward-btn" style="background: linear-gradient(135deg, #228B22, #32CD32); color: white; border: none; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;">➤</button>
+                    </div>
+                    <div id="forward-error" style="color: #dc3545; font-size: 12px; margin-top: 8px; display: none;">Выберите хотя бы одного получателя</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    var oldModal = document.getElementById('forward-modal');
+    if (oldModal) oldModal.remove();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    loadForwardChats();
+    
+    var searchInput = document.getElementById('forward-search-input');
+    if (searchInput) {
+        searchInput.oninput = function() {
+            filterForwardChats(this.value.toLowerCase());
+        };
+    }
+    
+    var settingsBtn = document.getElementById('forward-settings-btn');
+    if (settingsBtn) {
+        settingsBtn.onclick = showForwardSettings;
+    }
+    
+    var sendBtn = document.getElementById('send-forward-btn');
+    if (sendBtn) {
+        sendBtn.onclick = sendForwardMessages;
+    }
+}
+
+function loadForwardChats() {
+    var container = document.getElementById('forward-chats-list');
+    if (!container) return;
+    
+    container.innerHTML = '<div style="text-align: center; padding: 30px;">Загрузка чатов...</div>';
+    
+    database.ref('userChats/' + currentUser.uid).once('value').then(function(snapshot) {
+        var userChats = snapshot.val();
+        if (!userChats) {
+            container.innerHTML = '<div style="text-align: center; padding: 30px; color: #999;">Нет чатов для пересылки</div>';
+            return;
+        }
+        
+        var chatIds = Object.keys(userChats);
+        var chatsArray = [];
+        var processed = 0;
+        
+        if (chatIds.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 30px; color: #999;">Нет чатов для пересылки</div>';
+            return;
+        }
+        
+        chatIds.forEach(function(chatId) {
+            database.ref('chats/' + chatId).once('value').then(function(chatSnap) {
+                var chat = chatSnap.val();
+                if (chat && chatId !== currentChatId) {
+                    var chatInfo = {
+                        id: chatId,
+                        type: chat.type,
+                        name: '',
+                        avatar: '',
+                        participants: chat.participants
+                    };
+                    
+                    if (chat.type === 'group') {
+                        chatInfo.name = chat.name || 'Группа';
+                        chatInfo.avatar = chat.avatar || '';
+                        chatInfo.icon = '👥';
+                        chatsArray.push(chatInfo);
+                        processed++;
+                        checkComplete();
+                    } else if (chat.type === 'channel') {
+                        chatInfo.name = chat.name || 'Канал';
+                        chatInfo.avatar = chat.avatar || '';
+                        chatInfo.icon = '📢';
+                        chatsArray.push(chatInfo);
+                        processed++;
+                        checkComplete();
+                    } else {
+                        var otherId = chat.participants.find(function(id) { return id !== currentUser.uid; });
+                        if (otherId) {
+                            database.ref('users/' + otherId).once('value').then(function(userSnap) {
+                                var userData = userSnap.val();
+                                if (userData) {
+                                    chatInfo.name = userData.username || 'Пользователь';
+                                    chatInfo.avatar = userData.avatar || '';
+                                    chatInfo.userId = otherId;
+                                    chatInfo.icon = '';
+                                    chatsArray.push(chatInfo);
+                                }
+                                processed++;
+                                checkComplete();
+                            });
+                            return;
+                        }
+                        processed++;
+                        checkComplete();
+                    }
+                } else {
+                    processed++;
+                    checkComplete();
+                }
+                
+                function checkComplete() {
+                    if (processed === chatIds.length) {
+                        renderForwardChats(chatsArray);
+                    }
+                }
+            });
+        });
+    });
+}
+
+function renderForwardChats(chatsArray) {
+    var container = document.getElementById('forward-chats-list');
+    if (!container) return;
+    
+    if (chatsArray.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 30px; color: #999;">Нет чатов для пересылки</div>';
+        return;
+    }
+    
+    container.innerHTML = '';
+    window.forwardChatsData = chatsArray;
+    
+    chatsArray.forEach(function(chat) {
+        var isSelected = selectedForwardUsers.some(function(u) { return u.id === chat.id; });
+        
+        var avatarStyle = chat.avatar ? 'background-image: url(' + chat.avatar + '); background-size: cover; background-position: center;' : '';
+        var avatarContent = '';
+        var avatarClass = '';
+        
+        if (!chat.avatar) {
+            if (chat.type === 'group') {
+                avatarContent = '👥';
+                avatarClass = 'default-avatar-group';
+            } else if (chat.type === 'channel') {
+                avatarContent = '📢';
+                avatarClass = 'default-avatar-channel';
+            } else {
+                avatarContent = '👤';
+                avatarClass = 'default-avatar-user';
+            }
+        }
+        
+        var div = document.createElement('div');
+        div.className = 'forward-chat-item';
+        div.setAttribute('data-chat-id', chat.id);
+        div.setAttribute('data-chat-type', chat.type);
+        div.setAttribute('data-chat-name', chat.name);
+        div.style.cssText = 'display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;';
+        
+        div.innerHTML = `
+            <div class="avatar ${avatarClass}" style="width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; ${avatarStyle}">${avatarContent}</div>
+            <div style="flex: 1;">
+                <div style="font-weight: 500;">${escapeHtml(chat.name)}</div>
+                <div style="font-size: 11px; color: #999;">${chat.type === 'group' ? 'Группа' : (chat.type === 'channel' ? 'Канал' : 'Личный чат')}</div>
+            </div>
+            <div class="forward-checkbox" style="width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ddd; background: white; display: flex; align-items: center; justify-content: center; transition: 0.2s;">
+                ${isSelected ? '<span style="color: #228B22; font-size: 14px;">✓</span>' : ''}
+            </div>
+        `;
+        
+        div.onclick = (function(chatId) {
+            return function() { toggleForwardUser(chatId); };
+        })(chat.id);
+        
+        container.appendChild(div);
+    });
+}
+
+function filterForwardChats(query) {
+    if (!window.forwardChatsData) return;
+    
+    var filtered = window.forwardChatsData.filter(function(chat) {
+        return chat.name.toLowerCase().includes(query);
+    });
+    
+    var container = document.getElementById('forward-chats-list');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    filtered.forEach(function(chat) {
+        var isSelected = selectedForwardUsers.some(function(u) { return u.id === chat.id; });
+        
+        var avatarStyle = chat.avatar ? 'background-image: url(' + chat.avatar + '); background-size: cover; background-position: center;' : '';
+        var avatarContent = '';
+        var avatarClass = '';
+        
+        if (!chat.avatar) {
+            if (chat.type === 'group') {
+                avatarContent = '👥';
+                avatarClass = 'default-avatar-group';
+            } else if (chat.type === 'channel') {
+                avatarContent = '📢';
+                avatarClass = 'default-avatar-channel';
+            } else {
+                avatarContent = '👤';
+                avatarClass = 'default-avatar-user';
+            }
+        }
+        
+        var div = document.createElement('div');
+        div.style.cssText = 'display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid #eee; cursor: pointer;';
+        
+        div.innerHTML = `
+            <div class="avatar ${avatarClass}" style="width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; ${avatarStyle}">${avatarContent}</div>
+            <div style="flex: 1;">
+                <div style="font-weight: 500;">${escapeHtml(chat.name)}</div>
+                <div style="font-size: 11px; color: #999;">${chat.type === 'group' ? 'Группа' : (chat.type === 'channel' ? 'Канал' : 'Личный чат')}</div>
+            </div>
+            <div class="forward-checkbox" style="width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ddd; background: white; display: flex; align-items: center; justify-content: center;">
+                ${isSelected ? '<span style="color: #228B22; font-size: 14px;">✓</span>' : ''}
+            </div>
+        `;
+        
+        div.onclick = (function(chatId) {
+            return function() { toggleForwardUser(chatId); };
+        })(chat.id);
+        
+        container.appendChild(div);
+    });
+}
+
+function toggleForwardUser(chatId) {
+    var index = -1;
+    for (var i = 0; i < selectedForwardUsers.length; i++) {
+        if (selectedForwardUsers[i].id === chatId) {
+            index = i;
+            break;
+        }
+    }
+    
+    // Находим данные чата
+    var chatData = null;
+    if (window.forwardChatsData) {
+        for (var j = 0; j < window.forwardChatsData.length; j++) {
+            if (window.forwardChatsData[j].id === chatId) {
+                chatData = window.forwardChatsData[j];
+                break;
+            }
+        }
+    }
+    
+    if (index === -1) {
+        if (selectedForwardUsers.length >= 10) {
+            showNotification('Можно выбрать не более 10 получателей', 'error');
+            return;
+        }
+        if (chatData) {
+            selectedForwardUsers.push({ id: chatId, name: chatData.name, type: chatData.type });
+        }
+    } else {
+        selectedForwardUsers.splice(index, 1);
+    }
+    
+    // Обновляем чекбоксы
+    var items = document.querySelectorAll('.forward-chat-item');
+    for (var k = 0; k < items.length; k++) {
+        var item = items[k];
+        var itemChatId = item.getAttribute('data-chat-id');
+        var isSelected = false;
+        for (var s = 0; s < selectedForwardUsers.length; s++) {
+            if (selectedForwardUsers[s].id === itemChatId) {
+                isSelected = true;
+                break;
+            }
+        }
+        var checkbox = item.querySelector('.forward-checkbox');
+        if (checkbox) {
+            checkbox.innerHTML = isSelected ? '<span style="color: #228B22; font-size: 14px;">✓</span>' : '';
+        }
+    }
+    
+    updateSelectedUsersDisplay();
+    
+    var errorDiv = document.getElementById('forward-error');
+    if (errorDiv) {
+        errorDiv.style.display = selectedForwardUsers.length === 0 ? 'block' : 'none';
+    }
+}
+
+function updateSelectedUsersDisplay() {
+    var container = document.getElementById('selected-users-container');
+    var list = document.getElementById('selected-users-list');
+    
+    if (!container || !list) return;
+    
+    if (selectedForwardUsers.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'block';
+    list.innerHTML = '';
+    
+    for (var i = 0; i < selectedForwardUsers.length; i++) {
+        var user = selectedForwardUsers[i];
+        var chip = document.createElement('div');
+        chip.style.cssText = 'display: flex; align-items: center; gap: 6px; background: #e8f5e8; padding: 5px 10px; border-radius: 20px; font-size: 13px;';
+        chip.innerHTML = `
+            <span>${user.type === 'group' ? '👥' : (user.type === 'channel' ? '📢' : '👤')}</span>
+            <span>${escapeHtml(user.name)}</span>
+            <button onclick="removeForwardUser('${user.id}')" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #999;">×</button>
+        `;
+        list.appendChild(chip);
+    }
+}
+
+window.removeForwardUser = function(chatId) {
+    var index = -1;
+    for (var i = 0; i < selectedForwardUsers.length; i++) {
+        if (selectedForwardUsers[i].id === chatId) {
+            index = i;
+            break;
+        }
+    }
+    if (index !== -1) {
+        selectedForwardUsers.splice(index, 1);
+        updateSelectedUsersDisplay();
+        
+        var items = document.querySelectorAll('.forward-chat-item');
+        for (var k = 0; k < items.length; k++) {
+            if (items[k].getAttribute('data-chat-id') === chatId) {
+                var checkbox = items[k].querySelector('.forward-checkbox');
+                if (checkbox) checkbox.innerHTML = '';
+                break;
+            }
+        }
+        
+        var errorDiv = document.getElementById('forward-error');
+        if (errorDiv) {
+            errorDiv.style.display = selectedForwardUsers.length === 0 ? 'block' : 'none';
+        }
+    }
+};
+
+var forwardSettings = {
+    showSenderName: false,
+    showCaption: true,
+    allowFurtherForward: true
+};
+
+function showForwardSettings() {
+    var modalHtml = `
+        <div id="forward-settings-modal" class="modal" style="z-index: 10003;">
+            <div class="modal-content" style="max-width: 350px; width: 85%; border-radius: 24px; background: white;">
+                <div class="modal-header" style="padding: 15px 20px;">
+                    <h3 style="margin: 0;">⚙️ Настройки пересылки</h3>
+                    <button onclick="closeForwardSettingsModal()" class="btn-close">×</button>
+                </div>
+                <div style="padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div>
+                            <div style="font-weight: 500;">👤 Показывать имя отправителя</div>
+                            <div style="font-size: 11px; color: #999;">Будет видно, кто отправил оригинал</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="forward-show-sender" ${forwardSettings.showSenderName ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div>
+                            <div style="font-weight: 500;">📝 Показывать подпись</div>
+                            <div style="font-size: 11px; color: #999;">Подпись к фото/GIF</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="forward-show-caption" ${forwardSettings.showCaption ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: 500;">🔄 Разрешить дальнейшую пересылку</div>
+                            <div style="font-size: 11px; color: #999;">Получатели смогут переслать это сообщение</div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="forward-allow-forward" ${forwardSettings.allowFurtherForward ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div style="padding: 15px 20px; border-top: 1px solid #eee;">
+                    <button onclick="saveForwardSettings()" class="btn-primary" style="width: 100%;">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    var oldModal = document.getElementById('forward-settings-modal');
+    if (oldModal) oldModal.remove();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function closeForwardSettingsModal() {
+    var modal = document.getElementById('forward-settings-modal');
+    if (modal) modal.remove();
+}
+
+function saveForwardSettings() {
+    var showSender = document.getElementById('forward-show-sender');
+    var showCaption = document.getElementById('forward-show-caption');
+    var allowForward = document.getElementById('forward-allow-forward');
+    
+    if (showSender) forwardSettings.showSenderName = showSender.checked;
+    if (showCaption) forwardSettings.showCaption = showCaption.checked;
+    if (allowForward) forwardSettings.allowFurtherForward = allowForward.checked;
+    
+    closeForwardSettingsModal();
+    showNotification('Настройки сохранены', 'success');
+}
+
+function sendForwardMessages() {
+    if (selectedForwardUsers.length === 0) {
+        var errorDiv = document.getElementById('forward-error');
+        if (errorDiv) errorDiv.style.display = 'block';
+        return;
+    }
+    
+    var caption = document.getElementById('forward-caption');
+    var captionText = caption ? caption.value.trim() : '';
+    
+    showNotification('📤 Отправка ' + selectedForwardUsers.length + ' получателям...', 'info');
+    
+    var promises = [];
+    
+    for (var i = 0; i < selectedForwardUsers.length; i++) {
+        var user = selectedForwardUsers[i];
+        
+        var forwardData = {
+            type: forwardMessageData.type,
+            text: forwardMessageData.text || '',
+            senderId: currentUser.uid,
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            forwarded: true
+        };
+        
+        // Добавляем информацию об отправителе
+        if (forwardSettings.showSenderName && forwardMessageData.senderId !== currentUser.uid) {
+            forwardData.originalSender = forwardMessageData.senderId;
+        }
+        
+        // Запрет дальнейшей пересылки
+        if (!forwardSettings.allowFurtherForward) {
+            forwardData.noForward = true;
+        }
+        
+        // Копируем медиа данные
+        if (forwardMessageData.imageUrl) {
+            forwardData.imageUrl = forwardMessageData.imageUrl;
+            if (forwardSettings.showCaption && forwardMessageData.caption) {
+                forwardData.caption = captionText ? captionText + '\n\n' + forwardMessageData.caption : forwardMessageData.caption;
+            } else if (captionText) {
+                forwardData.caption = captionText;
+            }
+        } else if (forwardMessageData.gifUrl) {
+            forwardData.gifUrl = forwardMessageData.gifUrl;
+            if (captionText) forwardData.caption = captionText;
+        } else if (forwardMessageData.videoUrl) {
+            forwardData.videoUrl = forwardMessageData.videoUrl;
+            if (captionText) forwardData.caption = captionText;
+        } else if (forwardMessageData.audioUrl) {
+            forwardData.audioUrl = forwardMessageData.audioUrl;
+            if (captionText) forwardData.caption = captionText;
+        } else if (forwardMessageData.fileUrl) {
+            forwardData.fileUrl = forwardMessageData.fileUrl;
+            forwardData.fileName = forwardMessageData.fileName;
+            if (captionText) forwardData.caption = captionText;
+        } else if (captionText) {
+            forwardData.text = captionText + '\n\n' + (forwardData.text || '');
+        }
+        
+        var promise = database.ref('messages/' + user.id).push(forwardData).then(function() {
+            var previewText = forwardMessageData.text || 'Медиа';
+            if (previewText.length > 50) previewText = previewText.substring(0, 47) + '...';
+            
+            var lastMsg = '📨 Переслано: ' + previewText;
+            if (captionText) lastMsg = '📨 ' + captionText.substring(0, 30) + (captionText.length > 30 ? '...' : '');
+            
+            return database.ref('chats/' + user.id).update({
+                lastMessage: lastMsg,
+                lastMessageTime: firebase.database.ServerValue.TIMESTAMP
+            });
+        });
+        
+        promises.push(promise);
+    }
+    
+    Promise.all(promises).then(function() {
+        showNotification('✅ Отправлено ' + selectedForwardUsers.length + ' получателям!', 'success');
+        closeForwardModal();
+    }).catch(function() {
+        showNotification('❌ Ошибка при отправке', 'error');
+    });
+}
+
+window.closeForwardModal = function() {
+    var modal = document.getElementById('forward-modal');
+    if (modal) modal.remove();
+    selectedForwardUsers = [];
+    forwardMessageData = null;
+};
+
+console.log('✅ Расширенная пересылка сообщений добавлена!');
