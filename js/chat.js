@@ -2162,3 +2162,269 @@ setTimeout(function() {
         addContextMenuToMessages();
     }
 }, 1000);
+// ========== СИСТЕМА ОТВЕТОВ НА СООБЩЕНИЯ (ДОБАВЛЕНА В КОНЕЦ) ==========
+
+// Глобальная переменная для хранения данных ответа
+window.ReplyToData = null;
+
+// Функция ответа на сообщение
+window.ReplyToMessage = function(messageId) {
+    console.log('ReplyToMessage вызван для:', messageId);
+    
+    database.ref('messages/' + currentChatId + '/' + messageId).once('value').then(function(snapshot) {
+        var msg = snapshot.val();
+        if (!msg) return;
+        
+        // Получаем имя отправителя
+        if (msg.senderId === currentUser.uid) {
+            window.showReplyBar(messageId, msg, 'Вы');
+        } else {
+            database.ref('users/' + msg.senderId + '/username').once('value').then(function(nameSnap) {
+                var senderName = nameSnap.val() || 'Пользователь';
+                window.showReplyBar(messageId, msg, senderName);
+            });
+        }
+    });
+};
+
+// Показать панель ответа
+window.showReplyBar = function(messageId, msg, senderName) {
+    // Сохраняем данные
+    window.ReplyToData = {
+        id: messageId,
+        text: msg.text || 'Медиа',
+        senderName: senderName,
+        type: msg.type || 'text'
+    };
+    
+    // Удаляем старую панель
+    var oldBar = document.getElementById('replyBar');
+    if (oldBar) oldBar.remove();
+    
+    // Создаём панель
+    var bar = document.createElement('div');
+    bar.id = 'replyBar';
+    bar.style.cssText = 'background: #e8f5e8; border-left: 4px solid #228B22; padding: 10px 12px; border-radius: 12px; margin: 0 12px 8px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; cursor: pointer;';
+    
+    var replyText = window.ReplyToData.text;
+    if (window.ReplyToData.type === 'image') replyText = '📷 Фото';
+    else if (window.ReplyToData.type === 'gif') replyText = '🎬 GIF';
+    else if (window.ReplyToData.type === 'audio') replyText = '🎤 Голосовое';
+    else if (window.ReplyToData.type === 'video') replyText = '🎬 Видео';
+    else if (window.ReplyToData.type === 'file') replyText = '📎 Файл';
+    
+    var displayText = replyText.length > 50 ? replyText.substring(0, 47) + '...' : replyText;
+    
+    bar.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden;">
+            <span style="font-size: 16px;">↩️</span>
+            <div style="overflow: hidden;">
+                <div style="font-weight: 600; font-size: 12px; color: #228B22;">${escapeHtml(window.ReplyToData.senderName)}</div>
+                <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(displayText)}</div>
+            </div>
+        </div>
+        <button id="cancelReplyBtn" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #999;">×</button>
+    `;
+    
+    // Клик по панели - скролл к сообщению
+    bar.onclick = function(e) {
+        if (e.target.id !== 'cancelReplyBtn') {
+            window.scrollToRepliedMessage(window.ReplyToData.id);
+        }
+    };
+    
+    // Кнопка отмены
+    var cancelBtn = bar.querySelector('#cancelReplyBtn');
+    if (cancelBtn) {
+        cancelBtn.onclick = function(e) {
+            e.stopPropagation();
+            window.cancelReplyBar();
+        };
+    }
+    
+    var inputArea = document.querySelector('.message-input-area');
+    if (inputArea) {
+        inputArea.parentNode.insertBefore(bar, inputArea);
+    }
+    
+    document.getElementById('message-input').focus();
+};
+
+// Отмена ответа
+window.cancelReplyBar = function() {
+    window.ReplyToData = null;
+    var bar = document.getElementById('replyBar');
+    if (bar) bar.remove();
+};
+
+// Скролл к сообщению и подсветка
+window.scrollToRepliedMessage = function(messageId) {
+    var msgElement = document.querySelector('.message[data-message-id="' + messageId + '"]');
+    if (msgElement) {
+        msgElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Подсветка
+        var originalBg = msgElement.style.backgroundColor;
+        msgElement.style.transition = 'background-color 0.3s';
+        msgElement.style.backgroundColor = 'rgba(34, 139, 34, 0.3)';
+        
+        setTimeout(function() {
+            msgElement.style.backgroundColor = '';
+            setTimeout(function() {
+                msgElement.style.transition = '';
+            }, 300);
+        }, 1000);
+    }
+};
+
+// ПЕРЕОПРЕДЕЛЯЕМ ФУНКЦИЮ sendMessage ДЛЯ ПОДДЕРЖКИ ОТВЕТОВ
+var originalSendMessage = window.sendMessage;
+window.sendMessage = function() {
+    var input = document.getElementById('message-input');
+    if (!input) return;
+    
+    var text = input.value.trim();
+    if (!text && !window.ReplyToData) return;
+    if (!text && window.ReplyToData) {
+        showNotification('Введите текст ответа', 'error');
+        return;
+    }
+    if (!window.currentChatId) return;
+    
+    var message = {
+        type: 'text',
+        text: text,
+        senderId: window.currentUser.uid,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    };
+    
+    // Добавляем информацию об ответе
+    if (window.ReplyToData) {
+        message.replyTo = {
+            messageId: window.ReplyToData.id,
+            text: window.ReplyToData.text,
+            senderName: window.ReplyToData.senderName,
+            type: window.ReplyToData.type
+        };
+    }
+    
+    input.value = '';
+    
+    database.ref('messages/' + window.currentChatId).push(message).then(function() {
+        var lastMsg = text.length > 100 ? text.substring(0, 97) + '...' : text;
+        if (window.ReplyToData) {
+            lastMsg = '↩️ Ответ: ' + lastMsg;
+        }
+        database.ref('chats/' + window.currentChatId).update({
+            lastMessage: lastMsg,
+            lastMessageTime: firebase.database.ServerValue.TIMESTAMP
+        });
+        
+        // Очищаем панель ответа
+        window.cancelReplyBar();
+        
+        if (typeof KukumberSounds !== 'undefined') {
+            KukumberSounds.playSend();
+        }
+    }).catch(function(err) {
+        console.error('Ошибка отправки:', err);
+        showNotification('Ошибка отправки', 'error');
+        input.value = text;
+    });
+};
+
+// Добавляем отображение ответа в сообщениях (переопределяем appendMessage)
+var originalAppendMessage = window.appendMessage;
+window.appendMessage = function(message) {
+    var container = document.getElementById('messages-container');
+    if (!container) return;
+    
+    var isSent = message.senderId === window.currentUser.uid;
+    var messageDiv = document.createElement('div');
+    messageDiv.className = 'message ' + (isSent ? 'sent' : 'received');
+    messageDiv.setAttribute('data-message-id', message.id);
+    
+    var content = '';
+    
+    // ОТОБРАЖАЕМ БЛОК С ОТВЕТОМ
+    if (message.replyTo) {
+        var replyText = '';
+        if (message.replyTo.type === 'image') replyText = '📷 Фото';
+        else if (message.replyTo.type === 'gif') replyText = '🎬 GIF';
+        else if (message.replyTo.type === 'audio') replyText = '🎤 Голосовое';
+        else if (message.replyTo.type === 'video') replyText = '🎬 Видео';
+        else if (message.replyTo.type === 'file') replyText = '📎 Файл';
+        else replyText = message.replyTo.text;
+        
+        var displayReplyText = replyText.length > 50 ? replyText.substring(0, 47) + '...' : replyText;
+        
+        content += `
+            <div class="message-reply" onclick="window.scrollToRepliedMessage('${message.replyTo.messageId}')" style="background: rgba(0,0,0,0.05); border-left: 3px solid #228B22; padding: 6px 10px; border-radius: 10px; margin-bottom: 6px; cursor: pointer; font-size: 12px;">
+                <div style="font-weight: 600; color: #228B22;">↩️ ${escapeHtml(message.replyTo.senderName)}</div>
+                <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(displayReplyText)}</div>
+            </div>
+        `;
+    }
+    
+    // Текст сообщения
+    if (message.type === 'text') {
+        var textContent = message.text || '';
+        if (message.edited) textContent += ' <span style="font-size:10px; opacity:0.6;">(ред.)</span>';
+        content += '<div class="message-text" style="word-break:break-word; white-space:normal;">' + escapeHtml(textContent) + '</div>';
+    } else if (message.type === 'image') {
+        content += '<div class="message-image" onclick="openLightbox(\'' + message.imageUrl + '\')"><img src="' + message.imageUrl + '" style="max-width:200px; max-height:200px; border-radius:12px;"></div>';
+        if (message.caption) content += '<div class="message-text">' + escapeHtml(message.caption) + '</div>';
+    } else if (message.type === 'gif') {
+        content += '<div class="gif-message"><img src="' + message.gifUrl + '" style="max-width:200px; border-radius:12px;"><span class="gif-badge">GIF</span></div>';
+    } else if (message.type === 'audio') {
+        content += '<div class="audio-message">🎤 Голосовое сообщение</div>';
+    } else {
+        content += '<div class="message-text">' + escapeHtml(message.text || 'Медиа') + '</div>';
+    }
+    
+    messageDiv.innerHTML = `
+        <div class="message-content">
+            ${content}
+            <div class="message-time">${formatTime(message.timestamp)}</div>
+        </div>
+    `;
+    
+    container.appendChild(messageDiv);
+    container.scrollTop = container.scrollHeight;
+    
+    // Сохраняем данные для контекстного меню
+    if (!window.tempMessageData) window.tempMessageData = {};
+    window.tempMessageData[message.id] = message;
+};
+
+// Подключаем обработчик для пункта "Ответить" в контекстном меню
+// Перехватываем создание контекстного меню
+if (typeof showMessageContextMenu === 'function') {
+    var originalShowMessageContextMenu = window.showMessageContextMenu;
+    window.showMessageContextMenu = function(event, messageId, messageData) {
+        // Вызываем оригинальную функцию
+        if (originalShowMessageContextMenu) {
+            originalShowMessageContextMenu(event, messageId, messageData);
+        }
+        
+        // Добавляем свой обработчик через небольшую задержку
+        setTimeout(function() {
+            var menuItems = document.querySelectorAll('#message-context-menu .context-menu-item');
+            for (var i = 0; i < menuItems.length; i++) {
+                var item = menuItems[i];
+                if (item.innerText.includes('Ответить') || item.innerText.includes('Reply')) {
+                    var oldOnclick = item.onclick;
+                    item.onclick = function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        window.ReplyToMessage(messageId);
+                        var menu = document.getElementById('message-context-menu');
+                        if (menu) menu.remove();
+                    };
+                }
+            }
+        }, 10);
+    };
+}
+
+console.log('✅ Система ответов на сообщения успешно добавлена!');
