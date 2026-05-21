@@ -201,78 +201,84 @@
             </div>
         </div>
 
-        <!-- ВКЛАДКА НАСТРОЙКИ -->
-        <div id="settings-tab" class="tab-content hidden">
-            <div class="settings-container">
-                <div class="settings-header">
-                    <h2>Настройки</h2>
-                </div>
-                
-                <div class="settings-profile" onclick="showEditProfileModal()">
-                    <div class="settings-avatar" id="settings-avatar">🥒</div>
-                    <div class="settings-profile-info">
-                        <h3 id="settings-username">Пользователь</h3>
-                        <p id="settings-usertag" style="font-size: 12px; color: var(--text-muted);">@username</p>
-                    </div>
-                    <span class="arrow">›</span>
-                </div>
+      <!-- ВКЛАДКА НАСТРОЙКИ -->
+<div id="settings-tab" class="tab-content hidden">
+    <div class="settings-container">
+        <!-- Шапка -->
+        <div class="settings-header">
+            <h2>Настройки</h2>
+        </div>
 
-                <div class="settings-section">
-                    <div class="settings-item" onclick="showNotificationSettings()">
-                        <span class="settings-icon">🔔</span>
-                        <span>Уведомления</span>
-                        <span class="arrow">›</span>
-                    </div>
-                    <div class="settings-item" onclick="showPrivacySettings()">
-                        <span class="settings-icon">🔒</span>
-                        <span>Конфиденциальность</span>
-                        <span class="arrow">›</span>
-                    </div>
-                    <div class="settings-item" onclick="showThemeSettings()">
-                        <span class="settings-icon">🎨</span>
-                        <span>Оформление</span>
-                        <span class="arrow">›</span>
-                    </div>
-                    <div class="settings-item" onclick="showLanguageSettings()">
-                        <span class="settings-icon">🌍</span>
-                        <span>Язык</span>
-                        <span class="settings-value">Русский</span>
-                        <span class="arrow">›</span>
-                    </div>
-                    <div class="settings-item" onclick="showStorageSettings()">
-                        <span class="settings-icon">💾</span>
-                        <span>Данные и память</span>
-                        <span class="arrow">›</span>
-                    </div>
-                </div>
+        <!-- Профиль -->
+        <div class="settings-profile" onclick="showEditProfileModal()">
+            <div class="settings-avatar" id="settings-avatar">🥒</div>
+            <div class="settings-profile-info">
+                <h3 id="settings-username">Пользователь</h3>
+                <p id="settings-usertag">@username</p>
+            </div>
+            <span class="arrow">›</span>
+        </div>
 
-                <div class="settings-section">
-                    <div class="settings-item" onclick="showAbout()">
-                        <span class="settings-icon">ℹ️</span>
-                        <span>О приложении</span>
-                        <span class="settings-value">v1.0</span>
-                        <span class="arrow">›</span>
-                    </div>
-                    <div class="settings-item" onclick="showHelp()">
-                        <span class="settings-icon">❓</span>
-                        <span>Помощь</span>
-                        <span class="arrow">›</span>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <div class="settings-item danger" onclick="logout()">
-                        <span class="settings-icon">🚪</span>
-                        <span>Выйти из аккаунта</span>
-                    </div>
-                </div>
-
-                <div class="settings-footer">
-                    <p>K Messenger</p>
-                    <p>Свежее общение каждый день 🥒</p>
-                </div>
+        <!-- Секция 1 -->
+        <div class="settings-section">
+            <div class="settings-item" onclick="showNotificationSettings()">
+                <span class="settings-icon">🔔</span>
+                <span>Уведомления</span>
+                <span class="arrow">›</span>
+            </div>
+            <div class="settings-item" onclick="showPrivacySettings()">
+                <span class="settings-icon">🔒</span>
+                <span>Конфиденциальность</span>
+                <span class="arrow">›</span>
+            </div>
+            <div class="settings-item" onclick="showThemeSettings()">
+                <span class="settings-icon">🎨</span>
+                <span>Оформление</span>
+                <span class="arrow">›</span>
+            </div>
+            <div class="settings-item" onclick="showLanguageSettings()">
+                <span class="settings-icon">🌍</span>
+                <span>Язык</span>
+                <span class="settings-value" id="current-language-label">Русский</span>
+                <span class="arrow">›</span>
+            </div>
+            <div class="settings-item" onclick="showStorageSettings()">
+                <span class="settings-icon">💾</span>
+                <span>Данные и память</span>
+                <span class="arrow">›</span>
             </div>
         </div>
+
+        <!-- Секция 2 -->
+        <div class="settings-section">
+            <div class="settings-item" onclick="showAbout()">
+                <span class="settings-icon">ℹ️</span>
+                <span>О приложении</span>
+                <span class="settings-value">v1.0</span>
+                <span class="arrow">›</span>
+            </div>
+            <div class="settings-item" onclick="showHelp()">
+                <span class="settings-icon">❓</span>
+                <span>Помощь</span>
+                <span class="arrow">›</span>
+            </div>
+        </div>
+
+        <!-- Секция 3 - Выход -->
+        <div class="settings-section">
+            <div class="settings-item danger" onclick="logout()">
+                <span class="settings-icon">🚪</span>
+                <span>Выйти</span>
+            </div>
+        </div>
+
+        <!-- Футер -->
+        <div class="settings-footer">
+            <p>K Messenger</p>
+            <p>Свежее общение каждый день 🥒</p>
+        </div>
+    </div>
+</div>
 
         <!-- НИЖНЯЯ НАВИГАЦИЯ -->
         <nav class="bottom-nav">
