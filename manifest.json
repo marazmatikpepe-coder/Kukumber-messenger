@@ -1,9 +1,9 @@
 {
   "name": "K Messenger",
   "short_name": "KMsg",
-  "description": "Свежее общение каждый день 🔑",
-  "start_url": "/Kukumber-messenger/",
-  "scope": "/Kukumber-messenger/",
+  "description": "Свежее общение каждый день 🥒",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "theme_color": "#228B22",
   "background_color": "#228B22",
