@@ -1573,6 +1573,7 @@ function toggleVoicePlayback() {
 }
 
 // Отправка голосового сообщения
+// Отправка голосового сообщения (исправленная версия - через tmpfiles)
 async function sendVoiceMessageWithAPI() {
     if (!voiceState.audioBlob) return;
     if (!window.currentChatId) {
@@ -1583,7 +1584,23 @@ async function sendVoiceMessageWithAPI() {
     showNotification('📤 Отправка голосового...', 'info');
     
     try {
-        var audioUrl = await window.uploadAudioToPixelDrain(voiceState.audioBlob);
+        // Временное решение через tmpfiles.org (работает без ключа)
+        var formData = new FormData();
+        formData.append('file', voiceState.audioBlob);
+        
+        var response = await fetch('https://tmpfiles.org/api/v1/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        var data = await response.json();
+        console.log('Upload response:', data);
+        
+        if (!data.status === 'success' || !data.data.url) {
+            throw new Error('Ошибка загрузки');
+        }
+        
+        var audioUrl = data.data.url;
         
         await database.ref('messages/' + window.currentChatId).push({
             type: 'audio',
@@ -1609,7 +1626,6 @@ async function sendVoiceMessageWithAPI() {
         showNotification('❌ Ошибка отправки: ' + err.message, 'error');
     }
 }
-
 // Начать запись
 window.startVoiceRecording = async function() {
     if (voiceState.isRecording || voiceState.audioBlob) return;
