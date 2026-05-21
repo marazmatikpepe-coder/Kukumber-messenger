@@ -1077,3 +1077,225 @@ if (typeof window.handleFileSelect !== 'undefined') {
 
 console.log('✅ Видео-функционал полностью настроен!');
 console.log('Теперь при выборе видео должно открываться окно предпросмотра');
+// ========== ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ ОТПРАВКА ВИДЕО ==========
+
+// Удаляем старую функцию sendVideoMessage если она есть
+if (typeof window.sendVideoMessage === 'function') {
+    window.sendVideoMessage = null;
+}
+
+// Переменные для видео
+window.pendingVideos = window.pendingVideos || [];
+window.currentVideoIndex = 0;
+
+// Функция добавления видео
+window.addVideoForPreview = function(file) {
+    if (!file.type.startsWith('video/')) return false;
+    if (file.size > 100 * 1024 * 1024) {
+        showNotification('Видео не более 100MB', 'error');
+        return false;
+    }
+    window.pendingVideos.push({ file: file, caption: '' });
+    console.log('Видео добавлено:', file.name);
+    return true;
+};
+
+// Показать предпросмотр видео
+window.showVideoPreview = function() {
+    if (!window.pendingVideos.length) return;
+    
+    var oldModal = document.getElementById('video-preview-modal');
+    if (oldModal) oldModal.remove();
+    
+    var modalHtml = `
+        <div id="video-preview-modal" class="modal" style="z-index: 10010;">
+            <div style="max-width: 450px; width: 90%; background: white; border-radius: 24px; margin: auto; overflow: hidden;">
+                <div style="padding: 12px 16px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
+                    <h3 style="margin: 0;">🎬 Отправка видео (<span id="video-counter">0/0</span>)</h3>
+                    <button onclick="window.closeVideoPreview()" style="background: none; border: none; font-size: 24px;">×</button>
+                </div>
+                <div style="background: #000; text-align: center;">
+                    <video id="preview-video" controls style="max-width: 100%; max-height: 300px;"></video>
+                </div>
+                <div style="display: flex; justify-content: center; gap: 30px; padding: 10px;">
+                    <button id="video-prev-btn" style="background: none; border: none; font-size: 32px;">←</button>
+                    <img src="https://i.ibb.co/BVhBTnmS/11623-AE3-5-A11-48-F3-9-C9-F-95-AF1-CD6-AAE4.png" onclick="window.addMoreVideos()" style="width: 45px; cursor: pointer;">
+                    <button id="video-next-btn" style="background: none; border: none; font-size: 32px;">→</button>
+                </div>
+                <div style="padding: 10px 16px 20px;">
+                    <input type="text" id="video-caption" placeholder="Добавить подпись..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 30px;">
+                    <button onclick="window.confirmVideoSend()" style="width: 100%; margin-top: 12px; padding: 12px; background: #228B22; color: white; border: none; border-radius: 30px;">📤 Отправить</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    var video = window.pendingVideos[window.currentVideoIndex];
+    var preview = document.getElementById('preview-video');
+    if (preview && video) {
+        preview.src = URL.createObjectURL(video.file);
+        preview.load();
+    }
+    
+    document.getElementById('video-counter').textContent = `${window.currentVideoIndex + 1}/${window.pendingVideos.length}`;
+    document.getElementById('video-caption').value = video.caption || '';
+    
+    document.getElementById('video-prev-btn').onclick = () => window.navigateVideo(-1);
+    document.getElementById('video-next-btn').onclick = () => window.navigateVideo(1);
+    
+    document.getElementById('video-prev-btn').style.display = window.currentVideoIndex > 0 ? 'inline-block' : 'none';
+    document.getElementById('video-next-btn').style.display = window.currentVideoIndex < window.pendingVideos.length - 1 ? 'inline-block' : 'none';
+};
+
+window.navigateVideo = function(direction) {
+    var newIndex = window.currentVideoIndex + direction;
+    if (newIndex >= 0 && newIndex < window.pendingVideos.length) {
+        var caption = document.getElementById('video-caption');
+        if (caption) window.pendingVideos[window.currentVideoIndex].caption = caption.value;
+        window.currentVideoIndex = newIndex;
+        window.showVideoPreview();
+    }
+};
+
+window.addMoreVideos = function() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'video/*';
+    input.multiple = true;
+    input.onchange = function(e) {
+        var files = Array.from(e.target.files);
+        files.forEach(f => {
+            if (f.type.startsWith('video/') && f.size <= 100 * 1024 * 1024) {
+                window.pendingVideos.push({ file: f, caption: '' });
+            }
+        });
+        if (window.pendingVideos.length) {
+            window.currentVideoIndex = window.pendingVideos.length - 1;
+            window.showVideoPreview();
+        }
+    };
+    input.click();
+};
+
+window.closeVideoPreview = function() {
+    var modal = document.getElementById('video-preview-modal');
+    if (modal) modal.remove();
+};
+
+window.cancelAllVideos = function() {
+    window.pendingVideos = [];
+    window.currentVideoIndex = 0;
+    window.closeVideoPreview();
+};
+
+// Загрузка видео на PixelDrain (рабочая версия)
+window.uploadVideoToPixelDrain = async function(file) {
+    var formData = new FormData();
+    formData.append('file', file);
+    
+    var response = await fetch('https://pixeldrain.com/api/file/', {
+        method: 'POST',
+        body: formData
+    });
+    
+    var data = await response.json();
+    console.log('PixelDrain ответ:', data);
+    
+    if (!data.id) {
+        throw new Error(data.message || 'Ошибка загрузки');
+    }
+    
+    return `https://pixeldrain.com/api/file/${data.id}`;
+};
+
+// Отправка видео
+window.confirmVideoSend = async function() {
+    if (!window.pendingVideos.length) {
+        showNotification('Нет видео для отправки', 'error');
+        return;
+    }
+    if (!window.currentChatId) {
+        showNotification('Выберите чат', 'error');
+        return;
+    }
+    
+    var caption = document.getElementById('video-caption')?.value || '';
+    if (window.pendingVideos[window.currentVideoIndex]) {
+        window.pendingVideos[window.currentVideoIndex].caption = caption;
+    }
+    
+    showNotification(`📤 Отправка ${window.pendingVideos.length} видео...`, 'info');
+    
+    var success = 0, fail = 0;
+    
+    for (var i = 0; i < window.pendingVideos.length; i++) {
+        try {
+            var video = window.pendingVideos[i];
+            var videoUrl = await window.uploadVideoToPixelDrain(video.file);
+            
+            await database.ref('messages/' + window.currentChatId).push({
+                type: 'video',
+                videoUrl: videoUrl,
+                caption: video.caption || '',
+                fileName: video.file.name,
+                senderId: window.currentUser.uid,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+            
+            success++;
+        } catch (err) {
+            console.error('Ошибка:', err);
+            fail++;
+        }
+    }
+    
+    if (success > 0) {
+        var lastMsg = success === 1 ? '🎬 Видео' : `🎬 ${success} видео`;
+        await database.ref('chats/' + window.currentChatId).update({
+            lastMessage: lastMsg,
+            lastMessageTime: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
+    
+    showNotification(`✅ Отправлено: ${success}, ❌ Ошибок: ${fail}`, success ? 'success' : 'error');
+    
+    window.pendingVideos = [];
+    window.currentVideoIndex = 0;
+    window.closeVideoPreview();
+};
+
+// Переопределяем handleFileSelect
+window.handleFileSelect = function(event) {
+    var files = Array.from(event.target.files);
+    if (!files.length) return;
+    
+    var hasVideo = false;
+    
+    for (var file of files) {
+        var isVideo = file.type.startsWith('video/');
+        
+        if (isVideo) {
+            window.addVideoForPreview(file);
+            hasVideo = true;
+        } else if (file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')) {
+            if (!window.pendingGifs) window.pendingGifs = [];
+            window.pendingGifs.push(file);
+            if (typeof window.sendAllGifs === 'function') window.sendAllGifs();
+        } else if (file.type.startsWith('image/')) {
+            if (!window.pendingImages) window.pendingImages = [];
+            window.pendingImages.push({ file: file, caption: '' });
+            if (typeof window.showImagePreview === 'function') window.showImagePreview();
+        }
+    }
+    
+    if (hasVideo && window.pendingVideos.length) {
+        window.currentVideoIndex = window.pendingVideos.length - 1;
+        window.showVideoPreview();
+    }
+    
+    event.target.value = '';
+};
+
+console.log('✅ Видео полностью исправлено! Используется PixelDrain');
