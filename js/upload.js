@@ -351,13 +351,14 @@ function handleFileSelect(event) {
     
     files.forEach(function(file) {
         var isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+        var isVideo = file.type.startsWith('video/');
         var isImage = file.type.startsWith('image/') && !isGif;
         
-       // ОБРАБОТКА ВИДЕО ЧЕРЕЗ VIMEO
-if (file.type.startsWith('video/')) {
-    sendVideoMessage(file);
-    return;
-}
+        // ВИДЕО ОТКЛЮЧЕНО НАВСЕГДА
+        if (isVideo) {
+            showNotification('📹 Видео недоступно', 'info');
+            return;
+        }
         
         if (isGif) {
             pendingGifs.push(file);
