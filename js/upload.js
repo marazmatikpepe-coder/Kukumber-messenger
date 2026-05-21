@@ -737,3 +737,279 @@ async function sendVideoMessage(file) {
         showNotification('Ошибка загрузки видео', 'error');
     }
 }
+// ========== ОТПРАВКА ВИДЕО (С ПРЕДПРОСМОТРОМ КАК У ФОТО) ==========
+
+var pendingVideos = [];
+var currentVideoIndex = 0;
+
+// Функция для видео (вызывается из handleFileSelect)
+window.addVideoForPreview = function(file) {
+    if (!file.type.startsWith('video/')) return;
+    
+    if (file.size > 100 * 1024 * 1024) {
+        showNotification('Видео не более 100MB', 'error');
+        return false;
+    }
+    
+    pendingVideos.push({ file: file, caption: '' });
+    return true;
+};
+
+// Показать предпросмотр видео (как у фото)
+window.showVideoPreview = function() {
+    if (pendingVideos.length === 0) return;
+    
+    var modal = document.getElementById('video-preview-modal');
+    if (!modal) {
+        // Создаём модальное окно для видео
+        var modalHtml = `
+            <div id="video-preview-modal" class="modal" style="z-index: 10010;">
+                <div class="image-preview-container" style="max-width: 500px; width: 90%; border-radius: 20px; overflow: hidden; background: white;">
+                    <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin: 0; font-size: 16px;">🎬 Отправка видео (<span id="video-counter">0/0</span>)</h3>
+                        <button onclick="closeVideoPreview()" class="btn-close" style="font-size: 24px;">×</button>
+                    </div>
+                    <div style="position: relative; background: #000; min-height: 250px; display: flex; align-items: center; justify-content: center;">
+                        <video id="preview-video" controls style="max-width: 100%; max-height: 400px; width: auto; height: auto;"></video>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
+                        <button id="video-prev-btn" onclick="navigateVideo(-1)" style="background: none; border: none; font-size: 32px; cursor: pointer; color: var(--forest); display: none;">←</button>
+                        <img src="https://i.ibb.co/BVhBTnmS/11623-AE3-5-A11-48-F3-9-C9-F-95-AF1-CD6-AAE4.png" alt="Добавить видео" onclick="addMoreVideos()" style="width: 50px; height: 50px; cursor: pointer;">
+                        <button id="video-next-btn" onclick="navigateVideo(1)" style="background: none; border: none; font-size: 32px; cursor: pointer; color: var(--forest); display: none;">→</button>
+                    </div>
+                    <div style="padding: 10px 20px 20px;">
+                        <div style="display: flex; align-items: center; background: var(--background); border-radius: 24px; padding: 5px 15px;">
+                            <input type="text" id="video-caption" placeholder="Добавить подпись к видео..." style="flex: 1; background: transparent; border: none; padding: 12px 0; font-size: 14px; outline: none;">
+                            <button onclick="confirmVideoSend()" style="background: var(--forest); border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; padding: 0 20px 20px;">
+                        <button onclick="cancelAllVideos()" class="btn-secondary" style="flex: 1; padding: 10px;">❌ Отмена</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        modal = document.getElementById('video-preview-modal');
+    }
+    
+    var currentVideo = pendingVideos[currentVideoIndex];
+    var previewVideo = document.getElementById('preview-video');
+    var captionInput = document.getElementById('video-caption');
+    var counter = document.getElementById('video-counter');
+    
+    if (previewVideo && currentVideo) {
+        var url = URL.createObjectURL(currentVideo.file);
+        previewVideo.src = url;
+        previewVideo.load();
+        
+        // Старый URL нужно удалить при закрытии
+        previewVideo.onended = function() {
+            URL.revokeObjectURL(url);
+        };
+    }
+    
+    if (captionInput) captionInput.value = currentVideo.caption || '';
+    if (counter) counter.textContent = `${currentVideoIndex + 1} / ${pendingVideos.length}`;
+    
+    updateVideoNavButtons();
+    
+    modal.classList.remove('hidden');
+};
+
+function updateVideoNavButtons() {
+    var prevBtn = document.getElementById('video-prev-btn');
+    var nextBtn = document.getElementById('video-next-btn');
+    if (prevBtn) prevBtn.style.display = currentVideoIndex > 0 ? 'flex' : 'none';
+    if (nextBtn) nextBtn.style.display = currentVideoIndex < pendingVideos.length - 1 ? 'flex' : 'none';
+}
+
+function navigateVideo(direction) {
+    var newIndex = currentVideoIndex + direction;
+    if (newIndex >= 0 && newIndex < pendingVideos.length) {
+        var captionInput = document.getElementById('video-caption');
+        if (captionInput && pendingVideos[currentVideoIndex]) {
+            pendingVideos[currentVideoIndex].caption = captionInput.value;
+        }
+        currentVideoIndex = newIndex;
+        showVideoPreview();
+    }
+}
+
+function addMoreVideos() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'video/*';
+    input.multiple = true;
+    input.onchange = function(e) {
+        var files = Array.from(e.target.files);
+        files.forEach(function(file) {
+            if (file.type.startsWith('video/')) {
+                if (file.size <= 100 * 1024 * 1024) {
+                    pendingVideos.push({ file: file, caption: '' });
+                } else {
+                    showNotification('Видео ' + file.name + ' больше 100MB', 'error');
+                }
+            }
+        });
+        if (pendingVideos.length > 0) {
+            currentVideoIndex = pendingVideos.length - 1;
+            showVideoPreview();
+        }
+    };
+    input.click();
+}
+
+function cancelAllVideos() {
+    pendingVideos = [];
+    currentVideoIndex = 0;
+    closeVideoPreview();
+}
+
+function closeVideoPreview() {
+    var modal = document.getElementById('video-preview-modal');
+    if (modal) modal.classList.add('hidden');
+    
+    // Очищаем видео
+    var previewVideo = document.getElementById('preview-video');
+    if (previewVideo) {
+        previewVideo.src = '';
+    }
+}
+
+async function confirmVideoSend() {
+    if (pendingVideos.length === 0) {
+        showNotification('Нет видео для отправки', 'error');
+        return;
+    }
+    if (!window.currentChatId) {
+        showNotification('Выберите чат', 'error');
+        return;
+    }
+    
+    var captionInput = document.getElementById('video-caption');
+    var currentCaption = captionInput ? captionInput.value.trim() : '';
+    
+    // Сохраняем подпись для текущего видео
+    if (pendingVideos[currentVideoIndex]) {
+        pendingVideos[currentVideoIndex].caption = currentCaption;
+    }
+    
+    showNotification(`📤 Отправка ${pendingVideos.length} видео...`, 'info');
+    var successCount = 0;
+    var failCount = 0;
+    
+    for (var i = 0; i < pendingVideos.length; i++) {
+        try {
+            var video = pendingVideos[i];
+            var videoUrl = await uploadVideoToPixelDrain(video.file);
+            
+            var message = {
+                type: 'video',
+                videoUrl: videoUrl,
+                caption: video.caption || '',
+                fileName: video.file.name,
+                senderId: window.currentUser.uid,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            await database.ref('messages/' + window.currentChatId).push(message);
+            successCount++;
+            await new Promise(r => setTimeout(r, 300));
+        } catch (error) {
+            console.error('Ошибка отправки видео', i, error);
+            failCount++;
+        }
+    }
+    
+    if (successCount > 0) {
+        var lastMsg = successCount === 1 ? '🎬 Видео' : `🎬 ${successCount} видео`;
+        await database.ref('chats/' + window.currentChatId).update({
+            lastMessage: lastMsg,
+            lastMessageTime: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
+    
+    showNotification(failCount === 0 ? `✅ Все ${successCount} видео отправлены!` : `✅ Отправлено: ${successCount}, ошибок: ${failCount}`, failCount === 0 ? 'success' : 'info');
+    
+    pendingVideos = [];
+    currentVideoIndex = 0;
+    closeVideoPreview();
+}
+
+// Переопределяем handleFileSelect для поддержки видео
+var originalHandleFileSelect = window.handleFileSelect;
+window.handleFileSelect = function(event) {
+    var files = Array.from(event.target.files);
+    if (!files.length) return;
+    
+    var hasImages = false;
+    var hasVideos = false;
+    var hasGifs = false;
+    
+    files.forEach(function(file) {
+        var isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+        var isVideo = file.type.startsWith('video/');
+        var isImage = file.type.startsWith('image/') && !isGif;
+        
+        if (isVideo) {
+            window.addVideoForPreview(file);
+            hasVideos = true;
+        } else if (isGif) {
+            if (!window.pendingGifs) window.pendingGifs = [];
+            window.pendingGifs.push(file);
+            hasGifs = true;
+        } else if (isImage) {
+            if (!window.pendingImages) window.pendingImages = [];
+            window.pendingImages.push({ file: file, caption: '' });
+            hasImages = true;
+        }
+    });
+    
+    // Показываем соответствующий предпросмотр
+    if (hasVideos) {
+        if (window.pendingVideos && window.pendingVideos.length > 0) {
+            window.showVideoPreview();
+        }
+    } else if (hasImages && window.pendingImages && window.pendingImages.length > 0) {
+        if (typeof window.showImagePreview === 'function') {
+            window.showImagePreview();
+        }
+    } else if (hasGifs && window.pendingGifs && window.pendingGifs.length > 0) {
+        if (typeof window.sendAllGifs === 'function') {
+            window.sendAllGifs();
+        }
+    }
+    
+    event.target.value = '';
+};
+
+// Функция uploadVideoToPixelDrain (если её нет)
+window.uploadVideoToPixelDrain = async function(file) {
+    var PIXELDRAIN_API_KEY = 'fb14ed75-4352-4e78-804c-a797b3131456';
+    
+    var formData = new FormData();
+    formData.append('file', file);
+    
+    var response = await fetch('https://pixeldrain.com/api/file/', {
+        method: 'POST',
+        headers: {
+            'Authorization': 'Basic ' + btoa(PIXELDRAIN_API_KEY + ':')
+        },
+        body: formData
+    });
+    
+    var data = await response.json();
+    
+    if (!response.ok || !data.id) {
+        throw new Error(data.message || 'Ошибка загрузки видео');
+    }
+    
+    return 'https://pixeldrain.com/api/file/' + data.id;
+};
+
+console.log('✅ Видео-функционал добавлен!');
