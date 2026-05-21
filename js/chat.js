@@ -3332,3 +3332,169 @@ window.confirmVideoSend = async function() {
 };
 
 console.log('✅ Видео-функционал исправлен, добавлено отображение видео в чате');
+// ========== ФИНАЛЬНЫЕ ИСПРАВЛЕНИЯ ЧАТА ==========
+
+// Очищаем дублирующиеся функции
+if (typeof window.originalOpenChatWithData === 'undefined') {
+    window.originalOpenChatWithData = window.openChatWithData;
+}
+
+// Чистая функция открытия чата
+window.openChatWithData = async function(chatId, chatData) {
+    console.log('=== ЧИСТОЕ ОТКРЫТИЕ ЧАТА ===', chatId);
+    
+    if (!chatId || !chatData) {
+        console.error('Нет данных чата');
+        return;
+    }
+    
+    // Сохраняем глобальные переменные
+    window.currentChatId = chatId;
+    window.currentChatData = chatData;
+    window.currentChatData.chatId = chatId;
+    
+    // Устанавливаем otherUserId для личных чатов
+    if (chatData.type === 'private' && chatData.participants) {
+        for (var i = 0; i < chatData.participants.length; i++) {
+            if (chatData.participants[i] !== window.currentUser.uid) {
+                window.currentChatData.otherUserId = chatData.participants[i];
+                break;
+            }
+        }
+    }
+    
+    // Обновляем активный класс в списке чатов
+    document.querySelectorAll('.chat-item').forEach(function(item) {
+        item.classList.remove('active');
+        if (item.getAttribute('data-chat-id') === chatId) {
+            item.classList.add('active');
+        }
+    });
+    
+    // Показываем область чата
+    var noChat = document.getElementById('no-chat-selected');
+    var activeChat = document.getElementById('active-chat');
+    if (noChat) noChat.classList.add('hidden');
+    if (activeChat) activeChat.classList.remove('hidden');
+    
+    // Обновляем шапку
+    await updateChatHeaderSimple(chatId, chatData);
+    
+    // Загружаем сообщения
+    loadMessages(chatId);
+    
+    // Настраиваем клик по шапке
+    setTimeout(function() {
+        var header = document.querySelector('.chat-user-info');
+        if (header) {
+            header.style.cursor = 'pointer';
+            header.onclick = function(e) {
+                e.preventDefault();
+                openChatProfile();
+            };
+        }
+    }, 100);
+};
+
+// Простая функция обновления шапки
+async function updateChatHeaderSimple(chatId, chatData) {
+    var chatUsername = document.getElementById('chat-username');
+    var chatStatus = document.getElementById('chat-status');
+    var chatAvatar = document.getElementById('chat-avatar');
+    
+    if (!chatUsername) return;
+    
+    // Сбрасываем аватар
+    if (chatAvatar) {
+        chatAvatar.style.backgroundImage = '';
+        chatAvatar.textContent = '';
+        chatAvatar.classList.remove('default-avatar-user', 'default-avatar-group', 'default-avatar-channel');
+    }
+    
+    if (chatData.type === 'group') {
+        chatUsername.textContent = chatData.name || 'Группа';
+        if (chatStatus) {
+            var membersCount = chatData.members ? Object.keys(chatData.members).length : 0;
+            chatStatus.textContent = membersCount + ' участников';
+        }
+        if (chatAvatar) {
+            if (chatData.avatar) {
+                chatAvatar.style.backgroundImage = 'url(' + chatData.avatar + ')';
+                chatAvatar.style.backgroundSize = 'cover';
+            } else {
+                chatAvatar.textContent = '👥';
+                chatAvatar.classList.add('default-avatar-group');
+            }
+        }
+    } 
+    else if (chatData.type === 'channel') {
+        chatUsername.textContent = chatData.name || 'Канал';
+        if (chatStatus) {
+            var subsCount = chatData.subscribers ? Object.keys(chatData.subscribers).length : 0;
+            chatStatus.textContent = subsCount + ' подписчиков';
+        }
+        if (chatAvatar) {
+            if (chatData.avatar) {
+                chatAvatar.style.backgroundImage = 'url(' + chatData.avatar + ')';
+                chatAvatar.style.backgroundSize = 'cover';
+            } else {
+                chatAvatar.textContent = '📢';
+                chatAvatar.classList.add('default-avatar-channel');
+            }
+        }
+    } 
+    else {
+        var otherUserId = null;
+        if (chatData.participants) {
+            for (var i = 0; i < chatData.participants.length; i++) {
+                if (chatData.participants[i] !== window.currentUser.uid) {
+                    otherUserId = chatData.participants[i];
+                    break;
+                }
+            }
+        }
+        
+        if (otherUserId) {
+            try {
+                var userSnap = await database.ref('users/' + otherUserId).once('value');
+                var userData = userSnap.val();
+                if (userData) {
+                    chatUsername.textContent = userData.username || 'Пользователь';
+                    if (chatStatus) {
+                        if (userData.status && userData.status.online) {
+                            chatStatus.textContent = 'в сети';
+                        } else {
+                            chatStatus.textContent = formatLastSeen(userData.status?.lastSeen);
+                        }
+                    }
+                    if (chatAvatar) {
+                        if (userData.avatar) {
+                            chatAvatar.style.backgroundImage = 'url(' + userData.avatar + ')';
+                            chatAvatar.style.backgroundSize = 'cover';
+                        } else {
+                            chatAvatar.textContent = '👤';
+                            chatAvatar.classList.add('default-avatar-user');
+                        }
+                    }
+                }
+            } catch(e) {}
+        }
+    }
+}
+
+// Очищаем сообщения при открытии чата
+var originalLoadMessages = window.loadMessages;
+window.loadMessages = function(chatId) {
+    var container = document.getElementById('messages-container');
+    if (container) {
+        container.innerHTML = '';
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+    }
+    
+    if (originalLoadMessages) {
+        originalLoadMessages(chatId);
+    }
+};
+
+console.log('✅ Чат исправлен, всё ровно');
