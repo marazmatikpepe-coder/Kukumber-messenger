@@ -261,3 +261,181 @@ body.night-mode .slice-hashtag{background:#2d2d2d;color:#e0e0e0}
 body.night-mode .modal-content{background:#1e1e1e}
 body.night-mode .modal-header{background:#1e1e1e;border-bottom-color:#3a3a3a}
 body.night-mode .modal-header h3{color:#fff}
+/* ========== ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ ЧАТА ========== */
+
+/* Контейнер чата - правильная структура */
+.chat-area {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    position: relative !important;
+}
+
+/* Шапка чата - СВЕРХУ */
+.chat-header {
+    flex-shrink: 0 !important;
+    order: 0 !important;
+}
+
+/* Контейнер сообщений - ПОСЕРЕДИНЕ */
+.messages-container {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    order: 1 !important;
+    padding: 15px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    min-height: 0 !important;
+}
+
+/* Поле ввода - СНИЗУ */
+.message-input-area {
+    flex-shrink: 0 !important;
+    order: 2 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 10px 12px !important;
+    background: white !important;
+    border-top: 1px solid var(--border) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* Кнопка прикрепления - СЛЕВА */
+.attach-btn {
+    flex-shrink: 0 !important;
+    width: 44px !important;
+    height: 44px !important;
+    background: none !important;
+    border: none !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    order: 0 !important;
+}
+
+.attach-btn img {
+    width: 36px !important;
+    height: 36px !important;
+}
+
+/* Поле ввода текста - ПО ЦЕНТРУ */
+#message-input {
+    flex: 1 !important;
+    min-width: 0 !important;
+    padding: 10px 14px !important;
+    border: 2px solid var(--border) !important;
+    border-radius: 28px !important;
+    font-size: 15px !important;
+    background: white !important;
+    outline: none !important;
+    order: 1 !important;
+}
+
+/* Эмодзи - СПРАВА ОТ ПОЛЯ */
+.emoji-btn {
+    flex-shrink: 0 !important;
+    width: 44px !important;
+    height: 44px !important;
+    background: none !important;
+    border: none !important;
+    font-size: 22px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    order: 2 !important;
+}
+
+/* Кнопка отправки - САМАЯ ПРАВАЯ */
+.send-btn {
+    flex-shrink: 0 !important;
+    width: 44px !important;
+    height: 44px !important;
+    background: linear-gradient(135deg, var(--forest), var(--lime)) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 50% !important;
+    font-size: 18px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    order: 3 !important;
+}
+
+/* Сообщения - правильное отображение */
+.message {
+    max-width: 75% !important;
+    width: auto !important;
+    padding: 10px 14px !important;
+    border-radius: 16px !important;
+    display: block !important;
+    clear: both !important;
+}
+
+.message.sent {
+    align-self: flex-end !important;
+    background: linear-gradient(135deg, var(--forest), var(--cucumber)) !important;
+    color: white !important;
+}
+
+.message.received {
+    align-self: flex-start !important;
+    background: white !important;
+    box-shadow: 0 1px 3px var(--shadow) !important;
+}
+
+.message-text {
+    word-break: break-word !important;
+    white-space: normal !important;
+}
+
+/* Активный чат */
+.active-chat {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+#active-chat {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+/* Мобильные устройства */
+@media (max-width: 768px) {
+    .message-input-area {
+        padding: 8px 10px !important;
+        gap: 6px !important;
+    }
+    .attach-btn, .emoji-btn, .send-btn {
+        width: 40px !important;
+        height: 40px !important;
+    }
+    .attach-btn img {
+        width: 30px !important;
+        height: 30px !important;
+    }
+    .emoji-btn {
+        font-size: 20px !important;
+    }
+    #message-input {
+        font-size: 14px !important;
+        padding: 8px 12px !important;
+    }
+    .message {
+        max-width: 85% !important;
+    }
+}
