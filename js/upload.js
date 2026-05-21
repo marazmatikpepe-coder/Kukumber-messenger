@@ -351,15 +351,20 @@ function handleFileSelect(event) {
     
     files.forEach(function(file) {
         var isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
-        var isVideo = file.type.startsWith('video/');
         var isImage = file.type.startsWith('image/') && !isGif;
         
-        if (isVideo) {
-            sendVideoMessage(file);
-        } else if (isGif) {
+        // ВИДЕО ПРОСТО ИГНОРИРУЕМ
+        if (file.type.startsWith('video/')) {
+            showNotification('📹 Видео временно недоступно, отправьте фото или GIF', 'info');
+            return;
+        }
+        
+        if (isGif) {
             pendingGifs.push(file);
         } else if (isImage) {
             pendingImages.push({ file: file, caption: '' });
+        } else {
+            showNotification('Неподдерживаемый формат файла', 'error');
         }
     });
     
