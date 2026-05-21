@@ -656,37 +656,50 @@ if (typeof window.voiceRecorderLoaded === 'undefined') {
     document.addEventListener('DOMContentLoaded', initVoiceBtn);
     setTimeout(initVoiceBtn, 1000);
 }
-// ========== ОТПРАВКА ВИДЕО (ЧЕРЕЗ CATBOX.MOE - БЕСПЛАТНО) ==========
+// ========== ОТПРАВКА ВИДЕО (ЧЕРЕЗ GOFILE.IO) ==========
 
-window.uploadVideoToCatbox = async function(file) {
-    var formData = new FormData();
-    formData.append('fileToUpload', file);
-    formData.append('reqtype', 'fileupload');
-    
+window.uploadVideoToGoFile = async function(file) {
     try {
-        console.log('Загрузка видео на Catbox:', file.name, 'Размер:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+        console.log('Загрузка видео на GoFile:', file.name, 'Размер:', (file.size / 1024 / 1024).toFixed(2), 'MB');
         
-        var response = await fetch('https://catbox.moe/user/api.php', {
+        // Сначала получаем сервер
+        var serverResponse = await fetch('https://api.gofile.io/servers');
+        var serverData = await serverResponse.json();
+        
+        if (!serverData.status === 'ok') {
+            throw new Error('Не удалось получить сервер');
+        }
+        
+        var server = serverData.data.servers[0].name;
+        
+        // Загружаем файл
+        var formData = new FormData();
+        formData.append('file', file);
+        
+        var uploadResponse = await fetch(`https://${server}.gofile.io/uploadFile`, {
             method: 'POST',
             body: formData
         });
         
-        var url = await response.text();
-        console.log('Ответ Catbox:', url);
+        var uploadData = await uploadResponse.json();
+        console.log('Ответ GoFile:', uploadData);
         
-        if (!response.ok || !url.startsWith('https://')) {
-            throw new Error(url || 'Ошибка загрузки');
+        if (uploadData.status === 'ok') {
+            // Получаем прямую ссылку
+            var fileId = uploadData.data.fileId;
+            var directUrl = `https://${server}.gofile.io/download/${fileId}/${encodeURIComponent(file.name)}`;
+            return directUrl;
+        } else {
+            throw new Error(uploadData.status || 'Ошибка загрузки');
         }
         
-        return url.trim();
-        
     } catch (error) {
-        console.error('Ошибка загрузки на Catbox:', error);
+        console.error('Ошибка загрузки на GoFile:', error);
         throw new Error('Не удалось загрузить видео: ' + error.message);
     }
 };
 
-// Исправленная функция confirmVideoSend (использует Catbox)
+// Обновляем confirmVideoSend для использования GoFile
 async function confirmVideoSend() {
     if (pendingVideos.length === 0) {
         showNotification('Нет видео для отправки', 'error');
@@ -712,14 +725,13 @@ async function confirmVideoSend() {
         try {
             var video = pendingVideos[i];
             
-            // Проверка размера (Catbox принимает до 200MB)
-            if (video.file.size > 200 * 1024 * 1024) {
-                throw new Error('Видео больше 200MB');
+            if (video.file.size > 500 * 1024 * 1024) {
+                throw new Error('Видео больше 500MB');
             }
             
             showNotification(`Загрузка видео ${i+1}/${pendingVideos.length}...`, 'info');
             
-            var videoUrl = await window.uploadVideoToCatbox(video.file);
+            var videoUrl = await window.uploadVideoToGoFile(video.file);
             
             var message = {
                 type: 'video',
@@ -761,24 +773,14 @@ async function confirmVideoSend() {
 
 // Функция для теста
 window.testVideoUpload = async function() {
-    // Создаём тестовое видео (зелёный квадрат)
-    var canvas = document.createElement('canvas');
-    canvas.width = 320;
-    canvas.height = 240;
-    var ctx = canvas.getContext('2d');
-    ctx.fillStyle = 'green';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = 'white';
-    ctx.font = '20px Arial';
-    ctx.fillText('Test Video', 50, 120);
-    
-    var blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-    var testFile = new File([blob], 'test.png', { type: 'image/png' });
+    // Создаём тестовый маленький файл
+    var blob = new Blob(['test'], { type: 'text/plain' });
+    var testFile = new File([blob], 'test.txt', { type: 'text/plain' });
     
     console.log('Тестовый файл создан');
     
     try {
-        var url = await window.uploadVideoToCatbox(testFile);
+        var url = await window.uploadVideoToGoFile(testFile);
         console.log('Успешно! URL:', url);
         showNotification('Тест успешен!', 'success');
         return url;
@@ -789,182 +791,5 @@ window.testVideoUpload = async function() {
     }
 };
 
-console.log('✅ Видео-функционал переключен на Catbox.moe');
+console.log('✅ Видео-функционал переключен на GoFile.io');
 console.log('Для теста введите testVideoUpload()');
-// ========== ПЕРЕМЕННЫЕ ДЛЯ ВИДЕО (ВАЖНО!) ==========
-var pendingVideos = [];
-var currentVideoIndex = 0;
-
-// ========== ФУНКЦИИ ДЛЯ ПРЕДПРОСМОТРА ВИДЕО ==========
-window.addVideoForPreview = function(file) {
-    if (!file.type.startsWith('video/')) return false;
-    
-    if (file.size > 200 * 1024 * 1024) {
-        showNotification('Видео не более 200MB', 'error');
-        return false;
-    }
-    
-    pendingVideos.push({ file: file, caption: '' });
-    return true;
-};
-
-window.showVideoPreview = function() {
-    if (pendingVideos.length === 0) return;
-    
-    var modal = document.getElementById('video-preview-modal');
-    if (!modal) {
-        var modalHtml = `
-            <div id="video-preview-modal" class="modal" style="z-index: 10010;">
-                <div class="image-preview-container" style="max-width: 500px; width: 90%; border-radius: 20px; overflow: hidden; background: white;">
-                    <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-                        <h3 style="margin: 0; font-size: 16px;">🎬 Отправка видео (<span id="video-counter">0/0</span>)</h3>
-                        <button onclick="closeVideoPreview()" class="btn-close" style="font-size: 24px;">×</button>
-                    </div>
-                    <div style="position: relative; background: #000; min-height: 250px; display: flex; align-items: center; justify-content: center;">
-                        <video id="preview-video" controls style="max-width: 100%; max-height: 400px; width: auto; height: auto;"></video>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
-                        <button id="video-prev-btn" onclick="navigateVideo(-1)" style="background: none; border: none; font-size: 32px; cursor: pointer; color: var(--forest); display: none;">←</button>
-                        <img src="https://i.ibb.co/BVhBTnmS/11623-AE3-5-A11-48-F3-9-C9-F-95-AF1-CD6-AAE4.png" alt="Добавить видео" onclick="addMoreVideos()" style="width: 50px; height: 50px; cursor: pointer;">
-                        <button id="video-next-btn" onclick="navigateVideo(1)" style="background: none; border: none; font-size: 32px; cursor: pointer; color: var(--forest); display: none;">→</button>
-                    </div>
-                    <div style="padding: 10px 20px 20px;">
-                        <div style="display: flex; align-items: center; background: var(--background); border-radius: 24px; padding: 5px 15px;">
-                            <input type="text" id="video-caption" placeholder="Добавить подпись к видео..." style="flex: 1; background: transparent; border: none; padding: 12px 0; font-size: 14px; outline: none;">
-                            <button onclick="confirmVideoSend()" style="background: var(--forest); border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white;">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 10px; padding: 0 20px 20px;">
-                        <button onclick="cancelAllVideos()" class="btn-secondary" style="flex: 1; padding: 10px;">❌ Отмена</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        modal = document.getElementById('video-preview-modal');
-    }
-    
-    var currentVideo = pendingVideos[currentVideoIndex];
-    var previewVideo = document.getElementById('preview-video');
-    var captionInput = document.getElementById('video-caption');
-    var counter = document.getElementById('video-counter');
-    
-    if (previewVideo && currentVideo) {
-        var url = URL.createObjectURL(currentVideo.file);
-        previewVideo.src = url;
-        previewVideo.load();
-    }
-    
-    if (captionInput) captionInput.value = currentVideo.caption || '';
-    if (counter) counter.textContent = `${currentVideoIndex + 1} / ${pendingVideos.length}`;
-    
-    updateVideoNavButtons();
-    modal.classList.remove('hidden');
-};
-
-function updateVideoNavButtons() {
-    var prevBtn = document.getElementById('video-prev-btn');
-    var nextBtn = document.getElementById('video-next-btn');
-    if (prevBtn) prevBtn.style.display = currentVideoIndex > 0 ? 'flex' : 'none';
-    if (nextBtn) nextBtn.style.display = currentVideoIndex < pendingVideos.length - 1 ? 'flex' : 'none';
-}
-
-window.navigateVideo = function(direction) {
-    var newIndex = currentVideoIndex + direction;
-    if (newIndex >= 0 && newIndex < pendingVideos.length) {
-        var captionInput = document.getElementById('video-caption');
-        if (captionInput && pendingVideos[currentVideoIndex]) {
-            pendingVideos[currentVideoIndex].caption = captionInput.value;
-        }
-        currentVideoIndex = newIndex;
-        showVideoPreview();
-    }
-};
-
-window.addMoreVideos = function() {
-    var input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'video/*';
-    input.multiple = true;
-    input.onchange = function(e) {
-        var files = Array.from(e.target.files);
-        files.forEach(function(file) {
-            if (file.type.startsWith('video/')) {
-                if (file.size <= 200 * 1024 * 1024) {
-                    pendingVideos.push({ file: file, caption: '' });
-                } else {
-                    showNotification('Видео ' + file.name + ' больше 200MB', 'error');
-                }
-            }
-        });
-        if (pendingVideos.length > 0) {
-            currentVideoIndex = pendingVideos.length - 1;
-            showVideoPreview();
-        }
-    };
-    input.click();
-};
-
-window.cancelAllVideos = function() {
-    pendingVideos = [];
-    currentVideoIndex = 0;
-    closeVideoPreview();
-};
-
-window.closeVideoPreview = function() {
-    var modal = document.getElementById('video-preview-modal');
-    if (modal) modal.classList.add('hidden');
-    var previewVideo = document.getElementById('preview-video');
-    if (previewVideo) previewVideo.src = '';
-};
-
-// ПЕРЕОПРЕДЕЛЯЕМ handleFileSelect для поддержки видео
-var originalHandleFileSelect = window.handleFileSelect;
-window.handleFileSelect = function(event) {
-    var files = Array.from(event.target.files);
-    if (!files.length) return;
-    
-    var hasImages = false;
-    var hasVideos = false;
-    var hasGifs = false;
-    
-    files.forEach(function(file) {
-        var isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
-        var isVideo = file.type.startsWith('video/');
-        var isImage = file.type.startsWith('image/') && !isGif;
-        
-        if (isVideo) {
-            window.addVideoForPreview(file);
-            hasVideos = true;
-        } else if (isGif) {
-            if (!window.pendingGifs) window.pendingGifs = [];
-            window.pendingGifs.push(file);
-            hasGifs = true;
-        } else if (isImage) {
-            if (!window.pendingImages) window.pendingImages = [];
-            window.pendingImages.push({ file: file, caption: '' });
-            hasImages = true;
-        }
-    });
-    
-    if (hasVideos && pendingVideos.length > 0) {
-        window.showVideoPreview();
-    } else if (hasImages && window.pendingImages && window.pendingImages.length > 0) {
-        if (typeof window.showImagePreview === 'function') {
-            window.showImagePreview();
-        }
-    } else if (hasGifs && window.pendingGifs && window.pendingGifs.length > 0) {
-        if (typeof window.sendAllGifs === 'function') {
-            window.sendAllGifs();
-        }
-    }
-    
-    event.target.value = '';
-};
-
-console.log('✅ Видео-функционал полностью настроен!');
-console.log('Теперь при выборе видео должно открываться окно предпросмотра');
