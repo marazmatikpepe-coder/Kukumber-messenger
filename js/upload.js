@@ -353,11 +353,11 @@ function handleFileSelect(event) {
         var isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
         var isImage = file.type.startsWith('image/') && !isGif;
         
-        // ВИДЕО ПРОСТО ИГНОРИРУЕМ
-        if (file.type.startsWith('video/')) {
-            showNotification('📹 Видео временно недоступно, отправьте фото или GIF', 'info');
-            return;
-        }
+       // ОБРАБОТКА ВИДЕО ЧЕРЕЗ VIMEO
+if (file.type.startsWith('video/')) {
+    sendVideoMessage(file);
+    return;
+}
         
         if (isGif) {
             pendingGifs.push(file);
