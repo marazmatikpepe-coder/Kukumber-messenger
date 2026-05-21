@@ -3486,3 +3486,206 @@ body.night-mode .settings-item:active,
 body.night-mode .settings-profile:active {
     background: #2a2a2a !important;
 }
+/* Сообщения не сплющиваются */
+.message {
+    max-width: 75%;
+    width: auto;
+    padding: 10px 14px;
+    border-radius: 16px;
+    display: block;
+    clear: both;
+}
+
+.message-text {
+    word-break: break-word !important;
+    white-space: normal !important;
+    overflow-wrap: break-word;
+}
+
+.messages-container {
+    flex: 1;
+    overflow-y: auto !important;
+    padding: 15px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.active-chat {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+.chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+#no-chat-selected.hidden,
+#active-chat.hidden {
+    display: none !important;
+}
+/* ========== ГЛАВНОЕ ИСПРАВЛЕНИЕ ЧАТА ========== */
+
+/* Контейнер сообщений — правильная прокрутка */
+.messages-container {
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 15px !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+/* Каждое сообщение — НЕ сплюснутое */
+.message {
+    max-width: 80% !important;
+    width: auto !important;
+    padding: 10px 14px !important;
+    border-radius: 16px !important;
+    display: block !important;
+    clear: both !important;
+    position: relative !important;
+}
+
+.message.sent {
+    align-self: flex-end !important;
+    background: linear-gradient(135deg, var(--forest), var(--cucumber)) !important;
+    color: white !important;
+    border-bottom-right-radius: 4px !important;
+}
+
+.message.received {
+    align-self: flex-start !important;
+    background: white !important;
+    border-bottom-left-radius: 4px !important;
+    box-shadow: 0 1px 3px var(--shadow) !important;
+}
+
+/* Текст сообщения — перенос слов */
+.message .message-text,
+.message-text {
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+    margin-bottom: 4px !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
+}
+
+/* Время сообщения */
+.message .message-time,
+.message-time {
+    font-size: 10px !important;
+    text-align: right !important;
+    opacity: 0.7 !important;
+    margin-top: 4px !important;
+}
+
+/* Активный чат — полная высота */
+.active-chat {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+#active-chat {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+#active-chat.hidden {
+    display: none !important;
+}
+
+#no-chat-selected {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+}
+
+#no-chat-selected.hidden {
+    display: none !important;
+}
+
+/* Шапка чата — кликабельна */
+.chat-user-info {
+    cursor: pointer !important;
+    flex: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+/* Изображения в сообщениях */
+.message-image img,
+.gif-message img,
+.video-message video {
+    max-width: 250px !important;
+    max-height: 250px !important;
+    width: auto !important;
+    height: auto !important;
+    border-radius: 12px !important;
+    display: block !important;
+}
+
+/* Аудиосообщения */
+.audio-message {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    background: rgba(0,0,0,0.05) !important;
+    padding: 6px 12px !important;
+    border-radius: 20px !important;
+}
+
+.message.sent .audio-message {
+    background: rgba(255,255,255,0.2) !important;
+}
+
+/* Блок ответа на сообщение */
+.message-reply {
+    background: rgba(0,0,0,0.05) !important;
+    border-left: 3px solid var(--forest) !important;
+    padding: 6px 10px !important;
+    border-radius: 10px !important;
+    margin-bottom: 6px !important;
+    cursor: pointer !important;
+    font-size: 12px !important;
+}
+
+.message.sent .message-reply {
+    background: rgba(255,255,255,0.15) !important;
+}
+
+/* Тёмная тема */
+body.night-mode .message.received {
+    background: #2d2d2d !important;
+    color: #e0e0e0 !important;
+}
+
+body.night-mode .message.received .message-text {
+    color: #e0e0e0 !important;
+}
+
+body.night-mode .message-reply {
+    background: rgba(255,255,255,0.1) !important;
+}
