@@ -3090,3 +3090,238 @@ window.closeForwardModal = function() {
 };
 
 console.log('✅ Расширенная пересылка сообщений добавлена!');
+// ========== ОТОБРАЖЕНИЕ ВИДЕО В СООБЩЕНИЯХ ==========
+
+// Переопределяем appendMessage для поддержки видео
+var originalAppendMessage = window.appendMessage;
+window.appendMessage = function(message) {
+    var container = document.getElementById('messages-container');
+    if (!container) return;
+    
+    var isSent = message.senderId === window.currentUser.uid;
+    var messageDiv = document.createElement('div');
+    messageDiv.className = 'message ' + (isSent ? 'sent' : 'received');
+    messageDiv.setAttribute('data-message-id', message.id);
+    messageDiv.setAttribute('data-sender-id', message.senderId || '');
+    
+    var content = '';
+    
+    // Блок ответа
+    if (message.replyTo) {
+        var replyText = '';
+        if (message.replyTo.type === 'image') replyText = '📷 Фото';
+        else if (message.replyTo.type === 'gif') replyText = '🎬 GIF';
+        else if (message.replyTo.type === 'audio') replyText = '🎤 Голосовое';
+        else if (message.replyTo.type === 'video') replyText = '🎬 Видео';
+        else if (message.replyTo.type === 'file') replyText = '📎 Файл';
+        else replyText = message.replyTo.text;
+        
+        var displayReplyText = replyText.length > 50 ? replyText.substring(0, 47) + '...' : replyText;
+        
+        content += `
+            <div class="message-reply" onclick="window.scrollToRepliedMessage('${message.replyTo.messageId}')" style="background: rgba(0,0,0,0.05); border-left: 3px solid var(--forest); padding: 6px 10px; border-radius: 10px; margin-bottom: 6px; cursor: pointer; font-size: 12px;">
+                <div style="font-weight: 600; color: var(--forest);">↩️ ${escapeHtml(message.replyTo.senderName)}</div>
+                <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(displayReplyText)}</div>
+            </div>
+        `;
+    }
+    
+    // ВИДЕО СООБЩЕНИЕ
+    if (message.type === 'video') {
+        content += `
+            <div class="video-message" style="position: relative;">
+                <video controls preload="metadata" style="max-width: 250px; max-height: 250px; border-radius: 12px; background: #000;">
+                    <source src="${message.videoUrl}" type="video/mp4">
+                    Ваш браузер не поддерживает видео
+                </video>
+                ${message.caption ? '<div class="message-text" style="margin-top: 5px;">' + escapeHtml(message.caption) + '</div>' : ''}
+            </div>
+        `;
+    }
+    // ИЗОБРАЖЕНИЕ
+    else if (message.type === 'image') {
+        content += `
+            <div class="message-image" onclick="openLightbox('${message.imageUrl}')">
+                <img src="${message.imageUrl}" loading="lazy" style="max-width:250px; max-height:250px; border-radius:12px;">
+            </div>
+            ${message.caption ? '<div class="message-text">' + escapeHtml(message.caption) + '</div>' : ''}
+        `;
+    }
+    // GIF
+    else if (message.type === 'gif') {
+        content += `
+            <div class="gif-message" onclick="openLightbox('${message.gifUrl}')">
+                <img src="${message.gifUrl}" loading="lazy" style="max-width:250px; max-height:250px; border-radius:12px;">
+                <span class="gif-badge">GIF</span>
+            </div>
+        `;
+    }
+    // АУДИО
+    else if (message.type === 'audio') {
+        content += `
+            <div class="audio-message">
+                <button onclick="playAudio('${message.audioUrl}')">▶️</button>
+                <span>Голосовое сообщение ${message.duration ? '(' + message.duration + ' сек)' : ''}</span>
+            </div>
+        `;
+    }
+    // ФАЙЛ
+    else if (message.type === 'file') {
+        content += `
+            <div class="file-message">
+                <span style="font-size:24px;">📎</span>
+                <a href="${message.fileUrl}" target="_blank" rel="noopener noreferrer">${escapeHtml(message.fileName)}</a>
+            </div>
+        `;
+    }
+    // ТЕКСТ
+    else {
+        var textContent = formatMessageText(message.text || '');
+        if (message.edited) {
+            textContent += ' <span style="font-size:10px; opacity:0.6;">(ред.)</span>';
+        }
+        content += '<div class="message-text" style="word-break:break-word; white-space:normal;">' + textContent + '</div>';
+    }
+    
+    // Имя отправителя для групповых чатов
+    var senderNameHtml = '';
+    if (window.currentChatData && window.currentChatData.type !== 'private' && !isSent && message.senderId) {
+        var senderName = userCache.names[message.senderId]?.value || 'Пользователь';
+        senderNameHtml = '<div class="message-sender">' + escapeHtml(senderName) + '</div>';
+    }
+    
+    messageDiv.innerHTML = `
+        <div class="message-content" style="flex:1;">
+            ${senderNameHtml}
+            ${content}
+            <div class="message-time">${formatTime(message.timestamp)}</div>
+        </div>
+    `;
+    
+    container.appendChild(messageDiv);
+    container.scrollTop = container.scrollHeight;
+    
+    if (!window.tempMessageData) window.tempMessageData = {};
+    window.tempMessageData[message.id] = message;
+};
+
+// ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ ВИДЕО НА PIXELDRAIN ==========
+window.uploadVideoToPixelDrain = async function(file) {
+    var PIXELDRAIN_API_KEY = 'fb14ed75-4352-4e78-804c-a797b3131456';
+    
+    var formData = new FormData();
+    formData.append('file', file);
+    
+    console.log('Загрузка видео на PixelDrain:', file.name, 'Размер:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+    
+    try {
+        var response = await fetch('https://pixeldrain.com/api/file/', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Basic ' + btoa(PIXELDRAIN_API_KEY + ':')
+            },
+            body: formData
+        });
+        
+        var data = await response.json();
+        console.log('Ответ PixelDrain:', data);
+        
+        if (data.success === false || data.error) {
+            throw new Error(data.message || data.error || 'Ошибка загрузки');
+        }
+        
+        var fileId = data.id;
+        if (!fileId) {
+            throw new Error('Не получен ID файла');
+        }
+        
+        // Возвращаем прямую ссылку на файл
+        return 'https://pixeldrain.com/api/file/' + fileId;
+        
+    } catch (error) {
+        console.error('Ошибка PixelDrain:', error);
+        throw error;
+    }
+};
+
+// Отправка видео через PixelDrain
+window.confirmVideoSend = async function() {
+    if (!window.pendingVideos || window.pendingVideos.length === 0) {
+        if (typeof showNotification === 'function') showNotification('Нет видео для отправки', 'error');
+        return;
+    }
+    if (!window.currentChatId) {
+        if (typeof showNotification === 'function') showNotification('Выберите чат', 'error');
+        return;
+    }
+    
+    var captionInput = document.getElementById('video-caption');
+    var currentCaption = captionInput ? captionInput.value.trim() : '';
+    
+    if (window.pendingVideos[window.currentVideoIndex]) {
+        window.pendingVideos[window.currentVideoIndex].caption = currentCaption;
+    }
+    
+    if (typeof showNotification === 'function') {
+        showNotification(`📤 Отправка ${window.pendingVideos.length} видео...`, 'info');
+    }
+    
+    var successCount = 0;
+    var failCount = 0;
+    
+    for (var i = 0; i < window.pendingVideos.length; i++) {
+        try {
+            var video = window.pendingVideos[i];
+            
+            if (video.file.size > 100 * 1024 * 1024) {
+                throw new Error('Видео больше 100MB (лимит PixelDrain)');
+            }
+            
+            if (typeof showNotification === 'function') {
+                showNotification(`Загрузка видео ${i+1}/${window.pendingVideos.length}...`, 'info');
+            }
+            
+            var videoUrl = await window.uploadVideoToPixelDrain(video.file);
+            console.log('Видео загружено, URL:', videoUrl);
+            
+            var message = {
+                type: 'video',
+                videoUrl: videoUrl,
+                caption: video.caption || '',
+                fileName: video.file.name,
+                senderId: window.currentUser.uid,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            await database.ref('messages/' + window.currentChatId).push(message);
+            successCount++;
+            await new Promise(r => setTimeout(r, 500));
+            
+        } catch (error) {
+            console.error('Ошибка отправки видео', i, error);
+            failCount++;
+        }
+    }
+    
+    if (successCount > 0) {
+        var lastMsg = successCount === 1 ? '🎬 Видео' : `🎬 ${successCount} видео`;
+        await database.ref('chats/' + window.currentChatId).update({
+            lastMessage: lastMsg,
+            lastMessageTime: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
+    
+    if (typeof showNotification === 'function') {
+        if (failCount > 0) {
+            showNotification(`✅ Отправлено: ${successCount}, ❌ Ошибок: ${failCount}`, 'info');
+        } else {
+            showNotification(`✅ Все ${successCount} видео отправлены!`, 'success');
+        }
+    }
+    
+    window.pendingVideos = [];
+    window.currentVideoIndex = 0;
+    window.closeVideoPreview();
+};
+
+console.log('✅ Видео-функционал исправлен, добавлено отображение видео в чате');
