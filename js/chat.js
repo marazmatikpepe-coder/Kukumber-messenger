@@ -929,7 +929,6 @@ function formatMessageText(text) {
 }
 
 // ========== ОТПРАВКА СООБЩЕНИЙ ==========
-// ========== ОТПРАВКА СООБЩЕНИЙ ==========
 function sendMessage() {
     var input = document.getElementById('message-input');
     if (!input) return;
@@ -949,7 +948,6 @@ function sendMessage() {
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
     
-    // Добавляем информацию об ответе
     if (replyToMessageData) {
         message.replyTo = {
             messageId: replyToMessageData.id,
@@ -971,7 +969,16 @@ function sendMessage() {
             lastMessageTime: firebase.database.ServerValue.TIMESTAMP
         });
         
-        // Очищаем ответ
+        // ========== ОТПРАВКА PUSH-УВЕДОМЛЕНИЯ ==========
+        // Добавь ЭТОТ БЛОК КОДА сюда:
+        if (currentChatData && currentChatData.type === 'private' && currentChatData.otherUserId) {
+            var senderName = currentUserData?.username || 'Пользователь';
+            if (typeof sendPushNotification === 'function') {
+                sendPushNotification(currentChatData.otherUserId, senderName, text, currentChatId);
+            }
+        }
+        // ===============================================
+        
         cancelReply();
         
         if (typeof KukumberSounds !== 'undefined') {
