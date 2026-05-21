@@ -603,3 +603,44 @@ window.forceRegister = function(username, email, password) {
         });
     });
 };
+// ========== PUSH-УВЕДОМЛЕНИЯ ==========
+async function sendPushNotification(recipientId, title, body, chatId) {
+    try {
+        const tokenSnapshot = await database.ref('users/' + recipientId + '/fcmToken').once('value');
+        const token = tokenSnapshot.val();
+        
+        if (!token) {
+            console.log('Нет токена у пользователя', recipientId);
+            return;
+        }
+        
+        const response = await fetch('https://fcm.googleapis.com/fcm/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'key=AAAAvNcyvSU:APA91bE2G-ybuDgJLvKv2rJghVQVYOE74w3Jq6yLdgpQv9YGlJ__P21hUq70dMsQ15cBPG0OZ1-JnMj0v3c6K7OQthRdua2RkS5MQe5N2ypAt4ooScdrBWY5VrHD-K4pO-0SeWXh33MF'
+            },
+            body: JSON.stringify({
+                to: token,
+                notification: {
+                    title: title,
+                    body: body,
+                    icon: 'https://i.ibb.co/jPd3zD4K/039-C01-D0-CD06-45-F1-8151-5-B9634-D4-CBFA.png',
+                    badge: 'https://i.ibb.co/23pNfd0W/F449-F920-46-E7-4-E73-85-EF-26-CFF5-CAD938.jpg',
+                    vibrate: [200, 100, 200],
+                    sound: 'default'
+                },
+                data: {
+                    chatId: chatId,
+                    click_action: 'FLUTTER_NOTIFICATION_CLICK'
+                }
+            })
+        });
+        
+        const data = await response.json();
+        console.log('Push отправлен:', data);
+        
+    } catch (err) {
+        console.error('Ошибка отправки push:', err);
+    }
+}
