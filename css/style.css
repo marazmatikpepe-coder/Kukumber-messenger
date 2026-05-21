@@ -3295,3 +3295,194 @@ body.night-mode .settings-item:active {
 body.night-mode .settings-profile:active {
     background: #2a2a2a !important;
 }
+/* ========== НАСТРОЙКИ ДЛЯ ТЕЛЕФОНА - ИСПРАВЛЕННЫЕ ========== */
+
+/* Главный контейнер настроек - обязательно для прокрутки */
+.settings-container {
+    height: 100% !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    background: var(--background, #f5f7f5) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    -webkit-overflow-scrolling: touch !important;
+}
+
+/* Шапка */
+.settings-header {
+    background: white !important;
+    padding: 20px 16px !important;
+    border-bottom: 1px solid var(--border, #d4e4d4) !important;
+    flex-shrink: 0 !important;
+}
+
+.settings-header h2 {
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    margin: 0 !important;
+    color: var(--text-dark, #2c3e2c) !important;
+}
+
+/* Карточка профиля */
+.settings-profile {
+    background: white !important;
+    margin: 16px !important;
+    border-radius: 20px !important;
+    padding: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 15px !important;
+    cursor: pointer !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+
+.settings-avatar {
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 50% !important;
+    background: var(--sage, #9DC183) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 32px !important;
+    background-size: cover !important;
+    background-position: center !important;
+    flex-shrink: 0 !important;
+}
+
+/* Аватарка с картинкой - чтобы отображалась */
+.settings-avatar[style*="background-image"] {
+    background-size: cover !important;
+    background-position: center !important;
+    text-indent: -9999px !important;
+}
+
+.settings-avatar[style*="background-image"]::before {
+    display: none !important;
+}
+
+.settings-profile-info {
+    flex: 1 !important;
+}
+
+.settings-profile-info h3 {
+    font-size: 17px !important;
+    font-weight: 600 !important;
+    margin: 0 0 4px 0 !important;
+    color: var(--text-dark, #2c3e2c) !important;
+}
+
+.settings-profile-info p {
+    font-size: 13px !important;
+    color: var(--text-light, #6b8e6b) !important;
+    margin: 0 !important;
+}
+
+/* Стрелка */
+.arrow {
+    font-size: 20px !important;
+    color: var(--text-muted, #94a894) !important;
+    flex-shrink: 0 !important;
+}
+
+/* Секции */
+.settings-section {
+    background: white !important;
+    margin: 12px 16px !important;
+    border-radius: 20px !important;
+    overflow: hidden !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+
+/* Пункты меню */
+.settings-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 15px !important;
+    padding: 14px 16px !important;
+    border-bottom: 1px solid var(--border, #d4e4d4) !important;
+    cursor: pointer !important;
+    background: white !important;
+}
+
+.settings-item:last-child {
+    border-bottom: none !important;
+}
+
+.settings-icon {
+    font-size: 22px !important;
+    width: 32px !important;
+    text-align: center !important;
+    flex-shrink: 0 !important;
+}
+
+.settings-item span:nth-child(2) {
+    flex: 1 !important;
+    font-size: 16px !important;
+    color: var(--text-dark, #2c3e2c) !important;
+}
+
+.settings-value {
+    color: var(--text-light, #6b8e6b) !important;
+    font-size: 14px !important;
+    margin-right: 4px !important;
+}
+
+.settings-item.danger span:nth-child(2) {
+    color: #dc3545 !important;
+}
+
+/* Футер - внизу */
+.settings-footer {
+    text-align: center !important;
+    padding: 30px 20px 40px !important;
+    color: var(--text-muted, #94a894) !important;
+    font-size: 13px !important;
+    flex-shrink: 0 !important;
+}
+
+.settings-footer p {
+    margin: 5px 0 !important;
+}
+
+/* Эффект нажатия */
+.settings-item:active,
+.settings-profile:active {
+    background: var(--background, #f5f7f5) !important;
+    transform: scale(0.98) !important;
+    transition: 0.1s !important;
+}
+
+/* Тёмная тема */
+body.night-mode .settings-container {
+    background: #121212 !important;
+}
+
+body.night-mode .settings-header,
+body.night-mode .settings-profile,
+body.night-mode .settings-section,
+body.night-mode .settings-item {
+    background: #1e1e1e !important;
+}
+
+body.night-mode .settings-header h2,
+body.night-mode .settings-profile-info h3,
+body.night-mode .settings-item span:nth-child(2) {
+    color: white !important;
+}
+
+body.night-mode .settings-profile-info p,
+body.night-mode .settings-value {
+    color: #aaa !important;
+}
+
+body.night-mode .settings-item {
+    border-bottom-color: #3a3a3a !important;
+}
+
+body.night-mode .settings-item:active,
+body.night-mode .settings-profile:active {
+    background: #2a2a2a !important;
+}
