@@ -1304,3 +1304,29 @@ window.handleFileSelect = function(event) {
 };
 
 console.log('✅ Видео полностью исправлено! Используется PixelDrain');
+// ========== ОТКЛЮЧЕНИЕ ВИДЕО ==========
+// Перехватываем выбор файлов и блокируем видео
+var originalHandleFileSelect = window.handleFileSelect;
+if (originalHandleFileSelect) {
+    window.handleFileSelect = function(event) {
+        var files = Array.from(event.target.files);
+        var hasVideo = false;
+        
+        for (var i = 0; i < files.length; i++) {
+            if (files[i].type.startsWith('video/')) {
+                hasVideo = true;
+                break;
+            }
+        }
+        
+        if (hasVideo) {
+            showNotification('📹 Видео временно недоступно. Отправьте фото или GIF.', 'info');
+            event.target.value = '';
+            return;
+        }
+        
+        originalHandleFileSelect(event);
+    };
+}
+
+console.log('✅ Видео отключено, отправка только фото и GIF');
