@@ -1330,3 +1330,150 @@ if (originalHandleFileSelect) {
 }
 
 console.log('✅ Видео отключено, отправка только фото и GIF');
+// ========== ГОЛОСОВЫЕ СООБЩЕНИЯ (БЕСПЛАТНО, БЕЗ РЕГИСТРАЦИИ, БЕЗ КАРТЫ) ==========
+
+var voiceRecorder = {
+    mediaRecorder: null,
+    audioChunks: [],
+    isRecording: false,
+    startTime: null
+};
+
+// Загрузка аудио на бесплатный хостинг (без регистрации)
+window.uploadAudioToFreeHost = async function(blob) {
+    var formData = new FormData();
+    formData.append('file', blob);
+    
+    // Используем бесплатный сервис без ключей
+    var response = await fetch('https://tmpfiles.org/api/v1/upload', {
+        method: 'POST',
+        body: formData
+    });
+    
+    var data = await response.json();
+    console.log('Upload response:', data);
+    
+    if (data.status === 'success' && data.data.url) {
+        return data.data.url;
+    } else {
+        throw new Error('Ошибка загрузки');
+    }
+};
+
+// Начать запись
+window.startVoiceRecording = async function() {
+    if (voiceRecorder.isRecording) return;
+    if (!window.currentChatId) {
+        showNotification('Сначала выберите чат', 'error');
+        return;
+    }
+    
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        voiceRecorder.mediaRecorder = new MediaRecorder(stream);
+        voiceRecorder.audioChunks = [];
+        voiceRecorder.startTime = Date.now();
+        voiceRecorder.isRecording = true;
+        
+        voiceRecorder.mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) voiceRecorder.audioChunks.push(e.data);
+        };
+        
+        voiceRecorder.mediaRecorder.onstop = async () => {
+            const blob = new Blob(voiceRecorder.audioChunks, { type: 'audio/webm' });
+            const duration = Math.floor((Date.now() - voiceRecorder.startTime) / 1000);
+            
+            // Останавливаем все треки
+            stream.getTracks().forEach(track => track.stop());
+            
+            if (duration >= 1 && blob.size > 0) {
+                await sendVoiceMessage(blob, duration);
+            } else if (duration < 1) {
+                showNotification('Голосовое слишком короткое', 'error');
+            }
+            
+            voiceRecorder.audioChunks = [];
+            voiceRecorder.isRecording = false;
+        };
+        
+        voiceRecorder.mediaRecorder.start(100);
+        
+        // Меняем внешний вид кнопки
+        const btn = document.getElementById('voice-record-btn');
+        if (btn) {
+            btn.style.background = '#dc3545';
+            btn.style.color = 'white';
+        }
+        
+        showNotification('🎙️ Запись... Отпустите кнопку для отправки', 'info');
+        
+    } catch (err) {
+        console.error('Ошибка:', err);
+        showNotification('Нет доступа к микрофону', 'error');
+    }
+};
+
+// Остановить запись
+window.stopVoiceRecording = function() {
+    if (!voiceRecorder.isRecording) return;
+    if (voiceRecorder.mediaRecorder && voiceRecorder.mediaRecorder.state === 'recording') {
+        voiceRecorder.mediaRecorder.stop();
+    }
+    
+    // Восстанавливаем кнопку
+    const btn = document.getElementById('voice-record-btn');
+    if (btn) {
+        btn.style.background = '';
+        btn.style.color = '';
+    }
+};
+
+// Отправка голосового сообщения
+async function sendVoiceMessage(blob, duration) {
+    if (!window.currentChatId) {
+        showNotification('Выберите чат', 'error');
+        return;
+    }
+    
+    showNotification('📤 Отправка голосового...', 'info');
+    
+    try {
+        const audioUrl = await window.uploadAudioToFreeHost(blob);
+        
+        await database.ref('messages/' + window.currentChatId).push({
+            type: 'audio',
+            audioUrl: audioUrl,
+            duration: duration,
+            senderId: window.currentUser.uid,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+        
+        await database.ref('chats/' + window.currentChatId).update({
+            lastMessage: `🎤 Голосовое (${duration} сек)`,
+            lastMessageTime: firebase.database.ServerValue.TIMESTAMP
+        });
+        
+        showNotification('✅ Голосовое отправлено!', 'success');
+        
+    } catch (error) {
+        console.error('Ошибка:', error);
+        showNotification('❌ Ошибка отправки', 'error');
+    }
+}
+
+// Функция для теста микрофона
+window.testMicrophone = async function() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+        showNotification('✅ Микрофон работает!', 'success');
+        return true;
+    } catch (err) {
+        showNotification('❌ Нет доступа к микрофону', 'error');
+        return false;
+    }
+};
+
+console.log('✅ Голосовые сообщения настроены (без API, без регистрации)');
+console.log('Для теста микрофона введите testMicrophone()');
