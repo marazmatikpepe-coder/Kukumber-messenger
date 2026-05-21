@@ -3905,3 +3905,119 @@ body.night-mode .profile-close-btn:hover {
     border-radius: 12px;
     display: block;
 }
+/* ========== ЭКСТРЕННОЕ ИСПРАВЛЕНИЕ ЧАТА ДЛЯ ТЕЛЕФОНА ========== */
+.messages-container {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 15px !important;
+    overflow-y: auto !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+}
+
+.message {
+    display: flex !important;
+    flex-direction: column !important;
+    max-width: 85% !important;
+    width: auto !important;
+    padding: 10px 14px !important;
+    border-radius: 16px !important;
+    margin: 0 !important;
+    clear: both !important;
+}
+
+.message.sent {
+    align-self: flex-end !important;
+    background: linear-gradient(135deg, #228B22, #71BC78) !important;
+    color: white !important;
+    border-bottom-right-radius: 4px !important;
+}
+
+.message.received {
+    align-self: flex-start !important;
+    background: white !important;
+    color: #2c3e2c !important;
+    border-bottom-left-radius: 4px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+}
+
+.message-text {
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+    margin-bottom: 4px !important;
+}
+
+.message-time {
+    font-size: 10px !important;
+    text-align: right !important;
+    opacity: 0.7 !important;
+    margin-top: 4px !important;
+}
+
+.message-image img, .gif-message img, .video-message video {
+    max-width: 200px !important;
+    max-height: 200px !important;
+    border-radius: 12px !important;
+}
+
+/* Панель ввода */
+.message-input-area {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 8px 12px !important;
+    background: white !important;
+    border-top: 1px solid #d4e4d4 !important;
+    flex-shrink: 0 !important;
+}
+
+#message-input {
+    flex: 1 !important;
+    min-width: 0 !important;
+    padding: 10px 14px !important;
+    border: 2px solid #d4e4d4 !important;
+    border-radius: 28px !important;
+    font-size: 15px !important;
+    background: white !important;
+}
+
+.send-btn, .emoji-btn, .attach-btn, .voice-btn {
+    flex-shrink: 0 !important;
+    width: 44px !important;
+    height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.send-btn {
+    background: linear-gradient(135deg, #228B22, #32CD32) !important;
+    color: white !important;
+    border-radius: 50% !important;
+}
+
+.attach-btn img {
+    width: 36px !important;
+    height: 36px !important;
+}
+
+/* Активный чат */
+.active-chat {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+.chat-area {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    overflow: hidden !important;
+}
