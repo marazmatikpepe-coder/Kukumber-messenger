@@ -988,28 +988,173 @@ window.handleFileSelect = function(event) {
     event.target.value = '';
 };
 
-// Функция uploadVideoToPixelDrain (если её нет)
+// ========== ОТПРАВКА ВИДЕО (ИСПРАВЛЕННАЯ ВЕРСИЯ) ==========
+
+// Функция загрузки видео на Pixeldrain (исправленная)
 window.uploadVideoToPixelDrain = async function(file) {
     var PIXELDRAIN_API_KEY = 'fb14ed75-4352-4e78-804c-a797b3131456';
     
     var formData = new FormData();
     formData.append('file', file);
     
-    var response = await fetch('https://pixeldrain.com/api/file/', {
-        method: 'POST',
-        headers: {
-            'Authorization': 'Basic ' + btoa(PIXELDRAIN_API_KEY + ':')
-        },
-        body: formData
-    });
-    
-    var data = await response.json();
-    
-    if (!response.ok || !data.id) {
-        throw new Error(data.message || 'Ошибка загрузки видео');
+    try {
+        console.log('Начинаем загрузку видео:', file.name, 'Размер:', file.size);
+        
+        var response = await fetch('https://pixeldrain.com/api/file/', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Basic ' + btoa(PIXELDRAIN_API_KEY + ':')
+            },
+            body: formData
+        });
+        
+        var data = await response.json();
+        console.log('Ответ Pixeldrain:', data);
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Ошибка загрузки видео');
+        }
+        
+        if (!data.id) {
+            throw new Error('Не получен ID файла');
+        }
+        
+        // Возвращаем прямую ссылку на файл
+        return 'https://pixeldrain.com/api/file/' + data.id;
+        
+    } catch (error) {
+        console.error('Ошибка загрузки видео:', error);
+        throw new Error('Не удалось загрузить видео: ' + error.message);
     }
-    
-    return 'https://pixeldrain.com/api/file/' + data.id;
 };
 
-console.log('✅ Видео-функционал добавлен!');
+// Альтернативный способ загрузки через Archive.org (если Pixeldrain не работает)
+window.uploadVideoToArchive = async function(file) {
+    var IA_ACCESS_KEY = 'NvSNcWy5BiOXcDk2';
+    var IA_SECRET_KEY = '1Katd89Oa7Xk49P3';
+    
+    var itemId = 'kukumber_video_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+    var fileName = file.name;
+    var uploadUrl = `https://s3.us.archive.org/${itemId}/${encodeURIComponent(fileName)}`;
+    
+    var authBase64 = btoa(IA_ACCESS_KEY + ':' + IA_SECRET_KEY);
+    
+    var response = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+            'Authorization': 'LOW ' + authBase64,
+            'x-amz-auto-make-bucket': '1',
+            'x-archive-meta-mediatype': 'movies',
+            'Content-Type': file.type
+        },
+        body: file
+    });
+    
+    if (!response.ok) {
+        throw new Error('Ошибка загрузки на Archive.org');
+    }
+    
+    return `https://archive.org/download/${itemId}/${encodeURIComponent(fileName)}`;
+};
+
+// Исправленная функция confirmVideoSend с лучшей обработкой ошибок
+async function confirmVideoSend() {
+    if (pendingVideos.length === 0) {
+        showNotification('Нет видео для отправки', 'error');
+        return;
+    }
+    if (!window.currentChatId) {
+        showNotification('Выберите чат', 'error');
+        return;
+    }
+    
+    var captionInput = document.getElementById('video-caption');
+    var currentCaption = captionInput ? captionInput.value.trim() : '';
+    
+    if (pendingVideos[currentVideoIndex]) {
+        pendingVideos[currentVideoIndex].caption = currentCaption;
+    }
+    
+    showNotification(`📤 Отправка ${pendingVideos.length} видео...`, 'info');
+    var successCount = 0;
+    var failCount = 0;
+    var errors = [];
+    
+    for (var i = 0; i < pendingVideos.length; i++) {
+        try {
+            var video = pendingVideos[i];
+            showNotification(`Загрузка видео ${i+1}/${pendingVideos.length}...`, 'info');
+            
+            // Пробуем Pixeldrain
+            var videoUrl = await window.uploadVideoToPixelDrain(video.file);
+            
+            var message = {
+                type: 'video',
+                videoUrl: videoUrl,
+                caption: video.caption || '',
+                fileName: video.file.name,
+                senderId: window.currentUser.uid,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            await database.ref('messages/' + window.currentChatId).push(message);
+            successCount++;
+            await new Promise(r => setTimeout(r, 500));
+            
+        } catch (error) {
+            console.error('Ошибка отправки видео', i, error);
+            failCount++;
+            errors.push(video.file.name + ': ' + error.message);
+        }
+    }
+    
+    if (successCount > 0) {
+        var lastMsg = successCount === 1 ? '🎬 Видео' : `🎬 ${successCount} видео`;
+        await database.ref('chats/' + window.currentChatId).update({
+            lastMessage: lastMsg,
+            lastMessageTime: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
+    
+    if (failCount > 0) {
+        showNotification(`✅ Отправлено: ${successCount}, ❌ Ошибок: ${failCount}\n${errors[0] || ''}`, 'info');
+    } else {
+        showNotification(`✅ Все ${successCount} видео отправлены!`, 'success');
+    }
+    
+    pendingVideos = [];
+    currentVideoIndex = 0;
+    closeVideoPreview();
+}
+// Проверка работоспособности загрузки видео
+window.testVideoUpload = async function() {
+    // Создаём тестовый маленький видеофайл (1 секунда)
+    var canvas = document.createElement('canvas');
+    canvas.width = 320;
+    canvas.height = 240;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = 'green';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'white';
+    ctx.font = '20px Arial';
+    ctx.fillText('Test Video', 50, 120);
+    
+    // Преобразуем в Blob
+    var blob = await new Promise(resolve => canvas.toBlob(resolve, 'video/mp4'));
+    var testFile = new File([blob], 'test.mp4', { type: 'video/mp4' });
+    
+    console.log('Тестовый файл создан, размер:', testFile.size);
+    
+    try {
+        var url = await window.uploadVideoToPixelDrain(testFile);
+        console.log('Успешно загружено! URL:', url);
+        showNotification('Тест успешен! Видео загружено', 'success');
+        return url;
+    } catch (err) {
+        console.error('Тест не удался:', err);
+        showNotification('Ошибка загрузки: ' + err.message, 'error');
+        return null;
+    }
+};
+
+console.log('Для теста загрузки видео введите в консоль: testVideoUpload()');
