@@ -793,3 +793,287 @@ window.testVideoUpload = async function() {
 
 console.log('✅ Видео-функционал переключен на GoFile.io');
 console.log('Для теста введите testVideoUpload()');
+// ========== ВИДЕО - ОБЪЯВЛЕНИЕ ПЕРЕМЕННЫХ И ФУНКЦИЙ ==========
+
+// Объявляем глобальные переменные для видео
+window.pendingVideos = window.pendingVideos || [];
+window.currentVideoIndex = window.currentVideoIndex || 0;
+
+// Функция добавления видео в предпросмотр
+window.addVideoForPreview = function(file) {
+    if (!file.type.startsWith('video/')) return false;
+    
+    if (file.size > 200 * 1024 * 1024) {
+        if (typeof showNotification === 'function') {
+            showNotification('Видео не более 200MB', 'error');
+        }
+        return false;
+    }
+    
+    window.pendingVideos.push({ file: file, caption: '' });
+    console.log('Видео добавлено в очередь:', file.name, 'Всего:', window.pendingVideos.length);
+    return true;
+};
+
+// Показать предпросмотр видео
+window.showVideoPreview = function() {
+    if (!window.pendingVideos || window.pendingVideos.length === 0) return;
+    
+    // Удаляем старую модалку если есть
+    var oldModal = document.getElementById('video-preview-modal');
+    if (oldModal) oldModal.remove();
+    
+    var modalHtml = `
+        <div id="video-preview-modal" class="modal" style="z-index: 10010;">
+            <div class="image-preview-container" style="max-width: 500px; width: 90%; border-radius: 20px; overflow: hidden; background: white; margin: auto;">
+                <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0; font-size: 16px;">🎬 Отправка видео (<span id="video-counter">0/0</span>)</h3>
+                    <button onclick="window.closeVideoPreview()" class="btn-close" style="font-size: 24px;">×</button>
+                </div>
+                <div style="position: relative; background: #000; min-height: 250px; display: flex; align-items: center; justify-content: center;">
+                    <video id="preview-video" controls style="max-width: 100%; max-height: 400px; width: auto; height: auto;"></video>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;">
+                    <button id="video-prev-btn" style="background: none; border: none; font-size: 32px; cursor: pointer; color: var(--forest); display: none;">←</button>
+                    <img src="https://i.ibb.co/BVhBTnmS/11623-AE3-5-A11-48-F3-9-C9-F-95-AF1-CD6-AAE4.png" alt="Добавить видео" onclick="window.addMoreVideos()" style="width: 50px; height: 50px; cursor: pointer;">
+                    <button id="video-next-btn" style="background: none; border: none; font-size: 32px; cursor: pointer; color: var(--forest); display: none;">→</button>
+                </div>
+                <div style="padding: 10px 20px 20px;">
+                    <div style="display: flex; align-items: center; background: #f5f5f5; border-radius: 24px; padding: 5px 15px;">
+                        <input type="text" id="video-caption" placeholder="Добавить подпись к видео..." style="flex: 1; background: transparent; border: none; padding: 12px 0; font-size: 14px; outline: none;">
+                        <button onclick="window.confirmVideoSend()" style="background: #228B22; border: none; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: white;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; padding: 0 20px 20px;">
+                    <button onclick="window.cancelAllVideos()" class="btn-secondary" style="flex: 1; padding: 10px;">❌ Отмена</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    var currentVideo = window.pendingVideos[window.currentVideoIndex];
+    var previewVideo = document.getElementById('preview-video');
+    var captionInput = document.getElementById('video-caption');
+    var counter = document.getElementById('video-counter');
+    
+    if (previewVideo && currentVideo) {
+        var url = URL.createObjectURL(currentVideo.file);
+        previewVideo.src = url;
+        previewVideo.load();
+    }
+    
+    if (captionInput) captionInput.value = currentVideo.caption || '';
+    if (counter) counter.textContent = `${window.currentVideoIndex + 1} / ${window.pendingVideos.length}`;
+    
+    window.updateVideoNavButtons();
+};
+
+window.updateVideoNavButtons = function() {
+    var prevBtn = document.getElementById('video-prev-btn');
+    var nextBtn = document.getElementById('video-next-btn');
+    if (prevBtn) prevBtn.style.display = window.currentVideoIndex > 0 ? 'inline-block' : 'none';
+    if (nextBtn) nextBtn.style.display = window.currentVideoIndex < window.pendingVideos.length - 1 ? 'inline-block' : 'none';
+    
+    // Привязываем события
+    if (prevBtn) prevBtn.onclick = function() { window.navigateVideo(-1); };
+    if (nextBtn) nextBtn.onclick = function() { window.navigateVideo(1); };
+};
+
+window.navigateVideo = function(direction) {
+    var newIndex = window.currentVideoIndex + direction;
+    if (newIndex >= 0 && newIndex < window.pendingVideos.length) {
+        var captionInput = document.getElementById('video-caption');
+        if (captionInput && window.pendingVideos[window.currentVideoIndex]) {
+            window.pendingVideos[window.currentVideoIndex].caption = captionInput.value;
+        }
+        window.currentVideoIndex = newIndex;
+        window.showVideoPreview();
+    }
+};
+
+window.addMoreVideos = function() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'video/*';
+    input.multiple = true;
+    input.onchange = function(e) {
+        var files = Array.from(e.target.files);
+        files.forEach(function(file) {
+            if (file.type.startsWith('video/')) {
+                if (file.size <= 200 * 1024 * 1024) {
+                    window.pendingVideos.push({ file: file, caption: '' });
+                } else if (typeof showNotification === 'function') {
+                    showNotification('Видео ' + file.name + ' больше 200MB', 'error');
+                }
+            }
+        });
+        if (window.pendingVideos.length > 0) {
+            window.currentVideoIndex = window.pendingVideos.length - 1;
+            window.showVideoPreview();
+        }
+    };
+    input.click();
+};
+
+window.cancelAllVideos = function() {
+    window.pendingVideos = [];
+    window.currentVideoIndex = 0;
+    window.closeVideoPreview();
+};
+
+window.closeVideoPreview = function() {
+    var modal = document.getElementById('video-preview-modal');
+    if (modal) modal.remove();
+    var previewVideo = document.getElementById('preview-video');
+    if (previewVideo) previewVideo.src = '';
+};
+
+// Простая загрузка видео через ImgBB (для маленьких видео)
+window.uploadVideoToImgBB = async function(file) {
+    var formData = new FormData();
+    formData.append('image', file);
+    
+    var response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+        method: 'POST',
+        body: formData
+    });
+    
+    var data = await response.json();
+    
+    if (!data.success) {
+        throw new Error(data.error?.message || 'Ошибка загрузки');
+    }
+    
+    return data.data.url;
+};
+
+// Отправка видео (упрощённая версия)
+window.confirmVideoSend = async function() {
+    if (!window.pendingVideos || window.pendingVideos.length === 0) {
+        if (typeof showNotification === 'function') showNotification('Нет видео для отправки', 'error');
+        return;
+    }
+    if (!window.currentChatId) {
+        if (typeof showNotification === 'function') showNotification('Выберите чат', 'error');
+        return;
+    }
+    
+    var captionInput = document.getElementById('video-caption');
+    var currentCaption = captionInput ? captionInput.value.trim() : '';
+    
+    if (window.pendingVideos[window.currentVideoIndex]) {
+        window.pendingVideos[window.currentVideoIndex].caption = currentCaption;
+    }
+    
+    if (typeof showNotification === 'function') {
+        showNotification(`📤 Отправка ${window.pendingVideos.length} видео...`, 'info');
+    }
+    
+    var successCount = 0;
+    var failCount = 0;
+    
+    for (var i = 0; i < window.pendingVideos.length; i++) {
+        try {
+            var video = window.pendingVideos[i];
+            
+            if (typeof showNotification === 'function') {
+                showNotification(`Загрузка видео ${i+1}/${window.pendingVideos.length}...`, 'info');
+            }
+            
+            // Пробуем загрузить через ImgBB (поддерживает видео до 32MB)
+            var videoUrl = await window.uploadVideoToImgBB(video.file);
+            
+            var message = {
+                type: 'video',
+                videoUrl: videoUrl,
+                caption: video.caption || '',
+                fileName: video.file.name,
+                senderId: window.currentUser.uid,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            await database.ref('messages/' + window.currentChatId).push(message);
+            successCount++;
+            await new Promise(r => setTimeout(r, 300));
+            
+        } catch (error) {
+            console.error('Ошибка отправки видео', i, error);
+            failCount++;
+        }
+    }
+    
+    if (successCount > 0) {
+        var lastMsg = successCount === 1 ? '🎬 Видео' : `🎬 ${successCount} видео`;
+        await database.ref('chats/' + window.currentChatId).update({
+            lastMessage: lastMsg,
+            lastMessageTime: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
+    
+    if (typeof showNotification === 'function') {
+        if (failCount > 0) {
+            showNotification(`✅ Отправлено: ${successCount}, ❌ Ошибок: ${failCount}`, 'info');
+        } else {
+            showNotification(`✅ Все ${successCount} видео отправлены!`, 'success');
+        }
+    }
+    
+    window.pendingVideos = [];
+    window.currentVideoIndex = 0;
+    window.closeVideoPreview();
+};
+
+// Переопределяем handleFileSelect для поддержки видео
+if (typeof window.handleFileSelect !== 'undefined') {
+    var originalHandleFileSelect = window.handleFileSelect;
+    window.handleFileSelect = function(event) {
+        var files = Array.from(event.target.files);
+        if (!files.length) return;
+        
+        var hasImages = false;
+        var hasVideos = false;
+        var hasGifs = false;
+        
+        files.forEach(function(file) {
+            var isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+            var isVideo = file.type.startsWith('video/');
+            var isImage = file.type.startsWith('image/') && !isGif;
+            
+            if (isVideo) {
+                window.addVideoForPreview(file);
+                hasVideos = true;
+            } else if (isGif) {
+                if (!window.pendingGifs) window.pendingGifs = [];
+                window.pendingGifs.push(file);
+                hasGifs = true;
+            } else if (isImage) {
+                if (!window.pendingImages) window.pendingImages = [];
+                window.pendingImages.push({ file: file, caption: '' });
+                hasImages = true;
+            }
+        });
+        
+        if (hasVideos && window.pendingVideos && window.pendingVideos.length > 0) {
+            window.showVideoPreview();
+        } else if (hasImages && window.pendingImages && window.pendingImages.length > 0) {
+            if (typeof window.showImagePreview === 'function') {
+                window.showImagePreview();
+            }
+        } else if (hasGifs && window.pendingGifs && window.pendingGifs.length > 0) {
+            if (typeof window.sendAllGifs === 'function') {
+                window.sendAllGifs();
+            }
+        }
+        
+        event.target.value = '';
+    };
+}
+
+console.log('✅ Видео-функционал полностью настроен!');
+console.log('Теперь при выборе видео должно открываться окно предпросмотра');
